@@ -631,8 +631,8 @@
           <td class="px-4 py-3">${fmtDate(lic.expiresAt)}</td>
           <td class="px-4 py-3">
             <div class="flex flex-wrap gap-2">
-              <button class="px-3 py-1 rounded border border-white/20 hover:border-brand-400/60 text-xs" data-act="extend" data-i="${idx}">Gia hạn +30d</button>
-              <button class="px-3 py-1 rounded border border-white/20 hover:border-brand-400/60 text-xs" data-act="toggle" data-i="${idx}">${lic.status==='active'?'Tạm dừng':'Kích hoạt'}</button>
+              <button class="px-3 py-1 rounded border border-white/20 hover:border-brand-400/60 text-xs" data-act="extend" data-key="${lic.key}">Gia hạn +30d</button>
+              <button class="px-3 py-1 rounded border border-white/20 hover:border-brand-400/60 text-xs" data-act="toggle" data-key="${lic.key}">${lic.status==='active'?'Tạm dừng':'Kích hoạt'}</button>
               <button class="px-3 py-1 rounded border border-white/20 hover:border-brand-400/60 text-xs" data-act="copy" data-key="${lic.key}">Copy Key</button>
             </div>
           </td>
@@ -644,19 +644,21 @@
       tbody.querySelectorAll('button').forEach(btn=>{
         btn.addEventListener('click', ()=>{
           const act = btn.getAttribute('data-act');
-
-          if(act==='copy'){
-            navigator.clipboard.writeText(btn.getAttribute('data-key'));
-            btn.textContent='Đã copy';
-            setTimeout(()=>btn.textContent='Copy Key',800);
-            return;
-          }
-
-          const i = +btn.getAttribute('data-i');
+          const key = btn.getAttribute('data-key');
           const email = state.session.email;
           const all = state.licenses;
           const arr = all[email] || [];
-          const lic = arr[i];
+          const lic = arr.find(l => l.key === key);
+
+          if(act==='copy'){
+            if (key) {
+              navigator.clipboard.writeText(key);
+              btn.textContent='Đã copy';
+              setTimeout(()=>btn.textContent='Copy Key',800);
+            }
+            return;
+          }
+
           if(!lic) return;
 
           if(act==='extend'){
