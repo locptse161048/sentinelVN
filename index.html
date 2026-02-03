@@ -706,16 +706,30 @@
       const licenses = state.licenses;
       const email = sess.email;
       licenses[email] = licenses[email] || [];
-      licenses[email].push({
-        key: rawKey,
-        plan: planGuess,
-        status: 'active',
-        createdAt: now,
-        expiresAt: exp
-      });
+
+      // Check if key exists for this user
+      let found = false;
+      for (let lic of licenses[email]) {
+        if (lic.key === rawKey) {
+          // Update expiration and status
+          lic.expiresAt = exp;
+          lic.status = 'active';
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        licenses[email].push({
+          key: rawKey,
+          plan: planGuess,
+          status: 'active',
+          createdAt: now,
+          expiresAt: exp
+        });
+      }
       state.licenses = licenses;
 
-      $('#activateMsg').textContent='Đã kích hoạt key.';
+      $('#activateMsg').textContent = found ? 'Đã gia hạn license.' : 'Đã kích hoạt key.';
       renderLicenses();
       e.target.reset();
     });
