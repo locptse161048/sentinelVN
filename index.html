@@ -709,7 +709,7 @@
       const email = sess.email;
       licenses[email] = licenses[email] || [];
 
-      // Check if key exists for this user
+      // Chỉ cho phép kích hoạt/renew nếu key đã thuộc về user này
       let found = false;
       for (let lic of licenses[email]) {
         if (lic.key === rawKey) {
@@ -721,17 +721,13 @@
         }
       }
       if (!found) {
-        licenses[email].push({
-          key: rawKey,
-          plan: planGuess,
-          status: 'active',
-          createdAt: now,
-          expiresAt: exp
-        });
+        // Nếu key chưa từng thuộc về user này, báo lỗi
+        $('#activateMsg').textContent = 'Key không thuộc tài khoản này hoặc không hợp lệ.';
+        return;
       }
       state.licenses = licenses;
 
-      $('#activateMsg').textContent = found ? 'Đã gia hạn license.' : 'Đã kích hoạt key.';
+      $('#activateMsg').textContent = 'Đã gia hạn license.';
       renderLicenses();
       e.target.reset();
     });
