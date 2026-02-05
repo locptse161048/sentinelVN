@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SENTINEL VN — Thanh toán</title>
+    <meta name="description"
+        content="Sentinel VN — Plugin bảo mật cho VS Code, phát hiện sớm lỗ hổng và hướng dẫn khắc phục bằng AI. Chỉ từ 75.000đ/tháng." />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico" />
+    <link rel="shortcut icon" href="assets/images/favicon.ico" />
+    <link rel="apple-touch-icon" href="assets/images/favicon.ico" />
+    <meta name="theme-color" content="#0A1015" />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { inter: ['Inter', 'sans-serif'], orbitron: ['Orbitron', 'sans-serif'] },
+                    colors: { brand: { 400: '#1FE3FF' } }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Orbitron:wght@700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Base Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="text-white">
+    <!-- HEADER -->
+    <header class="sticky top-0 z-30 border-b border-white/10 blur-bg">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3">
+                <img src="assets/images/favicon.ico" alt="Sentinel VN"
+                    class="h-9 w-9 rounded border border-cyan-400/40">
+                <span class="font-orbitron text-lg tracking-wider">SENTINEL <span
+                        class="text-brand-400">VN</span></span>
+            </a>
+            <nav class="hidden md:flex items-center gap-6 text-sm">
+                <a href="index.html#features" class="hover:text-brand-400">Tính năng</a>
+                <a href="pricing.html" class="hover:text-brand-400">Bảng giá</a>
+                <a href="checkout.html" class="text-brand-400">Thanh toán</a>
+                <a href="about.html" class="hover:text-brand-400">About</a>
+                <a href="dashboard.html" class="hover:text-brand-400">License</a>
+                <a href="contact.html" class="hover:text-brand-400">Hỗ trợ</a>
+                <button id="openAuth"
+                    class="ml-2 px-3 py-1.5 rounded-lg border border-white/20 hover:border-brand-400/60 text-sm">
+                    <span id="authBtnText">Đăng nhập / Đăng ký</span>
+                </button>
+            </nav>
+            <button id="openAuth_m"
+                class="md:hidden px-3 py-1.5 rounded-lg border border-white/20 hover:border-brand-400/60 text-sm">
+                <span id="authBtnText_m">Đăng nhập / Đăng ký</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- CHECKOUT -->
+    <section id="checkout" class="py-20">
+        <div class="mx-auto max-w-3xl px-6 text-center">
+            <h2 class="font-orbitron text-3xl">Thanh toán</h2>
+            <p class="text-white/70 mt-2 max-w-2xl mx-auto">
+                Demo: tạo license tự động sau khi “thanh toán”. Gói FREE không yêu cầu thanh toán hoặc license.
+            </p>
+
+            <form id="checkoutForm" class="mt-8 grid gap-4 text-left">
+                <div class="grid md:grid-cols-2 gap-4">
+                    <input class="input" name="fullName" required placeholder="Họ và tên">
+                    <input class="input" name="email" type="email" required placeholder="Email">
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-4">
+                    <select id="planSelect" name="plan" class="input" required>
+                        <!-- FREE cố ý không có ở đây -->
+                        <option value="PREMIUM" selected>PREMIUM — 75.000đ/tháng</option>
+                        <option value="PRO">PRO — Liên hệ</option>
+                    </select>
+
+                    <select name="cycle" class="input" required>
+                        <option value="monthly" selected>Thanh toán theo tháng</option>
+                        <option value="yearly">Theo năm (tiết kiệm 20%)</option>
+                    </select>
+
+                    <select name="gateway" class="input" required>
+                        <option value="VNPay" selected>VNPay (demo)</option>
+                        <option value="MoMo">MoMo (demo)</option>
+                        <option value="BankTransfer">Chuyển khoản (manual)</option>
+                    </select>
+                </div>
+
+                <div class="text-white/70 text-sm">
+                    * Đây là môi trường demo: nhấn “Thanh toán” sẽ sinh license key (chỉ cho PREMIUM hoặc PRO)
+                    và đưa vào License Dashboard.
+                </div>
+
+                <button class="btn w-fit">Thanh toán</button>
+                <div id="checkoutMsg" class="text-sm text-white/80"></div>
+            </form>
+        </div>
+    </section>
+
+    <!-- AUTH MODAL -->
+    <div id="authModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm items-center justify-center p-4 hidden">
+        <div class="card max-w-md w-full p-6 relative">
+            <button id="closeAuth" class="absolute right-3 top-3 text-white/60 hover:text-white">✕</button>
+            <h3 class="text-xl font-semibold">Tài khoản</h3>
+            <p class="text-white/70 text-sm mt-1">Đăng nhập </p>
+
+            <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <button id="tabLogin" class="btn">Đăng nhập</button>
+                <button id="tabSignup" class="btn">Đăng ký</button>
+            </div>
+
+            <form id="loginForm" class="mt-4 grid gap-3">
+                <input class="input" name="email" type="email" placeholder="Email" required />
+                <input class="input" name="password" type="password" placeholder="Mật khẩu" required />
+                <button class="btn w-fit">Đăng nhập</button>
+                <div id="loginMsg" class="text-sm text-white/70"></div>
+            </form>
+
+            <form id="signupForm" class="mt-4 grid gap-3 hidden-el">
+                <input class="input" name="email" type="email" placeholder="Email" required />
+                <input class="input" name="password" type="password" placeholder="Mật khẩu (≥6 ký tự)" minlength="6"
+                    required />
+                <button class="btn w-fit">Tạo tài khoản</button>
+                <div id="signupMsg" class="text-sm text-white/70"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-white/10">
+        <div class="mx-auto max-w-7xl px-6 py-8 text-sm text-white/60 text-center">
+            © <span id="year"></span> Sentinel VN — Security-as-a-Plugin • Website: https://sentinelvn.io.vn • Email:
+            contact@sentinelvn.io.vn
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/app.js"></script>
+    <script src="js/checkout.js"></script>
+</body>
+
+</html>

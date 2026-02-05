@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SENTINEL VN — Về chúng tôi</title>
+    <meta name="description"
+        content="Sentinel VN — Plugin bảo mật cho VS Code, phát hiện sớm lỗ hổng và hướng dẫn khắc phục bằng AI. Chỉ từ 75.000đ/tháng." />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico" />
+    <link rel="shortcut icon" href="assets/images/favicon.ico" />
+    <link rel="apple-touch-icon" href="assets/images/favicon.ico" />
+    <meta name="theme-color" content="#0A1015" />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { inter: ['Inter', 'sans-serif'], orbitron: ['Orbitron', 'sans-serif'] },
+                    colors: { brand: { 400: '#1FE3FF' } }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Orbitron:wght@700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Base Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="text-white">
+    <!-- HEADER -->
+    <header class="sticky top-0 z-30 border-b border-white/10 blur-bg">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-3">
+                <img src="assets/images/favicon.ico" alt="Sentinel VN"
+                    class="h-9 w-9 rounded border border-cyan-400/40">
+                <span class="font-orbitron text-lg tracking-wider">SENTINEL <span
+                        class="text-brand-400">VN</span></span>
+            </a>
+            <nav class="hidden md:flex items-center gap-6 text-sm">
+                <a href="index.html#features" class="hover:text-brand-400">Tính năng</a>
+                <a href="pricing.html" class="hover:text-brand-400">Bảng giá</a>
+                <a href="checkout.html" class="hover:text-brand-400">Thanh toán</a>
+                <a href="about.html" class="text-brand-400">About</a>
+                <a href="dashboard.html" class="hover:text-brand-400">License</a>
+                <a href="contact.html" class="hover:text-brand-400">Hỗ trợ</a>
+                <button id="openAuth"
+                    class="ml-2 px-3 py-1.5 rounded-lg border border-white/20 hover:border-brand-400/60 text-sm">
+                    <span id="authBtnText">Đăng nhập / Đăng ký</span>
+                </button>
+            </nav>
+            <button id="openAuth_m"
+                class="md:hidden px-3 py-1.5 rounded-lg border border-white/20 hover:border-brand-400/60 text-sm">
+                <span id="authBtnText_m">Đăng nhập / Đăng ký</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ABOUT US -->
+    <section id="about" class="py-20 bg-gradient-to-b from-black/20 to-black/5 border-t border-white/10">
+        <div class="mx-auto max-w-5xl px-6 text-center">
+            <h2 class="font-orbitron text-3xl">Về Sentinel VN</h2>
+
+            <p class="text-white/85 text-lg leading-relaxed max-w-3xl mx-auto mt-6">
+                Sentinel VN được xây dựng bởi một nhóm kỹ sư bảo mật và sinh viên kỹ thuật ở Việt Nam
+                với mục tiêu rất rõ ràng: đưa tiêu chuẩn bảo mật đẳng cấp doanh nghiệp vào ngay trong
+                quá trình soạn thảo code — thay vì đợi pentest cuối kỳ.
+            </p>
+
+            <p class="text-white/70 text-base leading-relaxed max-w-3xl mx-auto mt-4">
+                Chúng tôi tin rằng bảo mật không nên là một cuộc điều tra "hậu kỳ", mà phải là công cụ
+                hỗ trợ lập trình viên mỗi ngày — dễ hiểu, dễ dùng, và mang tính giáo dục. Sentinel VN
+                giúp bạn phát hiện rủi ro, hiểu nguyên nhân, và khắc phục triệt để.
+            </p>
+
+            <div class="grid md:grid-cols-3 gap-6 text-left text-sm text-white/80 max-w-4xl mx-auto mt-10">
+                <div class="card p-5">
+                    <h4 class="font-semibold text-white">Tư duy dành cho Developer</h4>
+                    <p class="mt-2">Không phải checklist khô cứng. Chúng tôi đưa giải thích, bối cảnh tấn công
+                        và gợi ý bản vá dưới dạng bạn có thể copy & áp dụng ngay.</p>
+                </div>
+                <div class="card p-5">
+                    <h4 class="font-semibold text-white">Tương thích quy trình doanh nghiệp</h4>
+                    <p class="mt-2">Xuất SARIF/HTML, CI/CD Gatekeeper, hỗ trợ tuân thủ như ISO 27001 / SOC2,
+                        phù hợp cho đội ngũ cần audit trail.</p>
+                </div>
+                <div class="card p-5">
+                    <h4 class="font-semibold text-white">Sẵn sàng mở rộng</h4>
+                    <p class="mt-2">PREMIUM cho cá nhân và đội nhỏ. PRO cho doanh nghiệp cần quản lý license tập trung,
+                        SSO/SCIM và triển khai on-prem.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AUTH MODAL -->
+    <div id="authModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm items-center justify-center p-4 hidden">
+        <div class="card max-w-md w-full p-6 relative">
+            <button id="closeAuth" class="absolute right-3 top-3 text-white/60 hover:text-white">✕</button>
+            <h3 class="text-xl font-semibold">Tài khoản</h3>
+            <p class="text-white/70 text-sm mt-1">Đăng nhập.</p>
+
+            <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <button id="tabLogin" class="btn">Đăng nhập</button>
+                <button id="tabSignup" class="btn">Đăng ký</button>
+            </div>
+
+            <form id="loginForm" class="mt-4 grid gap-3">
+                <input class="input" name="email" type="email" placeholder="Email" required />
+                <input class="input" name="password" type="password" placeholder="Mật khẩu" required />
+                <button class="btn w-fit">Đăng nhập</button>
+                <div id="loginMsg" class="text-sm text-white/70"></div>
+            </form>
+
+            <form id="signupForm" class="mt-4 grid gap-3 hidden-el">
+                <input class="input" name="email" type="email" placeholder="Email" required />
+                <input class="input" name="password" type="password" placeholder="Mật khẩu (≥6 ký tự)" minlength="6"
+                    required />
+                <button class="btn w-fit">Tạo tài khoản</button>
+                <div id="signupMsg" class="text-sm text-white/70"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-white/10">
+        <div class="mx-auto max-w-7xl px-6 py-8 text-sm text-white/60 text-center">
+            © <span id="year"></span> Sentinel VN — Security-as-a-Plugin • Website: https://sentinelvn.io.vn • Email:
+            contact@sentinelvn.io.vn
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/app.js"></script>
+</body>
+
+</html>
