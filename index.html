@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SENTINEL VN — Security-as-a-Plugin</title>
-  <meta name="description" content="Sentinel VN — Plugin bảo mật cho VS Code, phát hiện sớm lỗ hổng và hướng dẫn khắc phục bằng AI. Chỉ từ 75.000đ/tháng." />
+  <meta name="description"
+    content="Sentinel VN — Plugin bảo mật cho VS Code, phát hiện sớm lỗ hổng và hướng dẫn khắc phục bằng AI. Chỉ từ 75.000đ/tháng." />
 
   <!-- Favicon -->
-  <link rel="icon" type="image/x-icon" href="favicon.ico" />
-  <link rel="shortcut icon" href="favicon.ico" />
-  <link rel="apple-touch-icon" href="favicon.ico" />
+  <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico" />
+  <link rel="shortcut icon" href="assets/images/favicon.ico" />
+  <link rel="apple-touch-icon" href="assets/images/favicon.ico" />
   <meta name="theme-color" content="#0A1015" />
 
   <!-- Tailwind CSS -->
@@ -18,65 +20,19 @@
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: { inter:['Inter','sans-serif'], orbitron:['Orbitron','sans-serif'] },
-          colors: { brand:{400:'#1FE3FF'} }
+          fontFamily: { inter: ['Inter', 'sans-serif'], orbitron: ['Orbitron', 'sans-serif'] },
+          colors: { brand: { 400: '#1FE3FF' } }
         }
       }
     }
   </script>
 
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Orbitron:wght@700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Orbitron:wght@700;800&display=swap"
+    rel="stylesheet">
 
   <!-- Base Styles -->
-  <style>
-    html,body{height:100%}
-    body{
-      background:
-        radial-gradient(circle at 1px 1px, rgba(31,227,255,.10) 1px, transparent 1px) 0 0 / 22px 22px,
-        linear-gradient(180deg,#050B10 0%,#07131A 100%);
-      color:#fff; font-family: Inter, system-ui, sans-serif;
-    }
-    .blur-bg{
-      backdrop-filter:saturate(140%) blur(6px);
-      background:rgba(5,11,16,.65)
-    }
-    .card{
-      border-radius:1rem;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.05)
-    }
-    /* Input fix: nền tối rõ hơn + chữ trắng để không bị chìm */
-    .input{
-      border-radius:0.75rem;
-      background:rgba(0,0,0,.7);
-      border:1px solid rgba(255,255,255,.25);
-      padding:0.75rem;
-      color:#fff;
-    }
-    .input option{
-      color:#fff;
-      background:#000;
-    }
-    .btn{
-      padding:0.75rem 1rem;
-      border-radius:0.75rem;
-      border:1px solid rgba(31,227,255,.6);
-      background:rgba(0,0,0,.4);
-      color:#fff;
-    }
-    .btn:hover{
-      background:rgba(31,227,255,.2);
-    }
-    .link{color:#1FE3FF}
-    .badge{
-      border:1px solid rgba(255,255,255,.18);
-      padding:.25rem .5rem;
-      border-radius:.5rem;
-      font-size:.75rem
-    }
-    .hidden-el{display:none}
-  </style>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body class="text-white">
@@ -84,7 +40,7 @@
   <header class="sticky top-0 z-30 border-b border-white/10 blur-bg">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <a href="#home" class="flex items-center gap-3">
-        <img src="favicon.ico" alt="Sentinel VN" class="h-9 w-9 rounded border border-cyan-400/40">
+        <img src="assets/images/favicon.ico" alt="Sentinel VN" class="h-9 w-9 rounded border border-cyan-400/40">
         <span class="font-orbitron text-lg tracking-wider">SENTINEL <span class="text-brand-400">VN</span></span>
       </a>
       <nav class="hidden md:flex items-center gap-6 text-sm">
@@ -94,11 +50,13 @@
         <a href="#about" class="hover:text-brand-400">About</a>
         <a href="#dashboard" class="hover:text-brand-400">License</a>
         <a href="#support" class="hover:text-brand-400">Hỗ trợ</a>
-        <button id="openAuth" class="ml-2 px-3 py-1.5 rounded-lg border border-white/20 hover:border-brand-400/60 text-sm">
+        <button id="openAuth"
+          class="ml-2 px-3 py-1.5 rounded-lg border border-white/20 hover:border-brand-400/60 text-sm">
           <span id="authBtnText">Đăng nhập</span>
         </button>
       </nav>
-      <button id="openAuth_m" class="md:hidden px-3 py-1.5 rounded-lg border border-white/20 hover:border-brand-400/60 text-sm">
+      <button id="openAuth_m"
+        class="md:hidden px-3 py-1.5 rounded-lg border border-white/20 hover:border-brand-400/60 text-sm">
         <span id="authBtnText_m">Đăng nhập</span>
       </button>
     </div>
@@ -115,25 +73,31 @@
     </p>
 
     <div class="max-w-3xl mx-auto text-lg md:text-xl text-white/85 leading-relaxed space-y-4 mt-4">
-      <p><strong>Sentinel VN</strong> ra đời với sứ mệnh giúp lập trình viên Việt phát hiện sớm, hiểu sâu và xử lý triệt để các rủi ro bảo mật ngay trong quá trình viết code.</p>
-      <p>Ứng dụng <strong>AI phân tích thông minh</strong> và khả năng <strong>tích hợp liền mạch trong VS Code</strong>, Sentinel VN mang đến trải nghiệm bảo mật chủ động, trực quan và dễ tiếp cận cho mọi developer.</p>
-      <p class="text-brand-400 font-semibold">Chỉ từ 75.000 đồng mỗi tháng — Viết code an toàn hơn, thông minh hơn và tự tin hơn mỗi ngày.</p>
+      <p><strong>Sentinel VN</strong> ra đời với sứ mệnh giúp lập trình viên Việt phát hiện sớm, hiểu sâu và xử lý triệt
+        để các rủi ro bảo mật ngay trong quá trình viết code.</p>
+      <p>Ứng dụng <strong>AI phân tích thông minh</strong> và khả năng <strong>tích hợp liền mạch trong VS
+          Code</strong>, Sentinel VN mang đến trải nghiệm bảo mật chủ động, trực quan và dễ tiếp cận cho mọi developer.
+      </p>
+      <p class="text-brand-400 font-semibold">Chỉ từ 75.000 đồng mỗi tháng — Viết code an toàn hơn, thông minh hơn và tự
+        tin hơn mỗi ngày.</p>
     </div>
 
-    <a href="#contact" class="mt-8 inline-block px-7 py-3 rounded-xl border border-brand-400 hover:bg-brand-400/30 text-base shadow-lg transition">
+    <a href="#contact"
+      class="mt-8 inline-block px-7 py-3 rounded-xl border border-brand-400 hover:bg-brand-400/30 text-base shadow-lg transition">
       📞 Liên hệ ngay với chúng tôi
     </a>
 
-     <div class="mt-10 w-full max-w-4xl mx-auto shadow-xl border border-brand-400/40 rounded-xl overflow-hidden">
+    <div class="mt-10 w-full max-w-4xl mx-auto shadow-xl border border-brand-400/40 rounded-xl overflow-hidden">
       <video controls autoplay muted loop playsinline class="w-full h-auto rounded-xl">
-        <source src="SourceFinal.mp4" type="video/mp4">
+        <source src="assets/videos/SourceFinal.mp4" type="video/mp4">
         Trình duyệt của bạn không hỗ trợ video HTML5.
       </video>
     </div>
 
     <div class="mx-auto max-w-7xl px-6 mt-8">
       <div class="rounded-xl border border-brand-400/50 bg-black/60 backdrop-blur-sm overflow-hidden">
-        <div class="w-full px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between text-sm font-semibold tracking-widest">
+        <div
+          class="w-full px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between text-sm font-semibold tracking-widest">
           <div class="uppercase">EXE201 — GROUP 78</div>
           <div class="uppercase">Lecture: Ms Phan Hà</div>
         </div>
@@ -170,7 +134,8 @@
             <span class="badge">Cá nhân</span>
           </div>
           <p class="mt-2 text-white/70">Quét cơ bản, rule giới hạn.</p>
-          <div class="mt-4 text-4xl font-orbitron">0đ<span class="text-base font-normal text-white/60">/tháng</span></div>
+          <div class="mt-4 text-4xl font-orbitron">0đ<span class="text-base font-normal text-white/60">/tháng</span>
+          </div>
           <ul class="mt-4 space-y-2 text-sm text-white/80">
             <li>• 100 lần quét/tháng</li>
             <li>• Rule OWASP cơ bản</li>
@@ -187,7 +152,8 @@
             <span class="badge">Developer</span>
           </div>
           <p class="mt-2 text-white/70">Toàn bộ rule + gợi ý bản vá, phù hợp developer cá nhân và đội nhỏ.</p>
-          <div class="mt-4 text-4xl font-orbitron">75.000đ<span class="text-base font-normal text-white/60">/tháng</span></div>
+          <div class="mt-4 text-4xl font-orbitron">75.000đ<span
+              class="text-base font-normal text-white/60">/tháng</span></div>
           <ul class="mt-4 space-y-2 text-sm text-white/80">
             <li>• Không giới hạn dự án</li>
             <li>• Gợi ý PR/bản vá</li>
@@ -331,7 +297,9 @@
         <h2 class="font-orbitron text-3xl">Quản lý License</h2>
         <div class="text-sm text-right">
           <span id="userEmail" class="text-white/70"></span>
-          <button id="logoutBtn" class="ml-2 px-3 py-1 rounded-lg border border-white/20 hover:border-brand-400/60 text-sm hidden">Đăng xuất</button>
+          <button id="logoutBtn"
+            class="ml-2 px-3 py-1 rounded-lg border border-white/20 hover:border-brand-400/60 text-sm hidden">Đăng
+            xuất</button>
         </div>
       </div>
 
@@ -414,7 +382,8 @@
         <input name="name" required placeholder="Họ và tên" class="input" />
         <input name="email" type="email" required placeholder="Email" class="input" />
         <textarea name="message" rows="4" required placeholder="Nhu cầu của bạn" class="input"></textarea>
-        <button class="px-5 py-3 rounded-xl bg-brand-400/25 border border-brand-400/60 hover:bg-brand-400/35 w-fit mx-auto text-white">
+        <button
+          class="px-5 py-3 rounded-xl bg-brand-400/25 border border-brand-400/60 hover:bg-brand-400/35 w-fit mx-auto text-white">
           Gửi yêu cầu
         </button>
       </form>
@@ -424,342 +393,13 @@
   <!-- FOOTER -->
   <footer class="border-t border-white/10">
     <div class="mx-auto max-w-7xl px-6 py-8 text-sm text-white/60 text-center">
-      © <span id="year"></span> Sentinel VN — Security-as-a-Plugin • Website: https://sentinelvn.io.vn • Email: contact@sentinelvn.io.vn
+      © <span id="year"></span> Sentinel VN — Security-as-a-Plugin • Website: https://sentinelvn.io.vn • Email:
+      contact@sentinelvn.io.vn
     </div>
   </footer>
 
   <!-- Scripts -->
-  <script>
-    document.getElementById('year').textContent = new Date().getFullYear();
-
-    // ========= LocalStorage model =========
-    const LS_USERS = 'sentinel_users';      // { email: {password} }
-    const LS_SESSION = 'sentinel_session';  // { email }
-    const LS_LICENSES = 'sentinel_licenses';// { email: [ {key, plan, status, createdAt, expiresAt} ] }
-
-    const $ = (q, root=document) => root.querySelector(q);
-    const $$ = (q, root=document) => Array.from(root.querySelectorAll(q));
-
-    const state = {
-      get users(){ return JSON.parse(localStorage.getItem(LS_USERS) || '{}'); },
-      set users(v){ localStorage.setItem(LS_USERS, JSON.stringify(v)); },
-      get session(){ return JSON.parse(localStorage.getItem(LS_SESSION) || 'null'); },
-      set session(v){ localStorage.setItem(LS_SESSION, JSON.stringify(v)); },
-      clearSession(){ localStorage.removeItem(LS_SESSION); },
-      get licenses(){ return JSON.parse(localStorage.getItem(LS_LICENSES) || '{}'); },
-      set licenses(v){ localStorage.setItem(LS_LICENSES, JSON.stringify(v)); },
-    };
-
-    const fmtDate = ts => new Date(ts).toLocaleDateString('vi-VN');
-    const addDays = (ts, days) => new Date(ts + days*24*3600*1000).getTime();
-
-    // ---- License Key Generator ----
-    // PREMIUM (dev, 75k/tháng): SNTL-9X2B-G7QM
-    // PRO (doanh nghiệp): PRO-XXXX-XXXX-XXXX-XXXX
-    function genKey(plan='PREMIUM') {
-      // helper tạo block A-Z0-9
-      function randBlock(len){
-        const bytes = crypto.getRandomValues(new Uint8Array(len));
-        const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        let out = "";
-        for (let i=0; i<len; i++){
-          out += alphabet[ bytes[i] % alphabet.length ];
-        }
-        return out;
-      }
-
-      if (plan === 'PREMIUM') {
-        const part1 = randBlock(4);
-        const part2 = randBlock(4);
-        return `SNTL-${part1}-${part2}`.toUpperCase();
-      } else {
-        const bytes = crypto.getRandomValues(new Uint8Array(10)).reduce(
-          (s,b)=>s+('0'+b.toString(16)).slice(-2),''
-        );
-        return `${plan}-${bytes.slice(0,4)}-${bytes.slice(4,8)}-${bytes.slice(8,12)}-${bytes.slice(12,16)}`.toUpperCase();
-      }
-    }
-
-    // ========= Auth modal =========
-    const authModal = $('#authModal');
-    const openAuthBtns = ['#openAuth','#openAuth_m','#needLoginLink'].map(sel => $(sel));
-    openAuthBtns.forEach(btn => btn && btn.addEventListener('click', e => {
-      e.preventDefault();
-      authModal.classList.remove('hidden');
-      authModal.classList.add('flex');
-    }));
-
-    $('#closeAuth').addEventListener('click', () => authModal.classList.add('hidden'));
-
-    const loginForm = $('#loginForm');
-    const signupForm = $('#signupForm');
-    const tabLogin = $('#tabLogin');
-    const tabSignup = $('#tabSignup');
-
-    tabLogin.addEventListener('click', () => {
-      signupForm.classList.add('hidden-el');
-      loginForm.classList.remove('hidden-el');
-    });
-    tabSignup.addEventListener('click', () => {
-      loginForm.classList.add('hidden-el');
-      signupForm.classList.remove('hidden-el');
-    });
-
-    signupForm.addEventListener('submit', e => {
-      e.preventDefault();
-      const email = signupForm.email.value.trim().toLowerCase();
-      const password = signupForm.password.value;
-      const users = state.users;
-      if(users[email]) {
-        $('#signupMsg').textContent='Email đã tồn tại.';
-        return;
-      }
-      users[email] = { password };
-      state.users = users;
-      state.session = { email };
-      $('#signupMsg').textContent='Tạo tài khoản thành công.';
-      updateAuthUI();
-      authModal.classList.add('hidden');
-    });
-
-    loginForm.addEventListener('submit', e => {
-      e.preventDefault();
-      const email = loginForm.email.value.trim().toLowerCase();
-      const password = loginForm.password.value;
-      const users = state.users;
-      if(!users[email] || users[email].password !== password) {
-        $('#loginMsg').textContent='Sai thông tin đăng nhập.';
-        return;
-      }
-      state.session = { email };
-      $('#loginMsg').textContent='Đăng nhập thành công.';
-      updateAuthUI();
-      authModal.classList.add('hidden');
-    });
-
-    $('#logoutBtn').addEventListener('click', () => {
-      state.clearSession();
-      updateAuthUI();
-    });
-
-    function updateAuthUI(){
-      const sess = state.session;
-      const loggedIn = !!(sess && sess.email);
-      const email = loggedIn ? sess.email : '';
-
-      $('#userEmail').textContent = loggedIn ? `Đang đăng nhập: ${email}` : '';
-      $('#logoutBtn').classList.toggle('hidden', !loggedIn);
-      $('#needLogin').classList.toggle('hidden', loggedIn);
-      $('#licenseArea').classList.toggle('hidden', !loggedIn);
-
-      $('#authBtnText').textContent = loggedIn ? 'Tài khoản' : 'Đăng nhập';
-      $('#authBtnText_m').textContent = $('#authBtnText').textContent;
-
-      if(loggedIn) renderLicenses();
-    }
-    updateAuthUI();
-
-    // ========= Pricing -> preselect plan =========
-    $$('a[href="#checkout"][data-plan]').forEach(a=>{
-      a.addEventListener('click', ()=>{
-        const plan = a.getAttribute('data-plan'); // PREMIUM / PRO
-        setTimeout(()=>{ $('#planSelect').value = plan; }, 0);
-      });
-    });
-
-    // ========= Checkout submit =========
-    $('#checkoutForm').addEventListener('submit', e=>{
-      e.preventDefault();
-
-      const sess = state.session;
-      if(!sess){
-        $('#checkoutMsg').textContent = 'Vui lòng đăng nhập trước khi thanh toán.';
-        authModal.classList.remove('hidden');
-        authModal.classList.add('flex');
-        return;
-      }
-
-      const email = sess.email;
-      const form = new FormData(e.target);
-      const plan = form.get('plan'); // PREMIUM hoặc PRO
-
-      const now = Date.now();
-      const exp = addDays(now, 30);
-      const key = genKey(plan);
-
-      const licenses = state.licenses;
-      licenses[email] = licenses[email] || [];
-      licenses[email].push({
-        key,
-        plan,
-        status:'active',
-        createdAt: now,
-        expiresAt: exp
-      });
-      state.licenses = licenses;
-
-      $('#checkoutMsg').innerHTML =
-        `✅ Thanh toán thành công (demo). License của bạn: <span class="link">${key}</span>. Đã thêm vào Dashboard.`;
-
-      renderLicenses();
-      location.hash = '#dashboard';
-    });
-
-    // ========= License Dashboard render =========
-    function renderLicenses(){
-      const sess = state.session;
-      if(!sess) return;
-      const email = sess.email;
-
-      const list = (state.licenses[email] || []).sort((a,b)=>b.createdAt-a.createdAt);
-      const tbody = $('#licenseTbody');
-      tbody.innerHTML = '';
-
-      if(!list.length){
-        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-4 text-white/60">Chưa có license.</td></tr>`;
-        return;
-      }
-
-      list.forEach((lic, idx)=>{
-        const tr = document.createElement('tr');
-        const statusColor = lic.status==='active' ? 'text-emerald-400' : 'text-white/60';
-        tr.innerHTML = `
-          <td class="px-4 py-3 font-mono">${lic.key}</td>
-          <td class="px-4 py-3">${lic.plan}</td>
-          <td class="px-4 py-3 ${statusColor}">${lic.status}</td>
-          <td class="px-4 py-3">${fmtDate(lic.createdAt)}</td>
-          <td class="px-4 py-3">${fmtDate(lic.expiresAt)}</td>
-          <td class="px-4 py-3">
-            <div class="flex flex-wrap gap-2">
-              <button class="px-3 py-1 rounded border border-white/20 hover:border-brand-400/60 text-xs" data-act="extend" data-key="${lic.key}">Gia hạn +30d</button>
-              <button class="px-3 py-1 rounded border border-white/20 hover:border-brand-400/60 text-xs" data-act="toggle" data-key="${lic.key}">${lic.status==='active'?'Tạm dừng':'Kích hoạt'}</button>
-              <button class="px-3 py-1 rounded border border-white/20 hover:border-brand-400/60 text-xs" data-act="copy" data-key="${lic.key}">Copy Key</button>
-            </div>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      // nút hành động
-      tbody.querySelectorAll('button').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const act = btn.getAttribute('data-act');
-          const key = btn.getAttribute('data-key');
-          const email = state.session.email;
-          const all = state.licenses;
-          const arr = all[email] || [];
-          const lic = arr.find(l => l.key === key);
-
-          if(act==='copy'){
-            if (key) {
-              navigator.clipboard.writeText(key);
-              btn.textContent='Đã copy';
-              setTimeout(()=>btn.textContent='Copy Key',800);
-            }
-            return;
-          }
-
-          if(!lic) return;
-
-          if(act==='extend'){
-            lic.expiresAt = addDays(lic.expiresAt, 30);
-          }
-          if(act==='toggle'){
-            lic.status = lic.status==='active' ? 'paused' : 'active';
-          }
-
-          all[email] = arr;
-          state.licenses = all;
-          renderLicenses();
-        });
-      });
-    }
-
-    // ========= Manual Activation =========
-    $('#activateForm').addEventListener('submit', e=>{
-      e.preventDefault();
-
-      const sess = state.session;
-      if(!sess){
-        $('#activateMsg').textContent='Hãy đăng nhập trước.';
-        return;
-      }
-
-      const rawKey = new FormData(e.target).get('key').trim().toUpperCase();
-      if(!rawKey || rawKey.length < 10){
-        $('#activateMsg').textContent='Key không hợp lệ.';
-        return;
-      }
-
-      // Suy đoán gói từ key:
-      // - SNTL-... => PREMIUM
-      // - PRO-...  => PRO
-      // fallback   => PREMIUM
-      let planGuess = 'PREMIUM';
-      if (rawKey.startsWith('SNTL-')) {
-        planGuess = 'PREMIUM';
-      } else if (rawKey.startsWith('PRO-')) {
-        planGuess = 'PRO';
-      }
-
-      const now = Date.now();
-      const exp = addDays(now, 30);
-
-      const licenses = state.licenses;
-      const email = sess.email;
-      licenses[email] = licenses[email] || [];
-
-      // Chỉ cho phép kích hoạt/renew nếu key đã thuộc về user này
-      let found = false;
-      for (let lic of licenses[email]) {
-        if (lic.key === rawKey) {
-          // Update expiration and status
-          lic.expiresAt = exp;
-          lic.status = 'active';
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        // Nếu key chưa từng thuộc về user này, báo lỗi
-        $('#activateMsg').textContent = 'Key không thuộc tài khoản này hoặc không hợp lệ.';
-        return;
-      }
-      state.licenses = licenses;
-
-      $('#activateMsg').textContent = 'Đã gia hạn license.';
-      renderLicenses();
-      e.target.reset();
-    });
-
-    // ========= Smooth scroll anchors =========
-    $$('a[href^="#"]').forEach(a=>{
-      a.addEventListener('click', (e)=>{
-        const id = a.getAttribute('href');
-        if(id.length>1 && document.querySelector(id)){
-          e.preventDefault();
-          document.querySelector(id).scrollIntoView({behavior:'smooth', block:'start'});
-          history.replaceState(null,'',id);
-        }
-      });
-    });
-
-    // ========= Query param sync ?plan=PREMIUM|PRO -> select =========
-    (function syncPlanFromQuery(){
-      const m = location.href.match(/[?&]plan=(PREMIUM|PRO)/i);
-      if(m) $('#planSelect').value = m[1].toUpperCase();
-    })();
-
-    // ========= Sync click pricing -> select plan checkout =========
-    $$('a[data-plan]').forEach(a=>{
-      a.addEventListener('click', ()=>{
-        const p = a.getAttribute('data-plan'); // PREMIUM | PRO
-        setTimeout(()=> {
-          const sel = $('#planSelect');
-          if(sel) sel.value = p;
-        }, 0);
-      });
-    });
-  </script>
+  <script src="js/app.js"></script>
 </body>
+
 </html>
