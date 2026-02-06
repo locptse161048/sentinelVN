@@ -46,7 +46,7 @@
                         class="text-brand-400">VN</span></span>
             </a>
             <nav class="hidden md:flex items-center gap-6 text-sm">
-                <a href="index.html#features" class="hover:text-brand-400">Tính năng</a>
+
                 <a href="pricing.html" class="hover:text-brand-400">Bảng giá</a>
                 <a href="checkout.html" class="hover:text-brand-400">Thanh toán</a>
                 <a href="about.html" class="hover:text-brand-400">About</a>
@@ -114,27 +114,30 @@
     <div id="authModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm items-center justify-center p-4 hidden">
         <div class="card max-w-md w-full p-6 relative">
             <button id="closeAuth" class="absolute right-3 top-3 text-white/60 hover:text-white">✕</button>
-            <h3 class="text-xl font-semibold">Tài khoản</h3>
-            <p class="text-white/70 text-sm mt-1">Đăng nhập </p>
+            <div id="authTitle" class="text-xl font-semibold mb-4 text-center">Đăng nhập từ Sentinel VN</div>
 
-            <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
-                <button id="tabLogin" class="btn">Đăng nhập</button>
-                <button id="tabSignup" class="btn">Đăng ký</button>
-            </div>
-
-            <form id="loginForm" class="mt-4 grid gap-3">
+            <!-- Login Form -->
+            <form id="loginForm" class="grid gap-4">
                 <input class="input" name="email" type="email" placeholder="Email" required />
                 <input class="input" name="password" type="password" placeholder="Mật khẩu" required />
-                <button class="btn w-fit">Đăng nhập</button>
-                <div id="loginMsg" class="text-sm text-white/70"></div>
+                <button class="btn w-full">Đăng nhập</button>
+                <div id="loginMsg" class="text-sm text-red-400 text-center min-h-[20px]"></div>
+                <div class="text-sm text-center text-white/60">
+                    Chưa có tài khoản? <a href="#" id="toSignup" class="text-brand-400 hover:underline">Đăng ký ngay</a>
+                </div>
             </form>
 
-            <form id="signupForm" class="mt-4 grid gap-3 hidden-el">
+            <!-- Signup Form -->
+            <form id="signupForm" class="grid gap-4 hidden-el">
+                <input class="input" name="fullname" type="text" placeholder="Họ và Tên" required />
                 <input class="input" name="email" type="email" placeholder="Email" required />
                 <input class="input" name="password" type="password" placeholder="Mật khẩu (≥6 ký tự)" minlength="6"
                     required />
-                <button class="btn w-fit">Tạo tài khoản</button>
-                <div id="signupMsg" class="text-sm text-white/70"></div>
+                <button class="btn w-full">Đăng ký</button>
+                <div id="signupMsg" class="text-sm text-red-400 text-center min-h-[20px]"></div>
+                <div class="text-sm text-center text-white/60">
+                    Đã có tài khoản? <a href="#" id="toLogin" class="text-brand-400 hover:underline">Đăng nhập</a>
+                </div>
             </form>
         </div>
     </div>
