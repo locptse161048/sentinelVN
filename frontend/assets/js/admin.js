@@ -1,9 +1,9 @@
 const sess = JSON.parse(localStorage.getItem('sentinel_session'));
-if (!sess || sess.role !== 'admin') location.href = 'index.html';
+if (!sess || sess.role !== 'admin') location.href = '/index.html';
 
 function logout() {
     localStorage.removeItem('sentinel_session');
-    location.href = 'index.html';
+    location.href = '/index.html';
 }
 
 /* ===== SUPPORT MESSAGES ===== */
