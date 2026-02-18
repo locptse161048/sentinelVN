@@ -2,21 +2,16 @@
 
 document.getElementById('year').textContent = new Date().getFullYear();
 // ========= LocalStorage model =========
-const LS_LICENSES = 'sentinel_licenses';// { email: [ {key, plan, status, createdAt, expiresAt} ] }
 
+const API_BASE = 'https://sentinelvn.onrender.com';
 const $ = (q, root = document) => root.querySelector(q);
 const $$ = (q, root = document) => Array.from(root.querySelectorAll(q));
-const LS_USERS = 'sentinel_users';
 const LS_SESSION = 'sentinel_session';
 
 const state = {
-    get users() { return JSON.parse(localStorage.getItem(LS_USERS) || '{}'); },
-    set users(v) { localStorage.setItem(LS_USERS, JSON.stringify(v)); },
     get session() { return JSON.parse(localStorage.getItem(LS_SESSION) || 'null'); },
     set session(v) { localStorage.setItem(LS_SESSION, JSON.stringify(v)); },
     clearSession() { localStorage.removeItem(LS_SESSION); },
-    get licenses() { return JSON.parse(localStorage.getItem(LS_LICENSES) || '{}'); },
-    set licenses(v) { localStorage.setItem(LS_LICENSES, JSON.stringify(v)); },
 };
 
 const fmtDate = ts => new Date(ts).toLocaleDateString('vi-VN');
@@ -251,94 +246,77 @@ function switchMode(m) {
 
 
 /* SUBMIT */
-form.onsubmit = e => {
+
+form.onsubmit = async e => {
     e.preventDefault();
     msg.textContent = '';
-
     const email = form.email.value.trim().toLowerCase();
     const password = form.password.value;
-    const users = JSON.parse(localStorage.getItem(LS_USERS) || '{}');
-    const now = new Date();
-    const expires = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
 
     /* ===== SIGNUP ===== */
     if (mode === 'signup') {
-
-        // Chuẩn hóa email
-        const normalizedEmail = email.trim().toLowerCase();
-
         // Không cho tạo admin
-        if (normalizedEmail === ADMIN_EMAIL.toLowerCase()) {
+        if (email === ADMIN_EMAIL.toLowerCase()) {
             msg.textContent = '❌ Không thể đăng ký tài khoản admin.';
             return;
         }
-
-        // Validate cơ bản
-        if (!normalizedEmail || !password) {
+        if (!email || !password) {
             msg.textContent = '⚠️ Vui lòng nhập đầy đủ thông tin.';
             return;
         }
-
         if (password.length < 6) {
             msg.textContent = '⚠️ Mật khẩu phải tối thiểu 6 ký tự.';
             return;
         }
-
-        // Kiểm tra tồn tại
-        if (users[normalizedEmail]) {
-            msg.textContent = '⚠️ Email đã tồn tại.';
+        // Gọi API đăng ký
+        const res = await fetch(`${API_BASE}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, name: email })
+        });
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            msg.textContent = data.message || 'Đăng ký thất bại.';
             return;
         }
-
-        // Tạo user chuẩn hóa
-        users[normalizedEmail] = {
-            password: password,
-            role: "client",
-            plan: "Free",
-            status: "active",   // thêm dòng này
-            createdAt: now.toISOString(),
-            expiresAt: expires.toISOString(),
-        };
-
-
-        localStorage.setItem(LS_USERS, JSON.stringify(users));
-
         msg.textContent = '✅ Đăng ký thành công. Hãy đăng nhập.';
         switchMode('login');
         return;
     }
-
 
     /* ===== LOGIN ===== */
     // ADMIN
     if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
         localStorage.setItem(LS_SESSION, JSON.stringify({
             email,
-            role: 'admin'
+            role: 'admin',
+            token: 'admin-token'
         }));
         window.location.href = 'admin.html';
         return;
     }
 
-    // CLIENT
-    if (!users[email]) {
-        msg.textContent = '⚠️ Chưa có tài khoản.';
+    // CLIENT: gọi API login
+    const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        msg.textContent = data.message || 'Đăng nhập thất bại.';
         return;
     }
-    if (users[email].password !== password) {
-        msg.textContent = '❌ Thông tin đăng nhập không chính xác.';
-        return;
-    }
-    if (users[email].status === "suspended") {
-        msg.textContent = "❌ Tài khoản của bạn hiện đã bị tạm ngưng";
+    if (data.user && data.user.status === 'tạm ngưng') {
+        msg.textContent = '❌ Tài khoản của bạn hiện đã bị tạm ngưng';
         return;
     }
     localStorage.setItem(LS_SESSION, JSON.stringify({
-        email,
-        role: 'client'
+        email: data.user.email,
+        role: data.user.role,
+        token: data.token
     }));
-    window.location.href = 'client.html';
+    window.location.href = data.user.role === 'admin' ? 'admin.html' : 'client.html';
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -390,7 +368,6 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.removeItem(LS_SESSION);
             window.location.reload();
         };
-
         logoutBtn?.addEventListener("click", doLogout);
         logoutBtn_m?.addEventListener("click", doLogout);
     }

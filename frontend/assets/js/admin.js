@@ -7,71 +7,47 @@ function logout() {
 }
 
 /* ===== SUPPORT MESSAGES ===== */
+
+const API_BASE = 'https://sentinelvn.onrender.com';
 const supportContainer = document.getElementById("supportMessages");
-const messages = JSON.parse(localStorage.getItem("support_messages") || "[]");
-function renderSupportMessages(keyword = "") {
-    supportContainer.innerHTML = "";
+async function fetchSupportMessages() {
+    const res = await fetch(`${API_BASE}/support`);
+    if (!res.ok) return [];
+    return await res.json();
+}
 
-    const messages = JSON.parse(
-        localStorage.getItem("support_messages") || "[]"
-    );
-
-    const filtered = messages.filter(msg =>
-        msg.email.toLowerCase().includes(keyword)
-    );
-
-    if (filtered.length === 0) {
-        supportContainer.innerHTML = `
-        <div class="text-white/50">
-            Không tìm thấy tin nhắn phù hợp.
-        </div>
-        `;
+async function renderSupportMessages(keyword = "") {
+    supportContainer.innerHTML = "Đang tải...";
+    let messages = await fetchSupportMessages();
+    if (keyword) {
+        messages = messages.filter(msg => (msg.subject || '').toLowerCase().includes(keyword));
+    }
+    if (messages.length === 0) {
+        supportContainer.innerHTML = `<div class=\"text-white/50\">Không tìm thấy tin nhắn phù hợp.</div>`;
         return;
     }
-
-    [...filtered].reverse().forEach(msg => {
-
+    supportContainer.innerHTML = "";
+    [...messages].reverse().forEach(msg => {
         const statusText =
             msg.status === "resolved"
                 ? '<span class="text-green-400 text-xs">Đã phản hồi</span>'
                 : '<span class="text-yellow-400 text-xs">Đang xử lý</span>';
-
         supportContainer.innerHTML += `
-        <div class="border border-white/10 rounded-lg p-3 bg-white/5">
-            
-            <div class="flex justify-between items-center">
-                <div class="text-sm text-brand-400 font-semibold">
-                    ${msg.email}
-                </div>
+        <div class=\"border border-white/10 rounded-lg p-3 bg-white/5\">
+            <div class=\"flex justify-between items-center\">
+                <div class=\"text-sm text-brand-400 font-semibold\">${msg.clientId || ''}</div>
                 ${statusText}
             </div>
-
-            <div class="text-sm font-semibold mt-1">
-                ${msg.subject}
-            </div>
-
-            <div class="text-sm text-white/80 mt-1">
-                ${msg.message}
-            </div>
-
-            <div class="text-xs text-white/40 mt-2">
-                ${new Date(msg.createdAt).toLocaleString()}
-            </div>
-
+            <div class=\"text-sm font-semibold mt-1\">${msg.subject}</div>
+            <div class=\"text-sm text-white/80 mt-1\">${msg.message}</div>
+            <div class=\"text-xs text-white/40 mt-2\">${new Date(msg.createdAt).toLocaleString()}</div>
             ${msg.status !== "resolved"
-                ? `
-                <button onclick="markResolved(${msg.id})"
-                    class="mt-2 px-3 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20">
-                    Đánh dấu hoàn thành
-                </button>
-            `
+                ? `<button onclick=\"markResolved('${msg.id}')\" class=\"mt-2 px-3 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20\">Đánh dấu hoàn thành</button>`
                 : ""
             }
-        </div>
-        `;
+        </div>`;
     });
 }
-
 
 renderSupportMessages();
 
@@ -94,82 +70,46 @@ function showTab(tabId) {
 
 
 /* ===== ACCOUNT DATA ===== */
-const LS_USERS = "sentinel_users";
-function renderAccounts(keyword = "") {
-    const accountTable = document.getElementById("accountTable");
-    accountTable.innerHTML = "";
-    const users = JSON.parse(localStorage.getItem(LS_USERS) || "{}");
-    const emails = Object.keys(users);
-    const filtered = emails.filter(email => {
-        const user = users[email];
-        return (
-            email.toLowerCase().includes(keyword) ||
-            (user.licenseKey || "").toLowerCase().includes(keyword)
-        );
-    });
-    if (emails.length === 0) {
-        accountTable.innerHTML = `
-      <tr>
-        <td colspan="4" class="p-4 text-center text-white/50">
-          Chưa có tài khoản nào
-        </td>
-      </tr>
-    `;
-        return;
-    }
-    filtered.forEach(email => {
-        const user = users[email];
-        if (!user.status) {
-            user.status = "active";
+
+async function fetchAccounts() {
+        const res = await fetch(`${API_BASE}/admin/clients`, {
+                headers: { 'Authorization': `Bearer ${sess.token}` }
+        });
+        if (!res.ok) return [];
+        return await res.json();
+}
+
+async function renderAccounts(keyword = "") {
+        const accountTable = document.getElementById("accountTable");
+        accountTable.innerHTML = "<tr><td colspan='7'>Đang tải...</td></tr>";
+        let users = await fetchAccounts();
+        if (keyword) {
+                users = users.filter(u => (u.email || '').toLowerCase().includes(keyword));
         }
-        const isActive = user.status === "active";
-        const statusText = isActive ? "Đang hoạt động" : "Tạm ngưng";
-        const statusColor = isActive
-            ? "text-green-400"
-            : "text-red-400";
-        accountTable.innerHTML += `
-  <tr class="border-t border-white/10">
-    <td class="p-2">${user.licenseKey || '-'}</td>
-    <td class="p-2">${email}</td>
-    <td class="p-2 ${statusColor}">
-  ${statusText}
-</td>
-    <td class="p-2">${user.plan}</td>
-    <td class="p-2">
-  ${user.createdAt
-                ? new Date(user.createdAt).toLocaleDateString("vi-VN")
-                : "-"
-            }
-</td>
-<td class="p-2">
-  ${user.expiresAt
-                ? new Date(user.expiresAt).toLocaleDateString("vi-VN")
-                : "-"
-            }
-</td>
-
-    <td class="p-2 space-x-3">
-      <button onclick="deleteUser('${email}')" 
-        class="px-2 py-1 text-xs border border-red-400 rounded hover:bg-red-400/20">
-        Xóa
-      </button>
-
-      <button onclick="togglePlan('${email}')" 
-        class="px-2 py-1 text-xs border border-brand-400 rounded hover:bg-brand-400/20">
-        Đổi gói
-      </button>
-      <button onclick="extendUser('${email}')"
-        class="px-2 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20">
-      Gia hạn 30 ngày
-      </button>
-      <button onclick="toggleStatus('${email}')"
-  class="px-2 py-1 text-xs border border-yellow-400 rounded hover:bg-yellow-400/20">
-  Đổi trạng thái
-</button>
-    </td>
-  </tr>
-`;
-    });
+        if (!users.length) {
+                accountTable.innerHTML = `<tr><td colspan='7' class='p-4 text-center text-white/50'>Chưa có tài khoản nào</td></tr>`;
+                return;
+        }
+        users.forEach(user => {
+                const isActive = user.status === "đang hoạt động";
+                const statusText = isActive ? "Đang hoạt động" : "Tạm ngưng";
+                const statusColor = isActive ? "text-green-400" : "text-red-400";
+                accountTable.innerHTML += `
+                <tr class=\"border-t border-white/10\">
+                        <td class=\"p-2\">${user.licenseKey || '-'}<\/td>
+                        <td class=\"p-2\">${user.email}<\/td>
+                        <td class=\"p-2 ${statusColor}\">${statusText}<\/td>
+                        <td class=\"p-2\">${user.plan || '-'}<\/td>
+                        <td class=\"p-2\">${user.createdAt ? new Date(user.createdAt).toLocaleDateString("vi-VN") : '-'}<\/td>
+                        <td class=\"p-2\">${user.expiresAt ? new Date(user.expiresAt).toLocaleDateString("vi-VN") : '-'}<\/td>
+                        <td class=\"p-2 space-x-3\">
+                                <button onclick=\"deleteUser('${user.id}')\" class=\"px-2 py-1 text-xs border border-red-400 rounded hover:bg-red-400/20\">Xóa</button>
+                                <button onclick=\"togglePlan('${user.id}')\" class=\"px-2 py-1 text-xs border border-brand-400 rounded hover:bg-brand-400/20\">Đổi gói</button>
+                                <button onclick=\"extendUser('${user.id}')\" class=\"px-2 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20\">Gia hạn 30 ngày</button>
+                                <button onclick=\"toggleStatus('${user.id}')\" class=\"px-2 py-1 text-xs border border-yellow-400 rounded hover:bg-yellow-400/20\">Đổi trạng thái</button>
+                        </td>
+                </tr>`;
+        });
 }
 
 renderAccounts();
