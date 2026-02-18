@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* ===== CUSTOM BASE STYLES ===== */
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(circle at 1px 1px, rgba(31, 227, 255, .10) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(180deg, #050B10 0%, #07131A 100%);
+  color: #fff;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.blur-bg {
+  backdrop-filter: saturate(140%) blur(6px);
+  background: rgba(5, 11, 16, .65);
+}
+
+.card {
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, .12);
+  background: rgba(255, 255, 255, .05);
+}
+
+.input {
+  border-radius: 0.75rem;
+  background: rgba(0, 0, 0, .7);
+  border: 1px solid rgba(255, 255, 255, .25);
+  padding: 0.75rem;
+  color: #fff;
+}
+
+.input option {
+  color: #fff;
+  background: #000;
+}
+
+.btn {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(31, 227, 255, .6);
+  background: rgba(0, 0, 0, .4);
+  color: #fff;
+}
+
+.btn:hover {
+  background: rgba(31, 227, 255, .2);
+}
+
+.link {
+  color: #1FE3FF;
+}
+
+.badge {
+  border: 1px solid rgba(255, 255, 255, .18);
+  padding: .25rem .5rem;
+  border-radius: .5rem;
+  font-size: .75rem;
+}
+
+.hidden-el {
+  display: none;
+}

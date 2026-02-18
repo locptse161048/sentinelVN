@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Client — Sentinel VN</title>
+
+
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Orbitron:wght@700;800&display=swap"
+    rel="stylesheet">
+  <link href="assets/css/client.css" rel="stylesheet">
+
+
+</head>
+
+<body>
+
+  <!-- HEADER -->
+  <header class="fixed top-0 left-0 right-0 z-50 border-b border-white/10 backdrop-blur bg-black/50">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3">
+        <img src="./assets/images/favicon.ico" class="h-9 w-9 border border-cyan-400/40 rounded">
+        <span class="font-orbitron tracking-widest">
+          SENTINEL <span class="text-brand-400">VN</span>
+        </span>
+      </a>
+
+      <button onclick="logout()" class="px-4 py-2 border border-brand-400 rounded-lg hover:bg-brand-400/20">
+        Đăng xuất
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <div class="pt-24 max-w-7xl mx-auto px-6">
+
+    <h1 class="font-orbitron text-3xl mb-8 tracking-widest">
+      Tài khoản của tôi
+    </h1>
+
+    <div class="grid md:grid-cols-4 gap-6">
+
+      <!-- SIDEBAR -->
+      <div class="space-y-3">
+        <button onclick="showTab(1)" id="tab1" class="w-full p-3 card text-left active-tab">
+          Thông tin tài khoản
+        </button>
+        <button onclick="showTab(2)" id="tab2" class="w-full p-3 card text-left">
+          Gói đã đăng ký
+        </button>
+        <button onclick="showTab(3)" id="tab3" class="w-full p-3 card text-left">
+          Lịch sử chi tiêu
+        </button>
+        <button onclick="showTab(4)" id="tab4" class="w-full p-3 card text-left">
+          Liên hệ & Hỗ trợ
+        </button>
+        <button onclick="showTab(5)" id="tab5" class="w-full p-3 card text-left">
+          Xem tin đã gửi
+        </button>
+      </div>
+
+      <!-- CONTENT -->
+      <div class="md:col-span-3">
+
+        <!-- ACCOUNT -->
+        <div id="content1" class="card p-6">
+          <h2 class="text-xl font-semibold mb-4">Thông tin tài khoản</h2>
+          <p>Email: <span id="accEmail" class="text-brand-400"></span></p>
+        </div>
+
+        <!-- SUBSCRIPTION -->
+        <div id="content2" class="card p-6 hidden">
+          <h2 class="text-xl font-semibold mb-4">Gói đã đăng ký</h2>
+          <p id="subInfo">Chưa đăng ký gói nào.</p>
+        </div>
+
+        <!-- HISTORY -->
+        <div id="content3" class="card p-6 hidden">
+          <h2 class="text-xl font-semibold mb-4">Lịch sử chi tiêu</h2>
+          <ul id="historyList" class="space-y-2 text-sm text-white/80"></ul>
+        </div>
+        <!-- SUPPORT -->
+        <div id="content4" class="card p-6 hidden">
+          <h2 class="text-xl font-semibold mb-4">Liên hệ & Hỗ trợ</h2>
+
+          <form id="supportForm" class="space-y-4">
+            <input type="text" required placeholder="Tiêu đề"
+              class="w-full p-3 rounded-lg bg-black/50 border border-white/20 text-white">
+
+            <textarea id="supportMessage" required rows="4" placeholder="Mô tả vấn đề của bạn..."
+              class="w-full p-3 rounded-lg bg-black/50 border border-white/20 text-white"></textarea>
+
+            <button type="submit" class="px-5 py-2 border border-brand-400 rounded-lg hover:bg-brand-400/20">
+              Gửi yêu cầu
+            </button>
+            <p id="supportMsg" class="text-sm text-brand-400"></p>
+          </form>
+        </div>
+        <!-- SENT MESSAGES -->
+        <div id="content5" class="card p-6 hidden">
+          <h2 class="text-xl font-semibold mb-4">Tin đã gửi</h2>
+          <ul id="sentMessagesList" class="space-y-3 text-sm text-white/80"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="assets/js/client.js"></script>
+
+</body>
+
+</html>
