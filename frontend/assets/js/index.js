@@ -3,7 +3,7 @@
 document.getElementById('year').textContent = new Date().getFullYear();
 // ========= LocalStorage model =========
 
-const API_BASE = 'https://sentinelvn.onrender.com/api';
+const API_BASE = 'https://sentinelvn.onrender.com';
 const $ = (q, root = document) => root.querySelector(q);
 const $$ = (q, root = document) => Array.from(root.querySelectorAll(q));
 const LS_SESSION = 'sentinel_session';
