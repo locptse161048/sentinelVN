@@ -279,7 +279,7 @@ form.onsubmit = async e => {
         const res = await fetch(`${API_BASE}/api/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, name: nameInput })
+            body: JSON.stringify({ email, password, fullName: nameInput })
         });
         if (!res.ok) {
             const data = await res.json().catch(() => ({}));

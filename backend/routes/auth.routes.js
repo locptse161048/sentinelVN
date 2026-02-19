@@ -6,15 +6,19 @@ const jwt = require('jsonwebtoken');
 
 // Đăng ký
 router.post('/register', async (req, res) => {
-	const { email, password, name } = req.body;
+	const { email, password, fullName } = req.body;
+	if (!fullName) {
+		return res.status(400).json({ message: "Vui lòng nhập họ và tên" });
+	}
 	try {
 		const existing = await Client.findOne({ email });
+
 		if (existing) return res.status(400).json({ message: 'Email đã tồn tại' });
 		const hash = await bcrypt.hash(password, 10);
 		const user = await Client.create({
 			email,
-			fullName: name,        
-			passwordHash: hash 
+			fullName: fullName || "",
+			passwordHash: hash
 		});
 		res.json({ message: 'Đăng ký thành công', user });
 	} catch (err) {
@@ -34,6 +38,7 @@ router.post('/login', async (req, res) => {
 		const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
 		res.json({ token, user });
 	} catch (err) {
+		console.error(err);
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
