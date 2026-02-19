@@ -244,8 +244,9 @@ function switchMode(m) {
     msg.textContent = '';
     const nameField = form.querySelector('input[name="name"]');
     if (nameField) {
-        nameField.parentElement.style.display = m === 'signup' ? 'block' : 'none';
+        nameField.style.display = m === 'signup' ? 'block' : 'none';
     }
+
 }
 
 
