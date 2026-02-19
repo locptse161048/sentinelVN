@@ -231,9 +231,10 @@
       <div class="grid grid-cols-2 gap-2 mb-4 text-sm"> <button id="loginTab" class="btn active">Đăng nhập</button>
         <button id="signupTab" class="btn">Đăng ký</button>
       </div> <!-- FORM -->
-      <form id="authForm" class="grid gap-3"> <input class="input" type="email" name="email" placeholder="Email"
-          required /> <input class="input" type="password" name="password" placeholder="Mật khẩu" required /> <button
-          type="submit" class="btn w-fit" id="submitBtn"> Đăng nhập </button> <button type="button" id="forgotLink"
+      <form id="authForm" class="grid gap-3"><input type="text" name="name" class="input" placeholder="Họ và tên" />
+        <input class="input" type="email" name="email" placeholder="Email" required /> <input class="input"
+          type="password" name="password" placeholder="Mật khẩu" required /> <button type="submit" class="btn w-fit"
+          id="submitBtn"> Đăng nhập </button> <button type="button" id="forgotLink"
           class="text-sm text-brand-400 hover:underline w-fit mt-1"> Quên mật khẩu? </button>
         <div id="msg" class="text-sm text-white/70"></div>
       </form>

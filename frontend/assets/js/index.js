@@ -242,6 +242,10 @@ function switchMode(m) {
         ? 'Đăng nhập'
         : 'Đăng ký';
     msg.textContent = '';
+    const nameField = form.querySelector('input[name="name"]');
+    if (nameField) {
+        nameField.parentElement.style.display = m === 'signup' ? 'block' : 'none';
+    }
 }
 
 
@@ -252,6 +256,8 @@ form.onsubmit = async e => {
     msg.textContent = '';
     const email = form.email.value.trim().toLowerCase();
     const password = form.password.value;
+    const nameInput = form.name ? form.name.value.trim() : "";
+
 
     /* ===== SIGNUP ===== */
     if (mode === 'signup') {
@@ -272,7 +278,7 @@ form.onsubmit = async e => {
         const res = await fetch(`${API_BASE}/api/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, name: email })
+            body: JSON.stringify({ email, password, name: nameInput })
         });
         if (!res.ok) {
             const data = await res.json().catch(() => ({}));
