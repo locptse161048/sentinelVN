@@ -11,9 +11,14 @@ router.post('/register', async (req, res) => {
 		const existing = await Client.findOne({ email });
 		if (existing) return res.status(400).json({ message: 'Email đã tồn tại' });
 		const hash = await bcrypt.hash(password, 10);
-		const user = await Client.create({ email, password: hash, name });
+		const user = await Client.create({
+			email,
+			fullName: name,        
+			passwordHash: hash 
+		});
 		res.json({ message: 'Đăng ký thành công', user });
 	} catch (err) {
+		console.error(err);
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
