@@ -6,14 +6,6 @@ document.getElementById('year').textContent = new Date().getFullYear();
 const API_BASE = 'https://sentinelvn.onrender.com';
 const $ = (q, root = document) => root.querySelector(q);
 const $$ = (q, root = document) => Array.from(root.querySelectorAll(q));
-const LS_SESSION = 'sentinel_session';
-
-const state = {
-    get session() { return JSON.parse(localStorage.getItem(LS_SESSION) || 'null'); },
-    set session(v) { localStorage.setItem(LS_SESSION, JSON.stringify(v)); },
-    clearSession() { localStorage.removeItem(LS_SESSION); },
-};
-
 const fmtDate = ts => new Date(ts).toLocaleDateString('vi-VN');
 const addDays = (ts, days) => new Date(ts + days * 24 * 3600 * 1000).getTime();
 
@@ -47,9 +39,21 @@ function genKey(plan = 'PREMIUM') {
 
 
 function updateAuthUI() {
-    const sess = state.session;
-    const loggedIn = !!(sess && sess.email);
-    const email = loggedIn ? sess.email : '';
+    async function updateAuthUI() {
+        try {
+            const res = await fetch(`${API_BASE}/api/auth/me`, {
+                credentials: "include"
+            });
+            if (!res.ok) {
+                setLoggedOutUI();
+                return;
+            }
+            const user = await res.json();
+            setLoggedInUI(user);
+        } catch (err) {
+            setLoggedOutUI();
+        }
+    }
 
     const userEmail = $('#userEmail');
     const logoutBtn = $('#logoutBtn');
@@ -70,7 +74,29 @@ function updateAuthUI() {
         renderLicenses();
     }
 }
+// Kiểm tra session khi load trang
+function setLoggedInUI(user) {
+    const userEmail = document.getElementById('userEmail');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const needLogin = document.getElementById('needLogin');
+    const licenseArea = document.getElementById('licenseArea');
 
+    if (userEmail) userEmail.textContent = `Đang đăng nhập: ${user.email}`;
+    if (logoutBtn) logoutBtn.classList.remove('hidden');
+    if (needLogin) needLogin.classList.add('hidden');
+    if (licenseArea) licenseArea.classList.remove('hidden');
+}
+function setLoggedOutUI() {
+    const userEmail = document.getElementById('userEmail');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const needLogin = document.getElementById('needLogin');
+    const licenseArea = document.getElementById('licenseArea');
+
+    if (userEmail) userEmail.textContent = '';
+    if (logoutBtn) logoutBtn.classList.add('hidden');
+    if (needLogin) needLogin.classList.remove('hidden');
+    if (licenseArea) licenseArea.classList.add('hidden');
+}
 
 // ========= Pricing -> preselect plan =========
 $$('a[href="#checkout"][data-plan]').forEach(a => {
@@ -202,8 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 /* ===== CONST ===== */
-const ADMIN_EMAIL = 'admin@admin.com';
-const ADMIN_PASSWORD = 'Thisisadmin';
+/*const ADMIN_EMAIL = 'admin@admin.com';
+const ADMIN_PASSWORD = 'Thisisadmin';*/
 
 let mode = 'login';
 
@@ -292,44 +318,37 @@ form.onsubmit = async e => {
     }
 
     /* ===== LOGIN ===== */
-    // ADMIN
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        localStorage.setItem(LS_SESSION, JSON.stringify({
-            email,
-            role: 'admin',
-            token: 'admin-token'
-        }));
-        window.location.href = 'admin.html';
-        return;
-    }
+    /* ===== LOGIN ===== */
 
-    // CLIENT: gọi API login
     const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: "include", // rất quan trọng
         body: JSON.stringify({ email, password })
     });
+
     const data = await res.json().catch(() => ({}));
+
     if (!res.ok) {
         msg.textContent = data.message || 'Đăng nhập thất bại.';
         return;
     }
+
     if (data.user && data.user.status === 'tạm ngưng') {
         msg.textContent = '❌ Tài khoản của bạn hiện đã bị tạm ngưng';
         return;
     }
-    localStorage.setItem(LS_SESSION, JSON.stringify({
-        email: data.user.email,
-        role: data.user.role,
-        token: data.token
-    }));
-    window.location.href = data.user.role === 'admin' ? 'admin.html' : 'client.html';
+
+    // Điều hướng theo role từ MongoDB
+    if (data.user.role === "admin") {
+        window.location.href = "admin.html";
+    } else {
+        window.location.href = "client.html";
+    }
+
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-
-    const session = JSON.parse(localStorage.getItem("sentinel_session"));
-
     const btn = document.getElementById("openAuth");
     const btn_m = document.getElementById("openAuth_m");
 

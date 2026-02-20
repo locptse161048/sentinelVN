@@ -9,6 +9,23 @@ function logout() {
 /* ===== SUPPORT MESSAGES ===== */
 
 const API_BASE = 'https://sentinelvn.onrender.com';
+/* ===== CHECK ADMIN SESSION ===== */
+document.addEventListener("DOMContentLoaded", async () => {
+    const res = await fetch(`${API_BASE}/api/auth/me`, {
+        credentials: "include"
+    });
+
+    if (!res.ok) {
+        window.location.href = "index.html";
+        return;
+    }
+
+    const user = await res.json();
+
+    if (!user.isAdmin) {   // nếu bạn dùng MongoDB field isAdmin
+        window.location.href = "index.html";
+    }
+});
 const supportContainer = document.getElementById("supportMessages");
 async function fetchSupportMessages() {
     const res = await fetch(`${API_BASE}/support`);
@@ -72,29 +89,29 @@ function showTab(tabId) {
 /* ===== ACCOUNT DATA ===== */
 
 async function fetchAccounts() {
-        const res = await fetch(`${API_BASE}/admin/clients`, {
-                headers: { 'Authorization': `Bearer ${sess.token}` }
-        });
-        if (!res.ok) return [];
-        return await res.json();
+    const res = await fetch(`${API_BASE}/admin/clients`, {
+        headers: { 'Authorization': `Bearer ${sess.token}` }
+    });
+    if (!res.ok) return [];
+    return await res.json();
 }
 
 async function renderAccounts(keyword = "") {
-        const accountTable = document.getElementById("accountTable");
-        accountTable.innerHTML = "<tr><td colspan='7'>Đang tải...</td></tr>";
-        let users = await fetchAccounts();
-        if (keyword) {
-                users = users.filter(u => (u.email || '').toLowerCase().includes(keyword));
-        }
-        if (!users.length) {
-                accountTable.innerHTML = `<tr><td colspan='7' class='p-4 text-center text-white/50'>Chưa có tài khoản nào</td></tr>`;
-                return;
-        }
-        users.forEach(user => {
-                const isActive = user.status === "đang hoạt động";
-                const statusText = isActive ? "Đang hoạt động" : "Tạm ngưng";
-                const statusColor = isActive ? "text-green-400" : "text-red-400";
-                accountTable.innerHTML += `
+    const accountTable = document.getElementById("accountTable");
+    accountTable.innerHTML = "<tr><td colspan='7'>Đang tải...</td></tr>";
+    let users = await fetchAccounts();
+    if (keyword) {
+        users = users.filter(u => (u.email || '').toLowerCase().includes(keyword));
+    }
+    if (!users.length) {
+        accountTable.innerHTML = `<tr><td colspan='7' class='p-4 text-center text-white/50'>Chưa có tài khoản nào</td></tr>`;
+        return;
+    }
+    users.forEach(user => {
+        const isActive = user.status === "đang hoạt động";
+        const statusText = isActive ? "Đang hoạt động" : "Tạm ngưng";
+        const statusColor = isActive ? "text-green-400" : "text-red-400";
+        accountTable.innerHTML += `
                 <tr class=\"border-t border-white/10\">
                         <td class=\"p-2\">${user.licenseKey || '-'}<\/td>
                         <td class=\"p-2\">${user.email}<\/td>
@@ -109,7 +126,7 @@ async function renderAccounts(keyword = "") {
                                 <button onclick=\"toggleStatus('${user.id}')\" class=\"px-2 py-1 text-xs border border-yellow-400 rounded hover:bg-yellow-400/20\">Đổi trạng thái</button>
                         </td>
                 </tr>`;
-        });
+    });
 }
 
 renderAccounts();

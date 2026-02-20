@@ -1,15 +1,6 @@
-const jwt = require('jsonwebtoken');
-const Client = require('../models/client');
-
-module.exports = async (req, res, next) => {
-	const token = req.header('Authorization')?.replace('Bearer ', '');
-	if (!token) return res.status(401).json({ message: 'No token, authorization denied' });
-	try {
-		const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-		req.user = await Client.findById(decoded.id);
-		if (!req.user) return res.status(401).json({ message: 'User not found' });
-		next();
-	} catch (err) {
-		res.status(401).json({ message: 'Token is not valid' });
-	}
+module.exports = (req, res, next) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Chưa đăng nhập" });
+  }
+  next();
 };

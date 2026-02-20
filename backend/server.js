@@ -5,9 +5,30 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 dotenv.config();
+const session = require("express-session");
+const MongoStore = require("connect-mongo");
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: "sentinelvn-one.vercel.app",
+  credentials: true
+}));
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || "supersecret",
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI
+  }),
+  cookie: {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  }
+}));
+
 app.use(bodyParser.json());
 
 // Database
@@ -38,7 +59,6 @@ app.get("/test", (req, res) => {
     message: "Backend đang hoạt động 🚀"
   });
 });
-
 
 app.get("/create-user", async (req, res) => {
   try {

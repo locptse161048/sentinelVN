@@ -33,11 +33,14 @@ router.post('/login', async (req, res) => {
 	try {
 		const user = await Client.findOne({ email });
 		if (!user) return res.status(400).json({ message: 'Sai email hoặc mật khẩu' });
+
 		const match = await bcrypt.compare(password, user.passwordHash);
 		if (!match) return res.status(400).json({ message: 'Sai email hoặc mật khẩu' });
-		const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+
+		req.session.userId = user._id;
+
 		res.json({
-			token,
+			message: "Đăng nhập thành công",
 			user: {
 				email: user.email,
 				role: user.isAdmin ? "admin" : "client",
@@ -45,23 +48,58 @@ router.post('/login', async (req, res) => {
 			}
 		});
 	} catch (err) {
-		console.error(err);
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
+//logout route
+router.post('/logout', (req, res) => {
+	req.session.destroy(() => {
+		res.clearCookie('connect.sid');
+		res.json({ message: "Đã đăng xuất" });
+	});
+});
 
-// Lấy thông tin user
+// Kiểm tra session
+router.get('/session', async (req, res) => {
+	if (!req.session.userId) {
+		return res.status(401).json({ message: "Chưa đăng nhập" });
+	}
+
+	const user = await Client.findById(req.session.userId);
+
+	if (!user) {
+		return res.status(401).json({ message: "User không tồn tại" });
+	}
+
+	res.json({
+		email: user.email,
+		role: user.isAdmin ? "admin" : "client",
+		fullName: user.fullName
+	});
+});
+// Lấy thông tin người dùng
 router.get('/me', async (req, res) => {
-	const token = req.header('Authorization')?.replace('Bearer ', '');
-	if (!token) return res.status(401).json({ message: 'No token' });
+	if (!req.session.userId) {
+		return res.status(401).json({ message: "Chưa đăng nhập" });
+	}
+
 	try {
-		const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-		const user = await Client.findById(decoded.id);
-		if (!user) return res.status(404).json({ message: 'User not found' });
-		res.json(user);
+		const user = await Client.findById(req.session.userId);
+		if (!user) {
+			return res.status(404).json({ message: "User không tồn tại" });
+		}
+
+		res.json({
+			email: user.email,
+			fullName: user.fullName,
+			role: user.isAdmin ? "admin" : "client",
+			plan: user.plan,
+			status: user.status
+		});
 	} catch (err) {
-		res.status(401).json({ message: 'Token invalid' });
+		res.status(500).json({ message: "Lỗi server" });
 	}
 });
+
 
 module.exports = router;
