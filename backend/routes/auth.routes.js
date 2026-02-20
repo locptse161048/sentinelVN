@@ -33,10 +33,17 @@ router.post('/login', async (req, res) => {
 	try {
 		const user = await Client.findOne({ email });
 		if (!user) return res.status(400).json({ message: 'Sai email hoặc mật khẩu' });
-		const match = await bcrypt.compare(password, user.password);
+		const match = await bcrypt.compare(password, user.passwordHash);
 		if (!match) return res.status(400).json({ message: 'Sai email hoặc mật khẩu' });
 		const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
-		res.json({ token, user });
+		res.json({
+			token,
+			user: {
+				email: user.email,
+				role: user.isAdmin ? "admin" : "client",
+				fullName: user.fullName
+			}
+		});
 	} catch (err) {
 		console.error(err);
 		res.status(500).json({ message: 'Lỗi server' });
