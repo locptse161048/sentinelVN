@@ -1,9 +1,26 @@
 
 
 document.getElementById('year').textContent = new Date().getFullYear();
+const API_BASE = 'https://sentinelvn.onrender.com';
+// ========= Auth session check on page load =========
+document.addEventListener("DOMContentLoaded", async () => {
+    try {
+        const res = await fetch(`${API_BASE}/api/auth/session`, {
+            credentials: "include"
+        });
+        if (!res.ok) {
+            setLoggedOutUI();
+            return;
+        }
+        const user = await res.json();
+        setLoggedInUI(user);
+        setupAccountButtons(user);
+    } catch (err) {
+        setLoggedOutUI();
+    }
+});
 // ========= LocalStorage model =========
 
-const API_BASE = 'https://sentinelvn.onrender.com';
 const $ = (q, root = document) => root.querySelector(q);
 const $$ = (q, root = document) => Array.from(root.querySelectorAll(q));
 const fmtDate = ts => new Date(ts).toLocaleDateString('vi-VN');
@@ -37,43 +54,6 @@ function genKey(plan = 'PREMIUM') {
 }
 
 
-
-function updateAuthUI() {
-    async function updateAuthUI() {
-        try {
-            const res = await fetch(`${API_BASE}/api/auth/me`, {
-                credentials: "include"
-            });
-            if (!res.ok) {
-                setLoggedOutUI();
-                return;
-            }
-            const user = await res.json();
-            setLoggedInUI(user);
-        } catch (err) {
-            setLoggedOutUI();
-        }
-    }
-
-    const userEmail = $('#userEmail');
-    const logoutBtn = $('#logoutBtn');
-    const needLogin = $('#needLogin');
-    const licenseArea = $('#licenseArea');
-    const authBtnText = $('#authBtnText');
-    const authBtnText_m = $('#authBtnText_m');
-
-    if (userEmail) userEmail.textContent = loggedIn ? `Đang đăng nhập: ${email}` : '';
-    if (logoutBtn) logoutBtn.classList.toggle('hidden', !loggedIn);
-    if (needLogin) needLogin.classList.toggle('hidden', loggedIn);
-    if (licenseArea) licenseArea.classList.toggle('hidden', !loggedIn);
-
-    if (authBtnText) authBtnText.textContent = loggedIn ? 'Tài khoản' : 'Đăng nhập';
-    if (authBtnText_m && authBtnText) authBtnText_m.textContent = authBtnText.textContent;
-
-    if (loggedIn && typeof renderLicenses === "function") {
-        renderLicenses();
-    }
-}
 // Kiểm tra session khi load trang
 function setLoggedInUI(user) {
     const userEmail = document.getElementById('userEmail');
@@ -125,26 +105,26 @@ $$('a[data-plan]').forEach(a => {
 
 
 document.querySelectorAll('.require-login').forEach(btn => {
-    btn.addEventListener('click', e => {
+    btn.addEventListener('click', async e => {
         e.preventDefault();
 
-        const session = JSON.parse(localStorage.getItem("sentinel_session"));
+        const res = await fetch(`${API_BASE}/api/auth/session`, {
+            credentials: "include"
+        });
 
-        // Nếu chưa login → mở modal
-        if (!session || !session.email) {
+        if (!res.ok) {
             const authModal = document.getElementById('authModal');
             authModal.classList.remove('hidden');
             authModal.classList.add('flex');
             return;
         }
 
-        // Nếu đã login
+        const user = await res.json();
         const plan = btn.getAttribute("data-plan");
 
         if (plan === "PREMIUM") {
             window.location.href = "payment.html?plan=PREMIUM";
         } else {
-            // FREE
             window.location.href = "client.html";
         }
     });
@@ -182,43 +162,32 @@ document.querySelectorAll('a[href^="#"]').forEach(link => {
 
 document.addEventListener('DOMContentLoaded', () => {
     const authModal = document.getElementById('authModal');
-
-    document.getElementById('openAuth')?.addEventListener('click', () => {
-
-        const session = JSON.parse(localStorage.getItem("sentinel_session"));
-
-        if (session) {
-            if (session.role === "client") {
-                window.location.href = "client.html";
-            } else {
-                window.location.href = "admin.html";
-            }
+    const openAuth = document.getElementById('openAuth');
+    const openAuth_m = document.getElementById('openAuth_m');
+    const handleAuthClick = async () => {
+        const res = await fetch(`${API_BASE}/api/auth/session`, {
+            credentials: "include"
+        });
+        if (!res.ok) {
+            authModal.classList.remove('hidden');
+            authModal.classList.add('flex');
             return;
         }
-
-        authModal.classList.remove('hidden');
-        authModal.classList.add('flex');
-    });
-    document.getElementById('openAuth_m')?.addEventListener('click', () => {
-
-        const session = JSON.parse(localStorage.getItem("sentinel_session"));
-
-        if (session) {
-            if (session.role === "client") {
-                window.location.href = "client.html";
-            } else {
-                window.location.href = "admin.html";
-            }
-            return;
+        const user = await res.json();
+        if (user.role === "admin") {
+            window.location.href = "admin.html";
+        } else {
+            window.location.href = "client.html";
         }
-        authModal.classList.remove('hidden');
-        authModal.classList.add('flex');
-    });
+    };
+    openAuth?.addEventListener('click', handleAuthClick);
+    openAuth_m?.addEventListener('click', handleAuthClick);
+
     document.getElementById('closeAuth')?.addEventListener('click', () => {
         authModal.classList.add('hidden');
         authModal.classList.remove('flex');
     });
-    authModal.addEventListener('click', e => {
+    authModal?.addEventListener('click', e => {
         if (e.target === authModal) {
             authModal.classList.add('hidden');
             authModal.classList.remove('flex');
@@ -288,11 +257,6 @@ form.onsubmit = async e => {
 
     /* ===== SIGNUP ===== */
     if (mode === 'signup') {
-        // Không cho tạo admin
-        if (email === ADMIN_EMAIL.toLowerCase()) {
-            msg.textContent = '❌ Không thể đăng ký tài khoản admin.';
-            return;
-        }
         if (!email || !password) {
             msg.textContent = '⚠️ Vui lòng nhập đầy đủ thông tin.';
             return;
@@ -318,8 +282,6 @@ form.onsubmit = async e => {
     }
 
     /* ===== LOGIN ===== */
-    /* ===== LOGIN ===== */
-
     const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -348,53 +310,40 @@ form.onsubmit = async e => {
 
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.getElementById("openAuth");
-    const btn_m = document.getElementById("openAuth_m");
 
-    if (!btn || !btn_m) return;
-
-    // Nếu đã đăng nhập
-    if (session && session.email) {
-
-        btn.textContent = "Tài khoản";
-        btn_m.textContent = "Tài khoản";
-
-        btn.onclick = () => {
-            if (session.role === "client") {
-                window.location.href = "client.html";
-            } else if (session.role === "admin") {
-                window.location.href = "admin.html";
-            }
-        };
-        btn_m.onclick = btn.onclick;
-    }
-});
 // ===== HEADER LOGOUT HANDLER =====
-document.addEventListener("DOMContentLoaded", () => {
-    const session = JSON.parse(localStorage.getItem(LS_SESSION));
 
-    const logoutBtn = document.getElementById("logoutBtnHeader");
-    const logoutBtn_m = document.getElementById("logoutBtnHeader_m");
+function setupAccountButtons(user) {
     const openAuthBtn = document.getElementById("openAuth");
     const openAuthBtn_m = document.getElementById("openAuth_m");
+    const logoutBtn = document.getElementById("logoutBtnHeader");
+    const logoutBtn_m = document.getElementById("logoutBtnHeader_m");
 
-    if (session && session.role === "client") {
+    if (openAuthBtn) openAuthBtn.textContent = "Tài khoản";
+    if (openAuthBtn_m) openAuthBtn_m.textContent = "Tài khoản";
 
-        // Hiện nút logout
-        logoutBtn?.classList.remove("hidden");
-        logoutBtn_m?.classList.remove("hidden");
+    const goAccount = () => {
+        if (user.role === "admin") {
+            window.location.href = "admin.html";
+        } else {
+            window.location.href = "client.html";
+        }
+    };
 
-        // Đổi text thành Tài khoản
-        if (openAuthBtn) openAuthBtn.textContent = "Tài khoản";
-        if (openAuthBtn_m) openAuthBtn_m.textContent = "Tài khoản";
+    openAuthBtn?.addEventListener("click", goAccount);
+    openAuthBtn_m?.addEventListener("click", goAccount);
 
-        // Xử lý logout
-        const doLogout = () => {
-            localStorage.removeItem(LS_SESSION);
-            window.location.reload();
-        };
-        logoutBtn?.addEventListener("click", doLogout);
-        logoutBtn_m?.addEventListener("click", doLogout);
-    }
-});
+    const doLogout = async () => {
+        await fetch(`${API_BASE}/api/auth/logout`, {
+            method: "POST",
+            credentials: "include"
+        });
+        window.location.reload();
+    };
+
+    logoutBtn?.classList.remove("hidden");
+    logoutBtn_m?.classList.remove("hidden");
+
+    logoutBtn?.addEventListener("click", doLogout);
+    logoutBtn_m?.addEventListener("click", doLogout);
+}

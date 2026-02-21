@@ -12,7 +12,11 @@ router.post('/register', async (req, res) => {
 	}
 	try {
 		const existing = await Client.findOne({ email });
-
+		if (req.body.isAdmin === true) {
+			return res.status(403).json({
+				message: "❌ Không thể đăng ký tài khoản admin."
+			});
+		}
 		if (existing) return res.status(400).json({ message: 'Email đã tồn tại' });
 		const hash = await bcrypt.hash(password, 10);
 		const user = await Client.create({
@@ -36,9 +40,7 @@ router.post('/login', async (req, res) => {
 
 		const match = await bcrypt.compare(password, user.passwordHash);
 		if (!match) return res.status(400).json({ message: 'Sai email hoặc mật khẩu' });
-
 		req.session.userId = user._id;
-
 		res.json({
 			message: "Đăng nhập thành công",
 			user: {
@@ -64,13 +66,10 @@ router.get('/session', async (req, res) => {
 	if (!req.session.userId) {
 		return res.status(401).json({ message: "Chưa đăng nhập" });
 	}
-
 	const user = await Client.findById(req.session.userId);
-
 	if (!user) {
 		return res.status(401).json({ message: "User không tồn tại" });
 	}
-
 	res.json({
 		email: user.email,
 		role: user.isAdmin ? "admin" : "client",
