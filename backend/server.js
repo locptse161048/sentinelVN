@@ -6,8 +6,7 @@ const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 dotenv.config();
 const session = require("express-session");
-const MongoStore = require("connect-mongo");
-
+const MongoStore = require('connect-mongo').default;
 const app = express();
 app.use(cors({
   origin: "sentinelvn-one.vercel.app",
