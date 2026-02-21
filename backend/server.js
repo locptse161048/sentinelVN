@@ -9,7 +9,7 @@ const session = require("express-session");
 const MongoStore = require('connect-mongo').default;
 const app = express();
 app.use(cors({
-  origin: "sentinelvn-one.vercel.app",
+  origin: "https://sentinelvn-one.vercel.app",
   credentials: true
 }));
 app.set("trust proxy", 1); 
