@@ -64,9 +64,10 @@ app.get("/create-user", async (req, res) => {
     const Client = require("./models/client");
 
     const user = await Client.create({
-      email: "test@gmail.com", 
-      fullName: "Test User",
-      passwordHash: "123456"
+      email: "admin@admin.com", 
+      fullName: "admin",
+      passwordHash: "ThisisAdmin",
+      isAdmin: true,
     });
 
     res.json(user);
