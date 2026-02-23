@@ -301,12 +301,15 @@ form.onsubmit = async e => {
         return;
     }
 
-    // Điều hướng theo role từ MongoDB
-    if (data.user.role === "admin") {
-        window.location.href = "admin.html";
-    } else {
-        window.location.href = "client.html";
-    }
+    // Sau khi login thành công
+    setLoggedInUI(data.user);
+    setupAccountButtons(data.user);
+    // Ẩn modal nếu đang mở
+    const authModal = document.getElementById('authModal');
+    authModal.classList.add('hidden');
+    authModal.classList.remove('flex');
+    document.getElementById('authModal')?.classList.add('hidden');
+
 
 };
 

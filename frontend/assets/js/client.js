@@ -4,13 +4,21 @@ const API_BASE = "https://sentinelvn.onrender.com";
 /* ===== CHECK SESSION FROM BACKEND ===== */
 async function checkSession() {
   try {
-    const res = await fetch(`${API_BASE}/api/auth/session`, {
+    let res = await fetch(`${API_BASE}/api/auth/session`, {
       credentials: "include"
     });
-
+    // Nếu fail, đợi 500ms rồi thử lại
     if (!res.ok) {
-      window.location.href = "index.html";
-      return null;
+      await new Promise(r => setTimeout(r, 500));
+
+      res = await fetch(`${API_BASE}/api/auth/session`, {
+        credentials: "include"
+      });
+
+      if (!res.ok) {
+        window.location.href = "index.html";
+        return null;
+      }
     }
 
     return await res.json();
@@ -19,6 +27,7 @@ async function checkSession() {
     return null;
   }
 }
+
 
 /* ===== LOAD USER INFO ===== */
 async function loadClientInfo() {

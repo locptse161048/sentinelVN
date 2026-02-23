@@ -41,13 +41,19 @@ router.post('/login', async (req, res) => {
 		const match = await bcrypt.compare(password, user.passwordHash);
 		if (!match) return res.status(400).json({ message: 'Sai email hoặc mật khẩu' });
 		req.session.userId = user._id;
-		res.json({
-			message: "Đăng nhập thành công",
-			user: {
-				email: user.email,
-				role: user.isAdmin ? "admin" : "client",
-				fullName: user.fullName
+
+		req.session.save(err => {
+			if (err) {
+				return res.status(500).json({ message: "Session error" });
 			}
+			res.json({
+				message: "Đăng nhập thành công",
+				user: {
+					email: user.email,
+					role: user.isAdmin ? "admin" : "client",
+					fullName: user.fullName
+				}
+			});
 		});
 	} catch (err) {
 		res.status(500).json({ message: 'Lỗi server' });
