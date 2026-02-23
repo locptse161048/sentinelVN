@@ -180,11 +180,12 @@ document.querySelectorAll('a[href^="#"]').forEach(link => {
 });
 
 
-
+// ========= Session check with retry logic (used in client.js and admin.js) =========
 document.addEventListener('DOMContentLoaded', () => {
     const authModal = document.getElementById('authModal');
     const openAuth = document.getElementById('openAuth');
     const openAuth_m = document.getElementById('openAuth_m');
+
     const handleAuthClick = async () => {
         try {
             const controller = new AbortController();
@@ -202,21 +203,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 authModal.classList.add('flex');
                 return;
             }
+
             const user = await res.json();
+
             if (user.role === "admin") {
                 window.location.href = "admin.html";
             } else {
                 window.location.href = "client.html";
             }
+
         } catch (err) {
             console.error("Auth check failed:", err.message);
             authModal.classList.remove('hidden');
             authModal.classList.add('flex');
         }
     };
-            window.location.href = "client.html";
-        }
-    };
+
     openAuth?.addEventListener('click', handleAuthClick);
     openAuth_m?.addEventListener('click', handleAuthClick);
 
@@ -224,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         authModal.classList.add('hidden');
         authModal.classList.remove('flex');
     });
+
     authModal?.addEventListener('click', e => {
         if (e.target === authModal) {
             authModal.classList.add('hidden');
@@ -231,6 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
 
 
 /* ===== CONST ===== */
