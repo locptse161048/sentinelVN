@@ -12,8 +12,9 @@ app.use(cors({
   origin: "https://sentinelvn-one.vercel.app",
   credentials: true
 }));
-app.set("trust proxy", 1); 
+app.set("trust proxy", 1);
 app.use(session({
+  name: "sentinel_session",
   secret: process.env.SESSION_SECRET || "supersecret",
   resave: false,
   saveUninitialized: false,
@@ -21,6 +22,7 @@ app.use(session({
     mongoUrl: process.env.MONGO_URI
   }),
   cookie: {
+    proxy: true,
     httpOnly: true,
     secure: true,
     sameSite: "none",
@@ -46,12 +48,12 @@ app.use('/api/payment', authMiddleware, require('./routes/payment.routes'));
 app.use('/api/support', authMiddleware, require('./routes/support.routes'));
 
 app.get('/', (req, res) => {
-	res.send('Sentinel VN Backend API');
+  res.send('Sentinel VN Backend API');
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-	console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
 app.get("/test", (req, res) => {
   res.json({
@@ -64,7 +66,7 @@ app.get("/create-user", async (req, res) => {
     const Client = require("./models/client");
 
     const user = await Client.create({
-      email: "admin@admin.com", 
+      email: "admin@admin.com",
       fullName: "admin",
       passwordHash: "ThisisAdmin",
       isAdmin: true,
