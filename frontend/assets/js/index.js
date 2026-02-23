@@ -180,7 +180,7 @@ document.querySelectorAll('a[href^="#"]').forEach(link => {
 });
 
 
-// ========= Session check with retry logic (used in client.js and admin.js) =========
+// ========= Session check with retry logic  =========
 document.addEventListener('DOMContentLoaded', () => {
     const authModal = document.getElementById('authModal');
     const openAuth = document.getElementById('openAuth');

@@ -5,23 +5,23 @@ const API_BASE = "https://sentinelvn.onrender.com";
 async function checkSession() {
   let retries = 0;
   const maxRetries = 3;
-  
+
   while (retries < maxRetries) {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
-      
+
       const res = await fetch(`${API_BASE}/api/auth/session`, {
         credentials: "include",
         signal: controller.signal
       });
-      
+
       clearTimeout(timeout);
-      
+
       if (res.ok) {
         return await res.json();
       }
-      
+
       retries++;
       if (retries < maxRetries) {
         // Exponential backoff: 300ms, 600ms, 1000ms
@@ -35,7 +35,7 @@ async function checkSession() {
       }
     }
   }
-  
+
   console.error("Session check failed after 3 attempts");
   window.location.href = "index.html";
   return null;
@@ -46,19 +46,15 @@ async function checkSession() {
 async function loadClientInfo() {
   let retries = 0;
   const maxRetries = 2;
-  
   while (retries < maxRetries) {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
-      
       const res = await fetch(`${API_BASE}/api/client/me`, {
         credentials: "include",
         signal: controller.signal
       });
-
       clearTimeout(timeout);
-
       if (!res.ok) {
         retries++;
         if (retries >= maxRetries) {
@@ -69,15 +65,13 @@ async function loadClientInfo() {
         await new Promise(r => setTimeout(r, 300 * Math.pow(2, retries - 1)));
         continue;
       }
-
       const user = await res.json();
-
       if (user.status === "tạm ngưng") {
         alert("Tài khoản của bạn hiện đã bị tạm ngưng");
         await logout();
         return null;
       }
-
+      document.getElementById("accName").textContent = user.fullName || "Chưa cập nhật";
       document.getElementById("accEmail").textContent = user.email;
       document.getElementById("subInfo").textContent =
         user.plan ? `Gói: ${user.plan}` : "Bạn đang sử dụng gói FREE.";
@@ -204,7 +198,7 @@ const supportForm = document.getElementById("supportForm");
 if (supportForm) {
   supportForm.addEventListener("submit", async e => {
     e.preventDefault();
-    
+
     try {
       await loadClientInfo();
       const subject = supportForm.querySelector("input").value.trim();
