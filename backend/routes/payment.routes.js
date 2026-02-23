@@ -4,11 +4,19 @@ const Payment = require('../models/payment');
 
 // Tạo payment mới
 router.post('/', async (req, res) => {
-	const { amount, description } = req.body;
+	const { amount, description, plan, status } = req.body;
 	try {
-		const payment = await Payment.create({ client: req.user._id, amount, description });
+		const payment = await Payment.create({ 
+			client: req.session.userId, 
+			amount, 
+			description,
+			plan: plan || 'PREMIUM',
+			status: status || 'pending',
+			date: new Date()
+		});
 		res.json(payment);
 	} catch (err) {
+		console.error("Error creating payment:", err);
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
@@ -16,9 +24,10 @@ router.post('/', async (req, res) => {
 // Lấy lịch sử chi tiêu
 router.get('/', async (req, res) => {
 	try {
-		const payments = await Payment.find({ client: req.user._id }).sort({ date: -1 });
+		const payments = await Payment.find({ client: req.session.userId }).sort({ date: -1 });
 		res.json(payments);
 	} catch (err) {
+		console.error("Error fetching payments:", err);
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });

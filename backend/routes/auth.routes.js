@@ -62,6 +62,7 @@ router.post('/login', async (req, res) => {
 //logout route
 router.post('/logout', (req, res) => {
 	req.session.destroy(() => {
+		res.clearCookie('sentinel_session');
 		res.clearCookie('connect.sid');
 		res.json({ message: "Đã đăng xuất" });
 	});
