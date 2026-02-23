@@ -11,26 +11,50 @@ function logout() {
 const API_BASE = 'https://sentinelvn.onrender.com';
 /* ===== CHECK ADMIN SESSION ===== */
 document.addEventListener("DOMContentLoaded", async () => {
-    const res = await fetch(`${API_BASE}/api/auth/me`, {
-        credentials: "include"
-    });
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
 
-    if (!res.ok) {
-        window.location.href = "index.html";
-        return;
-    }
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
+            credentials: "include",
+            signal: controller.signal
+        });
 
-    const user = await res.json();
+        clearTimeout(timeout);
 
-    if (!user.isAdmin) {   // nếu bạn dùng MongoDB field isAdmin
+        if (!res.ok) {
+            window.location.href = "index.html";
+            return;
+        }
+
+        const user = await res.json();
+
+        if (!user.isAdmin) {   // nếu bạn dùng MongoDB field isAdmin
+            window.location.href = "index.html";
+        }
+    } catch (err) {
+        console.error("Admin session check failed:", err.message);
         window.location.href = "index.html";
     }
 });
 const supportContainer = document.getElementById("supportMessages");
 async function fetchSupportMessages() {
-    const res = await fetch(`${API_BASE}/support`);
-    if (!res.ok) return [];
-    return await res.json();
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+
+        const res = await fetch(`${API_BASE}/support`, {
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (err) {
+        console.error("Error fetching support messages:", err);
+        return [];
+    }
 }
 
 async function renderSupportMessages(keyword = "") {
@@ -89,11 +113,23 @@ function showTab(tabId) {
 /* ===== ACCOUNT DATA ===== */
 
 async function fetchAccounts() {
-    const res = await fetch(`${API_BASE}/admin/clients`, {
-        headers: { 'Authorization': `Bearer ${sess.token}` }
-    });
-    if (!res.ok) return [];
-    return await res.json();
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+
+        const res = await fetch(`${API_BASE}/admin/clients`, {
+            headers: { 'Authorization': `Bearer ${sess.token}` },
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (err) {
+        console.error("Error fetching accounts:", err);
+        return [];
+    }
 }
 
 async function renderAccounts(keyword = "") {

@@ -5,9 +5,16 @@ const API_BASE = 'https://sentinelvn.onrender.com';
 // ========= Auth session check on page load =========
 document.addEventListener("DOMContentLoaded", async () => {
     try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+
         const res = await fetch(`${API_BASE}/api/auth/session`, {
-            credentials: "include"
+            credentials: "include",
+            signal: controller.signal
         });
+
+        clearTimeout(timeout);
+
         if (!res.ok) {
             setLoggedOutUI();
             return;
@@ -16,6 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         setLoggedInUI(user);
         setupAccountButtons(user);
     } catch (err) {
+        console.warn("Session check failed on page load:", err.message);
         setLoggedOutUI();
     }
 });
@@ -108,24 +116,37 @@ document.querySelectorAll('.require-login').forEach(btn => {
     btn.addEventListener('click', async e => {
         e.preventDefault();
 
-        const res = await fetch(`${API_BASE}/api/auth/session`, {
-            credentials: "include"
-        });
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
 
-        if (!res.ok) {
+            const res = await fetch(`${API_BASE}/api/auth/session`, {
+                credentials: "include",
+                signal: controller.signal
+            });
+
+            clearTimeout(timeout);
+
+            if (!res.ok) {
+                const authModal = document.getElementById('authModal');
+                authModal.classList.remove('hidden');
+                authModal.classList.add('flex');
+                return;
+            }
+
+            const user = await res.json();
+            const plan = btn.getAttribute("data-plan");
+
+            if (plan === "PREMIUM") {
+                window.location.href = "payment.html?plan=PREMIUM";
+            } else {
+                window.location.href = "client.html";
+            }
+        } catch (err) {
+            console.error("require-login check failed:", err.message);
             const authModal = document.getElementById('authModal');
             authModal.classList.remove('hidden');
             authModal.classList.add('flex');
-            return;
-        }
-
-        const user = await res.json();
-        const plan = btn.getAttribute("data-plan");
-
-        if (plan === "PREMIUM") {
-            window.location.href = "payment.html?plan=PREMIUM";
-        } else {
-            window.location.href = "client.html";
         }
     });
 });
@@ -165,18 +186,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const openAuth = document.getElementById('openAuth');
     const openAuth_m = document.getElementById('openAuth_m');
     const handleAuthClick = async () => {
-        const res = await fetch(`${API_BASE}/api/auth/session`, {
-            credentials: "include"
-        });
-        if (!res.ok) {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
+
+            const res = await fetch(`${API_BASE}/api/auth/session`, {
+                credentials: "include",
+                signal: controller.signal
+            });
+
+            clearTimeout(timeout);
+
+            if (!res.ok) {
+                authModal.classList.remove('hidden');
+                authModal.classList.add('flex');
+                return;
+            }
+            const user = await res.json();
+            if (user.role === "admin") {
+                window.location.href = "admin.html";
+            } else {
+                window.location.href = "client.html";
+            }
+        } catch (err) {
+            console.error("Auth check failed:", err.message);
             authModal.classList.remove('hidden');
             authModal.classList.add('flex');
-            return;
         }
-        const user = await res.json();
-        if (user.role === "admin") {
-            window.location.href = "admin.html";
-        } else {
+    };
             window.location.href = "client.html";
         }
     };
