@@ -48,7 +48,6 @@ function genKey(plan = 'PREMIUM') {
         }
         return out;
     }
-
     if (plan === 'PREMIUM') {
         const part1 = randBlock(4);
         const part2 = randBlock(4);

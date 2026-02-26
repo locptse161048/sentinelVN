@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Thanh Toán - SENTINEL VN</title>
+  <link rel="icon" type="image/x-icon" href="./assets/images/favicon.ico" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Orbitron:wght@700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>
+    .payment-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(10,16,21,1) 100%);
+    }
+    
+    .payment-card {
+      background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+      border: 1px solid rgba(34, 197, 226, 0.2);
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 500px;
+      width: 100%;
+      backdrop-filter: blur(10px);
+    }
+    
+    .payment-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 28px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    
+    .qr-container {
+      text-align: center;
+      margin: 30px 0;
+    }
+    
+    .qr-code {
+      max-width: 300px;
+      margin: 0 auto;
+      display: none;
+    }
+    
+    .qr-code.show {
+      display: block;
+    }
+    
+    .amount-info {
+      background: rgba(34, 197, 226, 0.1);
+      border: 1px solid rgba(34, 197, 226, 0.3);
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    
+    .amount-label {
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .amount-value {
+      font-size: 32px;
+      font-weight: bold;
+      color: #22c55e;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .spinner {
+      border: 3px solid rgba(34, 197, 226, 0.2);
+      border-top: 3px solid #22c55e;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .status-success {
+      background: rgba(34, 197, 226, 0.2);
+      color: #22c55e;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      margin: 20px 0;
+    }
+    
+    .status-error {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+      margin: 20px 0;
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s;
+      width: 100%;
+      margin-top: 20px;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(34, 197, 226, 0.3);
+    }
+    
+    .license-key {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(34, 197, 226, 0.5);
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      margin-top: 15px;
+      word-break: break-all;
+      font-size: 14px;
+    }
+    
+    .copy-btn {
+      background: #0ea5e9;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+    
+    .copy-btn:hover {
+      background: #0284c7;
+    }
+  </style>
+</head>
+<body class="text-white">
+  <!-- HEADER -->
+  <header class="fixed top-0 left-0 right-0 z-50 border-b border-white/10 blur-bg">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3 shrink-0">
+        <img src="assets/images/favicon.ico" class="h-9 w-9 rounded border border-cyan-400/40">
+        <span class="font-orbitron text-lg tracking-wider whitespace-nowrap">
+          SENTINEL <span class="text-brand-400">VN</span>
+        </span>
+      </a>
+      <a href="index.html" class="px-3 py-1.5 rounded-lg border border-white/20 hover:border-brand-400/60 text-sm">
+        Quay lại
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Payment Container -->
+  <div class="payment-container">
+    <div class="payment-card">
+      <h1 class="payment-title">💳 Thanh Toán</h1>
+      
+      <!-- Initial State: Show form -->
+      <div id="paymentForm">
+        <div class="amount-info">
+          <div class="amount-label">Gói được chọn</div>
+          <div id="planName" style="font-size: 20px; margin-bottom: 10px;">PREMIUM</div>
+          <div class="amount-label">Thanh toán</div>
+          <div class="amount-value" id="amountDisplay">75.000đ</div>
+        </div>
+
+        <p style="font-size: 14px; text-align: center; color: rgba(255,255,255,0.7); margin-bottom: 20px;">
+          Quét mã QR bên dưới để hoàn tất thanh toán
+        </p>
+
+        <button class="btn" onclick="handleCreatePayment()">
+          📱 Tạo Mã QR Thanh Toán
+        </button>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loadingState" style="display: none;">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Đang khởi tạo thanh toán...</p>
+        </div>
+      </div>
+
+      <!-- QR Code Display State -->
+      <div id="qrState" style="display: none;">
+        <div class="qr-container">
+          <p style="margin-bottom: 15px; font-size: 14px;">Quét mã QR bằng ứng dụng ngân hàng:</p>
+          <img id="qrCodeImage" class="qr-code" alt="Mã QR thanh toán">
+        </div>
+        <p style="font-size: 12px; text-align: center; color: rgba(255,255,255,0.7); margin: 20px 0;">
+          Sau khi thanh toán, vui lòng chờ xác nhận...
+        </p>
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Chờ xác nhận thanh toán...</p>
+        </div>
+      </div>
+
+      <!-- Success State -->
+      <div id="successState" style="display: none;">
+        <div class="status-success">
+          ✅ Thanh toán thành công!
+        </div>
+        <div class="amount-info">
+          <div class="amount-label">License Key của bạn:</div>
+          <div id="licenseKeyDisplay" class="license-key" style="margin-top: 15px; font-size: 16px; font-weight: bold;"></div>
+          <button class="copy-btn" onclick="copyLicenseKey()">📋 Copy License</button>
+        </div>
+        <div style="margin-top: 20px; padding: 15px; background: rgba(34, 197, 226, 0.1); border-radius: 8px; font-size: 12px;">
+          <p>• Giấy phép có hiệu lực 30 ngày</p>
+          <p>• Kích hoạt ngay trên VS Code Extension</p>
+          <p>• Hỗ trợ kỹ thuật 24/7</p>
+        </div>
+        <a href="index.html" class="btn" style="background: #0ea5e9; margin-top: 30px;">
+          🏠 Về Trang Chủ
+        </a>
+      </div>
+
+      <!-- Error State -->
+      <div id="errorState" style="display: none;">
+        <div class="status-error">
+          ❌ Thanh toán thất bại
+        </div>
+        <p id="errorMessage" style="text-align: center; margin: 15px 0; font-size: 14px;"></p>
+        <button class="btn" onclick="location.reload()">
+          🔄 Thử Lại
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/payment.js"></script>
+</body>
+</html>

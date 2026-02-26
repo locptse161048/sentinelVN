@@ -6,7 +6,7 @@ const SupportMsg = require('../models/supportMsg');
 // Lấy danh sách tất cả clients
 router.get('/clients', async (req, res) => {
 	try {
-		const clients = await Client.find({ isAdmin: false }).select('-passwordHash');
+		const clients = await Client.find({ role: 'client' }).select('-passwordHash');
 		res.json(clients);
 	} catch (err) {
 		console.error("Error fetching clients:", err);

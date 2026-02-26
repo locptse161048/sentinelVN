@@ -6,23 +6,20 @@ const jwt = require('jsonwebtoken');
 
 // Đăng ký
 router.post('/register', async (req, res) => {
-	const { email, password, fullName } = req.body;
-	if (!fullName) {
+	const { email, password, name } = req.body;
+	if (!name) {
 		return res.status(400).json({ message: "Vui lòng nhập họ và tên" });
 	}
 	try {
 		const existing = await Client.findOne({ email });
-		if (req.body.isAdmin === true) {
-			return res.status(403).json({
-				message: "❌ Không thể đăng ký tài khoản admin."
-			});
-		}
 		if (existing) return res.status(400).json({ message: 'Email đã tồn tại' });
 		const hash = await bcrypt.hash(password, 10);
 		const user = await Client.create({
 			email,
-			fullName: fullName || "",
-			passwordHash: hash
+			name: name || "",
+			passwordHash: hash,
+			role: 'client',
+			status: 'đang hoạt động'
 		});
 		res.json({ message: 'Đăng ký thành công', user });
 	} catch (err) {
@@ -50,8 +47,8 @@ router.post('/login', async (req, res) => {
 				message: "Đăng nhập thành công",
 				user: {
 					email: user.email,
-					role: user.isAdmin ? "admin" : "client",
-					fullName: user.fullName
+					role: user.role,
+					name: user.name
 				}
 			});
 		});
@@ -79,8 +76,8 @@ router.get('/session', async (req, res) => {
 	}
 	res.json({
 		email: user.email,
-		role: user.isAdmin ? "admin" : "client",
-		fullName: user.fullName
+		role: user.role,
+		name: user.name
 	});
 });
 // Lấy thông tin người dùng
@@ -97,7 +94,7 @@ router.get('/me', async (req, res) => {
 
 		res.json({
 			email: user.email,
-			fullName: user.fullName,
+			name: user.name,
 			role: user.isAdmin ? "admin" : "client",
 			plan: user.plan,
 			status: user.status

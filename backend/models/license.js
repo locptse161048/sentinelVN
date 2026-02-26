@@ -1,11 +1,13 @@
 const mongoose = require('mongoose');
 
 const LicenseSchema = new mongoose.Schema({
-	client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
-	packageName: { type: String, required: true },
-	startDate: { type: Date, default: Date.now },
-	endDate: { type: Date },
-	status: { type: String, enum: ['active', 'expired'], default: 'active' },
+	id: { type: String, unique: true, required: true },
+	clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
+	key: { type: String, unique: true, required: true },
+	plan: { type: String, enum: ['PREMIUM', 'PRO'], required: true },
+	ammount: { type: Number, required: true },
+	createdAt: { type: Date, default: Date.now },
+	expiresAt: { type: Date, required: true },
 });
 
 module.exports = mongoose.model('License', LicenseSchema);
