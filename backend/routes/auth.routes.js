@@ -6,8 +6,8 @@ const jwt = require('jsonwebtoken');
 
 // Đăng ký
 router.post('/register', async (req, res) => {
-	const { email, password, name } = req.body;
-	if (!name) {
+	const { email, password, fullName } = req.body;
+	if (!fullName) {
 		return res.status(400).json({ message: "Vui lòng nhập họ và tên" });
 	}
 	try {
@@ -16,7 +16,7 @@ router.post('/register', async (req, res) => {
 		const hash = await bcrypt.hash(password, 10);
 		const user = await Client.create({
 			email,
-			name: name || "",
+			fullName: fullName || "",
 			passwordHash: hash,
 			role: 'client',
 			status: 'đang hoạt động'
@@ -48,7 +48,7 @@ router.post('/login', async (req, res) => {
 				user: {
 					email: user.email,
 					role: user.role,
-					name: user.name
+					fullName: user.fullName
 				}
 			});
 		});
@@ -77,7 +77,7 @@ router.get('/session', async (req, res) => {
 	res.json({
 		email: user.email,
 		role: user.role,
-		name: user.name
+		fullName: user.fullName
 	});
 });
 // Lấy thông tin người dùng
@@ -94,7 +94,7 @@ router.get('/me', async (req, res) => {
 
 		res.json({
 			email: user.email,
-			name: user.name,
+			fullName: user.fullName,
 			role: user.isAdmin ? "admin" : "client",
 			plan: user.plan,
 			status: user.status
