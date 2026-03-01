@@ -5,7 +5,7 @@ const License = require('../models/license');
 const Client = require('../models/client');
 const crypto = require('crypto');
 require('dotenv').config();
-const PayOS = require('@payos/node');
+const { default: PayOS } = require('@payos/node');
 
 const payos = new PayOS(
 	process.env.PAYOS_CLIENT_ID,
