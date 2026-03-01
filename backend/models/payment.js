@@ -6,6 +6,7 @@ const PaymentSchema = new mongoose.Schema({
 	amount: { type: Number, required: true },
 	method: { type: String, enum: ['VNPay', 'Momo', 'PayOS'], required: true },
 	status: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
+	orderCode: { type: Number },
 	transactionId: { type: String, unique: true },
 	createdAt: { type: Date, default: Date.now },
 });

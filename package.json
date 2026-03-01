@@ -1,3 +1,6 @@
 {
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@payos/node": "^2.0.4"
+  }
 }

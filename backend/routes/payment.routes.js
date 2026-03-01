@@ -5,14 +5,20 @@ const License = require('../models/license');
 const Client = require('../models/client');
 const crypto = require('crypto');
 require('dotenv').config();
+const PayOS = require('@payos/node');
 
+const payos = new PayOS(
+	process.env.PAYOS_CLIENT_ID,
+	process.env.PAYOS_API_KEY,
+	process.env.PAYOS_CHECKSUM_KEY
+);
 // Tự tính signature theo đúng docs PayOS
 function generateSignature(data, checksumKey) {
-  const sortedKeys = ['amount', 'cancelUrl', 'description', 'orderCode', 'returnUrl'];
-  const signatureString = sortedKeys
-    .map(key => `${key}=${data[key]}`)
-    .join('&');
-  return crypto.createHmac('sha256', checksumKey).update(signatureString).digest('hex');
+	const sortedKeys = ['amount', 'cancelUrl', 'description', 'orderCode', 'returnUrl'];
+	const signatureString = sortedKeys
+		.map(key => `${key}=${data[key]}`)
+		.join('&');
+	return crypto.createHmac('sha256', checksumKey).update(signatureString).digest('hex');
 }
 // Helper: Tạo License Key (match logic từ index.js)
 function genKey(plan = 'PREMIUM') {
@@ -44,69 +50,70 @@ function getExpiresDate(days = 30) {
 
 // POST: Khởi tạo thanh toán
 router.post('/create', async (req, res) => {
-  try {
-    const { plan } = req.body;
-    const clientId = req.session.userId;
+	try {
+		const { plan } = req.body;
+		const clientId = req.session.userId;
 
-    const planConfig = { PREMIUM: 75000, PRO: 500000 };
-    const amount = planConfig[plan] || 75000;
+		const planConfig = { PREMIUM: 75000, PRO: 500000 };
+		const amount = planConfig[plan] || 75000;
+		const orderCode = Number(Date.now().toString().slice(-8));
+		const payment = await Payment.create({
+			clientId,
+			plan,
+			amount,
+			method: 'PayOS',
+			status: 'pending',
+			orderCode,
+			transactionId: generateOrderCode()
+		});
 
-    const payment = await Payment.create({
-      clientId,
-      plan,
-      amount,
-      method: 'PayOS',
-      status: 'pending',
-      transactionId: generateOrderCode()
-    });
+		const client = await Client.findById(clientId);
 
-    const client = await Client.findById(clientId);
-    const orderCode = Number(Date.now().toString().slice(-8));
 
-    const paymentData = {
-      orderCode,
-      amount,
-      description: `Mua goi ${plan}`,
-      cancelUrl: `${process.env.FRONTEND_URL}/payment.html?status=cancelled&id=${payment._id}`,
-      returnUrl: `${process.env.FRONTEND_URL}/payment.html?status=success&id=${payment._id}`,
-    };
+		const paymentData = {
+			orderCode,
+			amount,
+			description: `Mua goi ${plan}`,
+			cancelUrl: `${process.env.FRONTEND_URL}/payment.html?status=cancelled&id=${payment._id}`,
+			returnUrl: `${process.env.FRONTEND_URL}/payment.html?status=success&id=${payment._id}`,
+		};
 
-    const signature = generateSignature(paymentData, process.env.PAYOS_CHECKSUM_KEY);
+		const signature = generateSignature(paymentData, process.env.PAYOS_CHECKSUM_KEY);
 
-    const payload = {
-      ...paymentData,
-      buyerEmail: client.email,
-      signature,
-    };
+		const payload = {
+			...paymentData,
+			buyerEmail: client.email,
+			signature,
+		};
 
-    const response = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-client-id': process.env.PAYOS_CLIENT_ID,
-        'x-api-key': process.env.PAYOS_API_KEY,
-      },
-      body: JSON.stringify(payload),
-    });
+		const response = await fetch('https://api-merchant.payos.vn/v2/payment-requests', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'x-client-id': process.env.PAYOS_CLIENT_ID,
+				'x-api-key': process.env.PAYOS_API_KEY,
+			},
+			body: JSON.stringify(payload),
+		});
 
-    const result = await response.json();
-    console.log('PayOS response:', JSON.stringify(result));
+		const result = await response.json();
+		console.log('PayOS response:', JSON.stringify(result));
 
-    if (result.code !== '00') {
-      throw new Error(result.desc || 'Lỗi PayOS');
-    }
+		if (result.code !== '00') {
+			throw new Error(result.desc || 'Lỗi PayOS');
+		}
 
-    res.json({
-      success: true,
-      paymentId: payment._id,
-      checkoutUrl: result.data.checkoutUrl,
-      qrCode: result.data.qrCode,
-    });
+		res.json({
+			success: true,
+			paymentId: payment._id,
+			checkoutUrl: result.data.checkoutUrl,
+			qrCode: result.data.qrCode,
+		});
 
-  } catch (err) {
-    console.error('Error creating PayOS payment:', err.message);
-    res.status(500).json({ success: false, message: 'Lỗi tạo thanh toán' });
-  }
+	} catch (err) {
+		console.error('Error creating PayOS payment:', err.message);
+		res.status(500).json({ success: false, message: 'Lỗi tạo thanh toán' });
+	}
 });
 
 // GET: Lấy license key hiện tại
@@ -169,7 +176,7 @@ router.post('/return', async (req, res) => {
 		// Xác nhận với PayOS
 		try {
 			const paymentInfo = await payos.getPaymentLinkInformation(paymentId);
-			
+
 			// Kiểm tra trạng thái thanh toán từ PayOS
 			if (!paymentInfo || paymentInfo.status !== 'PAID') {
 				await Payment.findByIdAndUpdate(paymentId, { status: 'failed' });
@@ -177,7 +184,7 @@ router.post('/return', async (req, res) => {
 			}
 
 			// Cập nhật Payment status thành success
-			await Payment.findByIdAndUpdate(paymentId, { 
+			await Payment.findByIdAndUpdate(paymentId, {
 				status: 'success',
 				transactionId: paymentInfo.id
 			});
@@ -212,9 +219,9 @@ router.post('/return', async (req, res) => {
 			// Nếu không thể xác nhận với PayOS, giả định rằng nó đã thành công
 			// (có thể là timeout hoặc lỗi mạng)
 			await Payment.findByIdAndUpdate(paymentId, { status: 'pending' });
-			return res.status(502).json({ 
-				success: false, 
-				message: 'Không thể xác nhận với PayOS. Vui lòng thử lại sau vài giây.' 
+			return res.status(502).json({
+				success: false,
+				message: 'Không thể xác nhận với PayOS. Vui lòng thử lại sau vài giây.'
 			});
 		}
 
