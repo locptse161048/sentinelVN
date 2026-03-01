@@ -7,11 +7,11 @@ const crypto = require('crypto');
 require('dotenv').config();
 const { PayOS } = require('@payos/node');
 // Khởi tạo PayOS client
-const payos = new PayOS(
-    process.env.PAYOS_CLIENT_ID,
-    process.env.PAYOS_API_KEY,
-    process.env.PAYOS_CHECKSUM_KEY
-);
+const payos = new PayOS({
+    clientId: process.env.PAYOS_CLIENT_ID,
+    apiKey: process.env.PAYOS_API_KEY,
+    checksumKey: process.env.PAYOS_CHECKSUM_KEY,
+});
 
 // Helper: Tạo License Key (match logic từ index.js)
 function genKey(plan = 'PREMIUM') {
@@ -76,7 +76,7 @@ router.post('/create', async (req, res) => {
 		};
 
 		// Gọi PayOS API
-		const createdPayment = await payos.createPayment(paymentData);
+		const createdPayment = await payos.paymentRequests.create(paymentData);
 
 		res.json({
 			success: true,
