@@ -39,7 +39,7 @@ function genKey(plan = 'PREMIUM') {
 		for (let i = 0; i < 10; i++) {
 			hexStr += Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
 		}
-		return `PRO-${hexStr.slice(0,4)}-${hexStr.slice(4,8)}-${hexStr.slice(8,12)}-${hexStr.slice(12,16)}`.toUpperCase();
+		return `PRO-${hexStr.slice(0, 4)}-${hexStr.slice(4, 8)}-${hexStr.slice(8, 12)}-${hexStr.slice(12, 16)}`.toUpperCase();
 	}
 }
 
@@ -81,7 +81,7 @@ router.post('/create', async (req, res) => {
 			amount,
 			description: `Mua goi ${plan}`,
 			cancelUrl: `${process.env.FRONTEND_URL}/payment.html?status=cancelled&id=${payment._id}`,
-			returnUrl:  `${process.env.FRONTEND_URL}/payment.html?status=success&id=${payment._id}`,
+			returnUrl: `${process.env.FRONTEND_URL}/payment.html?status=success&id=${payment._id}`,
 		};
 
 		const signature = generateSignature(paymentData, process.env.PAYOS_CHECKSUM_KEY);
@@ -97,7 +97,7 @@ router.post('/create', async (req, res) => {
 			headers: {
 				'Content-Type': 'application/json',
 				'x-client-id': process.env.PAYOS_CLIENT_ID,
-				'x-api-key':   process.env.PAYOS_API_KEY,
+				'x-api-key': process.env.PAYOS_API_KEY,
 			},
 			body: JSON.stringify(payload),
 		});
@@ -111,9 +111,9 @@ router.post('/create', async (req, res) => {
 
 		res.json({
 			success: true,
-			paymentId:   payment._id,
+			paymentId: payment._id,
 			checkoutUrl: result.data.checkoutUrl,
-			qrCode:      result.data.qrCode,
+			qrCode: result.data.qrCode,
 		});
 
 	} catch (err) {
@@ -146,8 +146,8 @@ router.post('/return', async (req, res) => {
 				success: true,
 				message: 'Thanh toán đã được xác nhận',
 				license: license ? {
-					key:       license.key,
-					plan:      license.plan,
+					key: license.key,
+					plan: license.plan,
 					expiresAt: license.expiresAt
 				} : null
 			});
@@ -161,7 +161,7 @@ router.post('/return', async (req, res) => {
 					method: 'GET',
 					headers: {
 						'x-client-id': process.env.PAYOS_CLIENT_ID,
-						'x-api-key':   process.env.PAYOS_API_KEY,
+						'x-api-key': process.env.PAYOS_API_KEY,
 					}
 				}
 			);
@@ -176,19 +176,20 @@ router.post('/return', async (req, res) => {
 
 			// Thanh toán thành công → cập nhật Payment
 			await Payment.findByIdAndUpdate(paymentId, {
-				status:        'success',
+				status: 'success',
 				transactionId: verifyData.data.id || String(payment.orderCode)
 			});
 
 			// Tạo License Key
 			const licenseKey = genKey(payment.plan);
-			const expiresAt  = getExpiresDate(30);
+			const expiresAt = getExpiresDate(30);
 
 			await License.create({
+				id: verifyData.data.id,   // ← thêm: paymentLinkId từ PayOS
 				clientId,
-				key:       licenseKey,
-				plan:      payment.plan,
-				amount:    payment.amount,
+				key: licenseKey,
+				plan: payment.plan,
+				amount: payment.amount,      
 				expiresAt,
 			});
 
@@ -196,8 +197,8 @@ router.post('/return', async (req, res) => {
 				success: true,
 				message: 'Thanh toán thành công',
 				license: {
-					key:       licenseKey,
-					plan:      payment.plan,
+					key: licenseKey,
+					plan: payment.plan,
 					expiresAt,
 				}
 			});
@@ -234,8 +235,8 @@ router.get('/license/active', async (req, res) => {
 		res.json({
 			success: true,
 			license: {
-				key:       license.key,
-				plan:      license.plan,
+				key: license.key,
+				plan: license.plan,
 				expiresAt: license.expiresAt
 			}
 		});
