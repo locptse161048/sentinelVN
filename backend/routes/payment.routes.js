@@ -5,12 +5,16 @@ const License = require('../models/license');
 const Client = require('../models/client');
 const crypto = require('crypto');
 require('dotenv').config();
-const { default: PayOS } = require('@payos/node');
 
+const PayOSModule = require('@payos/node');
+console.log('PayOS module:', PayOSModule);           // xem nó export ra gì
+console.log('keys:', Object.keys(PayOSModule));      // xem có key nào
+
+const PayOS = PayOSModule.default || PayOSModule;    // tự động lấy đúng
 const payos = new PayOS(
-	process.env.PAYOS_CLIENT_ID,
-	process.env.PAYOS_API_KEY,
-	process.env.PAYOS_CHECKSUM_KEY
+  process.env.PAYOS_CLIENT_ID,
+  process.env.PAYOS_API_KEY,
+  process.env.PAYOS_CHECKSUM_KEY
 );
 // Tự tính signature theo đúng docs PayOS
 function generateSignature(data, checksumKey) {
