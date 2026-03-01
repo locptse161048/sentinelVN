@@ -72,7 +72,7 @@ app.use('/api/admin', adminMiddleware, require('./routes/admin.routes'));
 app.use('/api/client', authMiddleware, require('./routes/client.routes'));
 app.use('/api/payment', authMiddleware, require('./routes/payment.routes'));
 app.use('/api/support', authMiddleware, require('./routes/support.routes'));
-
+app.use('/api/webhook', require('./routes/webhook.routes'));
 app.get('/', (req, res) => {
   res.send('Sentinel VN Backend API');
 });

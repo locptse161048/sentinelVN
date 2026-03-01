@@ -39,7 +39,7 @@ function genKey(plan = 'PREMIUM') {
 		for (let i = 0; i < 10; i++) {
 			hexStr += Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
 		}
-		return `PRO-${hexStr.slice(0, 4)}-${hexStr.slice(4, 8)}-${hexStr.slice(8, 12)}-${hexStr.slice(12, 16)}`.toUpperCase();
+		return `PRO-${hexStr.slice(0,4)}-${hexStr.slice(4,8)}-${hexStr.slice(8,12)}-${hexStr.slice(12,16)}`.toUpperCase();
 	}
 }
 
@@ -60,8 +60,6 @@ router.post('/create', async (req, res) => {
 
 		const planConfig = { PREMIUM: 75000, PRO: 500000 };
 		const amount = planConfig[plan] || 75000;
-
-		// Tạo orderCode TRƯỚC rồi mới lưu vào Payment
 		const orderCode = Number(Date.now().toString().slice(-8));
 
 		const payment = await Payment.create({
@@ -81,7 +79,7 @@ router.post('/create', async (req, res) => {
 			amount,
 			description: `Mua goi ${plan}`,
 			cancelUrl: `${process.env.FRONTEND_URL}/payment.html?status=cancelled&id=${payment._id}`,
-			returnUrl: `${process.env.FRONTEND_URL}/payment.html?status=success&id=${payment._id}`,
+			returnUrl:  `${process.env.FRONTEND_URL}/payment.html?status=success&id=${payment._id}`,
 		};
 
 		const signature = generateSignature(paymentData, process.env.PAYOS_CHECKSUM_KEY);
@@ -97,7 +95,7 @@ router.post('/create', async (req, res) => {
 			headers: {
 				'Content-Type': 'application/json',
 				'x-client-id': process.env.PAYOS_CLIENT_ID,
-				'x-api-key': process.env.PAYOS_API_KEY,
+				'x-api-key':   process.env.PAYOS_API_KEY,
 			},
 			body: JSON.stringify(payload),
 		});
@@ -110,10 +108,10 @@ router.post('/create', async (req, res) => {
 		}
 
 		res.json({
-			success: true,
-			paymentId: payment._id,
+			success:     true,
+			paymentId:   payment._id,
 			checkoutUrl: result.data.checkoutUrl,
-			qrCode: result.data.qrCode,
+			qrCode:      result.data.qrCode,
 		});
 
 	} catch (err) {
@@ -122,20 +120,101 @@ router.post('/create', async (req, res) => {
 	}
 });
 
-// ========= POST /return =========
+// ========= POST /webhook =========
+// PayOS tự gọi route này khi có tiền chuyển đến
+// ⚠️ Route này KHÔNG cần authMiddleware → phải đặt trước module.exports
+
+router.post('/webhook', async (req, res) => {
+	try {
+		const webhookData = req.body;
+		console.log('Webhook received:', JSON.stringify(webhookData));
+
+		// 1. Xác thực chữ ký
+		const sortedKeys = [
+			'amount', 'code', 'desc', 'orderCode', 'reference',
+			'transactionDateTime', 'counterAccountBankId',
+			'counterAccountBankName', 'counterAccountName',
+			'counterAccountNumber', 'virtualAccountName',
+			'virtualAccountNumber'
+		];
+
+		const signatureString = sortedKeys
+			.filter(key => webhookData.data?.[key] !== undefined)
+			.map(key => `${key}=${webhookData.data[key]}`)
+			.join('&');
+
+		const expectedSignature = crypto
+			.createHmac('sha256', process.env.PAYOS_CHECKSUM_KEY)
+			.update(signatureString)
+			.digest('hex');
+
+		if (webhookData.signature !== expectedSignature) {
+			console.error('Invalid webhook signature');
+			return res.status(400).json({ error: 'Invalid signature' });
+		}
+
+		// 2. Chỉ xử lý khi thanh toán thành công
+		if (webhookData.code !== '00') {
+			return res.json({ received: true });
+		}
+
+		const orderCode = webhookData.data.orderCode;
+
+		// 3. Tìm Payment theo orderCode
+		const payment = await Payment.findOne({ orderCode });
+		if (!payment) {
+			console.error('Payment not found for orderCode:', orderCode);
+			return res.status(404).json({ error: 'Payment not found' });
+		}
+
+		// 4. Tránh xử lý trùng
+		if (payment.status === 'success') {
+			return res.json({ received: true, message: 'Already processed' });
+		}
+
+		// 5. Cập nhật Payment → success
+		await Payment.findByIdAndUpdate(payment._id, {
+			status:        'success',
+			transactionId: webhookData.data.reference || String(orderCode)
+		});
+
+		// 6. Tạo License
+		const licenseKey = genKey(payment.plan);
+		const expiresAt  = getExpiresDate(30);
+
+		await License.create({
+			id:       webhookData.data.reference || String(orderCode),
+			clientId: payment.clientId,
+			key:      licenseKey,
+			plan:     payment.plan,
+			amount:   payment.amount,
+			expiresAt,
+		});
+
+		console.log('✅ License created via webhook:', licenseKey);
+
+		// 7. Trả 200 để PayOS không retry
+		return res.json({ received: true });
+
+	} catch (err) {
+		console.error('Webhook error:', err);
+		return res.status(200).json({ received: true });
+	}
+});
+
+// ========= POST /return (user bấm "Đã thanh toán") =========
 
 router.post('/return', async (req, res) => {
 	try {
 		const { paymentId } = req.body;
 		const clientId = req.session.userId;
 
-		// Tìm Payment record
 		const payment = await Payment.findById(paymentId);
 		if (!payment) {
 			return res.status(404).json({ success: false, message: 'Thanh toán không tìm thấy' });
 		}
 
-		// Nếu đã xác nhận trước đó → trả license luôn
+		// Webhook đã xử lý xong → trả license luôn, không cần làm gì thêm
 		if (payment.status === 'success') {
 			const license = await License.findOne({
 				clientId,
@@ -146,14 +225,14 @@ router.post('/return', async (req, res) => {
 				success: true,
 				message: 'Thanh toán đã được xác nhận',
 				license: license ? {
-					key: license.key,
-					plan: license.plan,
+					key:       license.key,
+					plan:      license.plan,
 					expiresAt: license.expiresAt
 				} : null
 			});
 		}
 
-		// Gọi PayOS REST API để xác nhận trạng thái
+		// Webhook chưa kịp chạy → tự verify với PayOS (fallback)
 		try {
 			const verifyRes = await fetch(
 				`https://api-merchant.payos.vn/v2/payment-requests/${payment.orderCode}`,
@@ -161,7 +240,7 @@ router.post('/return', async (req, res) => {
 					method: 'GET',
 					headers: {
 						'x-client-id': process.env.PAYOS_CLIENT_ID,
-						'x-api-key': process.env.PAYOS_API_KEY,
+						'x-api-key':   process.env.PAYOS_API_KEY,
 					}
 				}
 			);
@@ -174,33 +253,29 @@ router.post('/return', async (req, res) => {
 				return res.json({ success: false, message: 'Thanh toán chưa được hoàn tất' });
 			}
 
-			// Thanh toán thành công → cập nhật Payment
+			// Đã thanh toán → cập nhật Payment
 			await Payment.findByIdAndUpdate(paymentId, {
-				status: 'success',
+				status:        'success',
 				transactionId: verifyData.data.id || String(payment.orderCode)
 			});
 
-			// Tạo License Key
+			// Tạo License
 			const licenseKey = genKey(payment.plan);
-			const expiresAt = getExpiresDate(30);
+			const expiresAt  = getExpiresDate(30);
 
 			await License.create({
-				id: verifyData.data.id,   // ← thêm: paymentLinkId từ PayOS
+				id:       verifyData.data.id,
 				clientId,
-				key: licenseKey,
-				plan: payment.plan,
-				amount: payment.amount,      
+				key:      licenseKey,
+				plan:     payment.plan,
+				amount:   payment.amount,
 				expiresAt,
 			});
 
 			return res.json({
 				success: true,
 				message: 'Thanh toán thành công',
-				license: {
-					key: licenseKey,
-					plan: payment.plan,
-					expiresAt,
-				}
+				license: { key: licenseKey, plan: payment.plan, expiresAt }
 			});
 
 		} catch (payosError) {
@@ -235,8 +310,8 @@ router.get('/license/active', async (req, res) => {
 		res.json({
 			success: true,
 			license: {
-				key: license.key,
-				plan: license.plan,
+				key:       license.key,
+				plan:      license.plan,
 				expiresAt: license.expiresAt
 			}
 		});
@@ -259,4 +334,5 @@ router.get('/', async (req, res) => {
 	}
 });
 
+// ⚠️ module.exports LUÔN ở cuối cùng
 module.exports = router;
