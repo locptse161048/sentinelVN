@@ -27,7 +27,7 @@ function genKey(plan = 'PREMIUM') {
         for (let i = 0; i < 10; i++) {
             hexStr += Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
         }
-        return `PRO-${hexStr.slice(0, 4)}-${hexStr.slice(4, 8)}-${hexStr.slice(8, 12)}-${hexStr.slice(12, 16)}`.toUpperCase();
+        return `PRO-${hexStr.slice(0,4)}-${hexStr.slice(4,8)}-${hexStr.slice(8,12)}-${hexStr.slice(12,16)}`.toUpperCase();
     }
 }
 
@@ -48,79 +48,50 @@ router.post('/payos', async (req, res) => {
 
         console.log('Webhook received:', JSON.stringify(webhookData));
 
-        // 1. Tính signature — khai báo TRƯỚC khi dùng
-        // ✅ Thứ tự alphabet — đúng
-        // ✅ Chỉ dùng đúng 7 field PayOS quy định, sort alphabet
-        const allowedKeys = [
-            'accountNumber',
-            'amount',
-            'currency',
-            'description',
-            'orderCode',
-            'reference',
-            'transactionDateTime'
-        ];
-
-        const signatureString = allowedKeys
-            .filter(key => webhookData.data?.[key] !== undefined &&
-                webhookData.data?.[key] !== null &&
-                webhookData.data?.[key] !== '')
-            .sort()
-            .map(key => `${key}=${webhookData.data[key]}`)
-            .join('&');
-
-        // ✅ Khai báo expectedSignature TRƯỚC khi log
-        const expectedSignature = crypto
-            .createHmac('sha256', process.env.PAYOS_CHECKSUM_KEY)
-            .update(signatureString)
-            .digest('hex');
-
-        // Log để debug — xóa sau khi xác nhận chạy đúng
-        console.log('signatureString:', signatureString);
-        console.log('expectedSignature:', expectedSignature);
-        console.log('receivedSignature:', webhookData.signature);
-
-        // 2. Xác thực chữ ký
-        if (webhookData.signature !== expectedSignature) {
-            console.warn('Invalid webhook signature');
+        // 1. Xác thực chữ ký bằng thư viện @payos/node
+        try {
+            payos.verifyPaymentWebhookData(webhookData);
+        } catch (verifyErr) {
+            console.warn('Invalid webhook signature:', verifyErr.message);
             return res.status(200).json({ success: true });
         }
 
-        // 3. Chỉ xử lý khi thanh toán thành công
+        // 2. Chỉ xử lý khi thanh toán thành công
         if (webhookData.code !== '00') {
             return res.json({ received: true });
         }
 
         const orderCode = webhookData.data.orderCode;
 
-        // 4. Tìm Payment theo orderCode
+        // 3. Tìm Payment theo orderCode
         const payment = await Payment.findOne({ orderCode });
         if (!payment) {
             console.error('Payment not found for orderCode:', orderCode);
             return res.status(404).json({ error: 'Payment not found' });
         }
 
-        // 5. Tránh xử lý trùng
+        // 4. Tránh xử lý trùng
         if (payment.status === 'success') {
+            console.log('Already processed:', orderCode);
             return res.json({ received: true, message: 'Already processed' });
         }
 
-        // 6. Cập nhật Payment → success
+        // 5. Cập nhật Payment → success
         await Payment.findByIdAndUpdate(payment._id, {
-            status: 'success',
+            status:        'success',
             transactionId: webhookData.data.reference || String(orderCode)
         });
 
-        // 7. Tạo License
+        // 6. Tạo License
         const licenseKey = genKey(payment.plan);
-        const expiresAt = getExpiresDate(30);
+        const expiresAt  = getExpiresDate(30);
 
         await License.create({
-            id: webhookData.data.reference || String(orderCode),
+            id:       webhookData.data.reference || String(orderCode),
             clientId: payment.clientId,
-            key: licenseKey,
-            plan: payment.plan,
-            amount: payment.amount,
+            key:      licenseKey,
+            plan:     payment.plan,
+            amount:   payment.amount,
             expiresAt,
         });
 
