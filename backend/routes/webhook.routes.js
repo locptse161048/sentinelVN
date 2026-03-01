@@ -27,7 +27,7 @@ function genKey(plan = 'PREMIUM') {
         for (let i = 0; i < 10; i++) {
             hexStr += Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
         }
-        return `PRO-${hexStr.slice(0,4)}-${hexStr.slice(4,8)}-${hexStr.slice(8,12)}-${hexStr.slice(12,16)}`.toUpperCase();
+        return `PRO-${hexStr.slice(0, 4)}-${hexStr.slice(4, 8)}-${hexStr.slice(8, 12)}-${hexStr.slice(12, 16)}`.toUpperCase();
     }
 }
 
@@ -49,18 +49,12 @@ router.post('/payos', async (req, res) => {
         console.log('Webhook received:', JSON.stringify(webhookData));
 
         // 1. Tính signature — khai báo TRƯỚC khi dùng
-        const sortedKeys = [
-            'amount',
-            'description',
-            'orderCode',
-            'reference',
-            'transactionDateTime',
-            'accountNumber',
-            'currency'
-        ];
-
-        const signatureString = sortedKeys
-            .filter(key => webhookData.data?.[key] !== undefined)
+        // ✅ Thứ tự alphabet — đúng
+        const signatureString = Object.keys(webhookData.data)
+            .filter(key => webhookData.data[key] !== '' &&
+                webhookData.data[key] !== null &&
+                webhookData.data[key] !== undefined)
+            .sort()
             .map(key => `${key}=${webhookData.data[key]}`)
             .join('&');
 
@@ -102,20 +96,20 @@ router.post('/payos', async (req, res) => {
 
         // 6. Cập nhật Payment → success
         await Payment.findByIdAndUpdate(payment._id, {
-            status:        'success',
+            status: 'success',
             transactionId: webhookData.data.reference || String(orderCode)
         });
 
         // 7. Tạo License
         const licenseKey = genKey(payment.plan);
-        const expiresAt  = getExpiresDate(30);
+        const expiresAt = getExpiresDate(30);
 
         await License.create({
-            id:       webhookData.data.reference || String(orderCode),
+            id: webhookData.data.reference || String(orderCode),
             clientId: payment.clientId,
-            key:      licenseKey,
-            plan:     payment.plan,
-            amount:   payment.amount,
+            key: licenseKey,
+            plan: payment.plan,
+            amount: payment.amount,
             expiresAt,
         });
 
