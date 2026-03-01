@@ -158,8 +158,11 @@ const HEADER_HEIGHT = 64; // chiều cao header (h-16)
 document.querySelectorAll('a[href^="#"]').forEach(link => {
     link.addEventListener('click', e => {
         const targetId = link.getAttribute('href');
-        const targetEl = document.querySelector(targetId);
 
+        // Fix: bỏ qua href="#" thuần (không có id thực)
+        if (!targetId || targetId === '#') return;
+
+        const targetEl = document.querySelector(targetId);
         if (!targetEl) return;
 
         e.preventDefault();

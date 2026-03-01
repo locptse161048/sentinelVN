@@ -4,84 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Thanh toán - SentinelVN</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: white;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .card {
-      background: #1e293b;
-      border-radius: 16px;
-      padding: 2rem;
-      text-align: center;
-      width: 100%;
-      max-width: 420px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    }
-    h2 { margin-bottom: 0.5rem; font-size: 1.4rem; }
-    .subtitle { color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem; }
-    .plan-btn {
-      display: inline-block;
-      background: #3b82f6;
-      color: white;
-      border: none;
-      padding: 0.7rem 2rem;
-      border-radius: 8px;
-      font-size: 1rem;
-      cursor: pointer;
-      margin: 0.4rem;
-      transition: background 0.2s;
-    }
-    .plan-btn:hover { background: #2563eb; }
-    .plan-btn.pro { background: #7c3aed; }
-    .plan-btn.pro:hover { background: #6d28d9; }
-    .qr-box {
-      background: white;
-      border-radius: 12px;
-      padding: 1rem;
-      display: inline-block;
-      margin: 1rem 0;
-    }
-    .qr-box img { width: 220px; height: 220px; display: block; }
-    .amount { font-size: 1.5rem; font-weight: bold; color: #38bdf8; margin-bottom: 0.4rem; }
-    .order-id { color: #64748b; font-size: 0.8rem; margin-bottom: 1rem; }
-    .link-btn {
-      display: inline-block;
-      background: #0ea5e9;
-      color: white;
-      padding: 0.6rem 1.4rem;
-      border-radius: 8px;
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-    .loading { color: #94a3b8; padding: 1.5rem; }
-    .error-msg { color: #f87171; padding: 1rem; }
-    .success-box { background: #14532d; border-radius: 12px; padding: 1.5rem; color: #86efac; margin-bottom: 1rem; }
-    .cancel-box { background: #450a0a; border-radius: 12px; padding: 1.5rem; color: #fca5a5; margin-bottom: 1rem; }
-    .license-key {
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 0.8rem;
-      font-family: monospace;
-      font-size: 1.1rem;
-      color: #fbbf24;
-      margin: 0.5rem 0;
-      letter-spacing: 2px;
-    }
-    .back-link { color: #38bdf8; text-decoration: none; font-size: 0.9rem; }
-    #qr-section { display: none; }
-    #result-section { display: none; }
-    
-  </style>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="assets/css/payment.css">
+
+  <!-- QRCode.js để render mã QR từ chuỗi EMVCo -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
+
 <div class="card">
   <h2>💎 Nâng cấp tài khoản</h2>
   <p class="subtitle">Chọn gói bạn muốn mua</p>
@@ -106,157 +37,32 @@
   <div id="qr-section">
     <p style="color:#94a3b8; margin-bottom:0.5rem">Quét mã QR để thanh toán</p>
     <div class="qr-box">
-      <img id="qr-image" src="" alt="QR Code">
+      <!-- ✅ FIX: dùng div thay img, QRCode.js sẽ render vào đây -->
+      <div id="qr-canvas"></div>
     </div>
     <div class="amount" id="amount-text"></div>
     <div class="order-id">Mã đơn: <span id="order-code"></span></div>
     <a id="checkout-link" class="link-btn" href="#" target="_blank">🔗 Thanh toán qua link</a>
     <br><br>
-    <button onclick="checkPayment()" style="background:#22c55e;color:white;border:none;padding:0.6rem 1.5rem;border-radius:8px;cursor:pointer;font-size:0.9rem">
+    <button
+      onclick="checkPayment()"
+      style="background:#22c55e;color:white;border:none;padding:0.6rem 1.5rem;border-radius:8px;cursor:pointer;font-size:0.9rem">
       ✅ Tôi đã thanh toán xong
     </button>
     <br><br>
-    <a href="/index.html" class="back-link">← Quay lại</a>
+    <a href="index.html" class="back-link">← Quay lại</a>
   </div>
 
   <!-- Bước 4: Kết quả -->
   <div id="result-section">
     <div id="result-content"></div>
     <br>
-    <a href="/index.html" class="back-link">← Quay về trang chủ</a>
+    <a href="index.html" class="back-link">← Quay về trang chủ</a>
   </div>
 </div>
 
-<script>
-  // ⚠️ QUAN TRỌNG: Đổi URL này thành backend Render của bạn
-  const BACKEND_URL = 'https://sentinelvn.onrender.com';
+<!-- JS -->
+<script src="assets/js/payment.js"></script>
 
-  let currentPaymentId = null;
-  let currentPlan = null;
-
-  // Kiểm tra nếu PayOS redirect về sau thanh toán
-  window.addEventListener('DOMContentLoaded', () => {
-    const params = new URLSearchParams(window.location.search);
-    const status = params.get('status');
-    const id = params.get('id');
-
-    if (status === 'success' && id) {
-      currentPaymentId = id;
-      document.getElementById('plan-section').style.display = 'none';
-      document.getElementById('loading-section').style.display = 'block';
-      document.getElementById('loading-section').innerHTML = '<p class="loading">⏳ Đang xác nhận thanh toán...</p>';
-      verifyPayment(id);
-    } else if (status === 'cancelled') {
-      document.getElementById('plan-section').style.display = 'none';
-      showResult('cancel', null);
-    }
-  });
-
-  // Bắt đầu tạo thanh toán
-  async function startPayment(plan) {
-    currentPlan = plan;
-    document.getElementById('plan-section').style.display = 'none';
-    document.getElementById('loading-section').style.display = 'block';
-
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/payment/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',   // quan trọng! để gửi session cookie
-        body: JSON.stringify({ plan }),
-      });
-
-      const data = await res.json();
-
-      if (!data.success) {
-        throw new Error(data.message || 'Lỗi tạo đơn hàng');
-      }
-
-      currentPaymentId = data.paymentId;
-
-      // Hiển thị QR
-      document.getElementById('loading-section').style.display = 'none';
-      document.getElementById('qr-section').style.display = 'block';
-      document.getElementById('qr-image').src = data.qrCode;
-      document.getElementById('checkout-link').href = data.checkoutUrl;
-      document.getElementById('order-code').textContent = data.paymentId;
-
-      const amounts = { PREMIUM: '75.000 ₫', PRO: '500.000 ₫' };
-      document.getElementById('amount-text').textContent = amounts[plan] || '';
-
-    } catch (err) {
-      document.getElementById('loading-section').innerHTML =
-        `<p class="error-msg">❌ ${err.message}<br><br><a href="/payment.html" class="back-link">Thử lại</a></p>`;
-      console.error(err);
-    }
-  }
-
-  // Khi user bấm "Tôi đã thanh toán xong"
-  async function checkPayment() {
-    if (!currentPaymentId) return;
-    document.getElementById('qr-section').style.display = 'none';
-    document.getElementById('loading-section').style.display = 'block';
-    document.getElementById('loading-section').innerHTML = '<p class="loading">⏳ Đang xác nhận...</p>';
-    verifyPayment(currentPaymentId);
-  }
-
-  // Gọi backend để xác nhận thanh toán
-  async function verifyPayment(paymentId) {
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/payment/return`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ paymentId }),
-      });
-
-      const data = await res.json();
-
-      document.getElementById('loading-section').style.display = 'none';
-
-      if (data.success) {
-        showResult('success', data.license);
-      } else {
-        showResult('pending', null, data.message);
-      }
-
-    } catch (err) {
-      document.getElementById('loading-section').innerHTML =
-        '<p class="error-msg">❌ Lỗi xác nhận. Vui lòng thử lại.<br><br><a href="/payment.html" class="back-link">Thử lại</a></p>';
-    }
-  }
-
-  function showResult(type, license, message) {
-    document.getElementById('result-section').style.display = 'block';
-    document.getElementById('loading-section').style.display = 'none';
-    document.getElementById('qr-section').style.display = 'none';
-    document.getElementById('plan-section').style.display = 'none';
-
-    if (type === 'success') {
-      document.getElementById('result-content').innerHTML = `
-        <div class="success-box">
-          <p style="font-size:1.3rem;margin-bottom:0.5rem">✅ Thanh toán thành công!</p>
-          <p style="margin-bottom:1rem">License key của bạn:</p>
-          <div class="license-key">${license?.key || 'N/A'}</div>
-          <p style="font-size:0.8rem;color:#86efac;margin-top:0.5rem">
-            Hạn sử dụng: ${license?.expiresAt ? new Date(license.expiresAt).toLocaleDateString('vi-VN') : 'N/A'}
-          </p>
-        </div>`;
-    } else if (type === 'cancel') {
-      document.getElementById('result-content').innerHTML = `
-        <div class="cancel-box">
-          <p style="font-size:1.2rem">❌ Bạn đã hủy thanh toán.</p>
-        </div>`;
-    } else {
-      document.getElementById('result-content').innerHTML = `
-        <div class="cancel-box">
-          <p>⚠️ ${message || 'Chưa xác nhận được thanh toán.'}</p>
-          <p style="font-size:0.85rem;margin-top:0.5rem">Nếu bạn đã chuyển tiền, vui lòng đợi vài phút rồi thử lại.</p>
-          <br>
-          <a href="/payment.html" class="back-link" style="color:#fca5a5">← Thử lại</a>
-        </div>`;
-    }
-  }
-</script>
 </body>
 </html>

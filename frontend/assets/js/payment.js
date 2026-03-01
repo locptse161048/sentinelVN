@@ -1,207 +1,157 @@
-// Payment.js - Handle PayOS payment flow
+const BACKEND_URL = 'https://sentinelvn.onrender.com';
 
-const API_BASE = 'https://sentinelvn.onrender.com';
+let currentPaymentId = null;
+let currentPlan = null;
 
-// Lấy query params
-function getQueryParam(name) {
-    const url = new URL(window.location);
-    return url.searchParams.get(name);
-}
+// ========= Kiểm tra nếu PayOS redirect về sau thanh toán =========
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const status = params.get('status');
+  const id = params.get('id');
 
-// Setup khi load trang
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        // Kiểm tra session
-        const res = await fetch(`${API_BASE}/api/auth/session`, {
-            credentials: 'include'
-        });
+  // Tự động chọn plan nếu có query ?plan=PREMIUM
+  const planFromQuery = params.get('plan');
+  if (planFromQuery === 'PREMIUM' || planFromQuery === 'PRO') {
+    startPayment(planFromQuery);
+    return;
+  }
 
-        if (!res.ok) {
-            window.location.href = 'index.html';
-            return;
-        }
-
-        const user = await res.json();
-        
-        // Xác định plan từ query param hoặc localStorage
-        const plan = getQueryParam('plan') || localStorage.getItem('selectedPlan') || 'PREMIUM';
-        const planConfig = {
-            'PREMIUM': { name: 'PREMIUM', amount: 75000 },
-            'PRO': { name: 'PRO', amount: 500000 }
-        };
-
-        const config = planConfig[plan] || planConfig['PREMIUM'];
-        
-        // Update UI
-        document.getElementById('planName').textContent = config.name;
-        document.getElementById('amountDisplay').textContent = formatCurrency(config.amount);
-        
-        // Lưu vào localStorage
-        localStorage.setItem('selectedPlan', plan);
-        localStorage.setItem('selectedAmount', config.amount);
-
-        // Check status from callback
-        const status = getQueryParam('status');
-        const paymentId = getQueryParam('id');
-
-        if (status === 'success' && paymentId) {
-            await handlePaymentReturn(paymentId);
-        } else if (status === 'cancelled') {
-            showErrorState('Thanh toán bị hủy bỏ');
-        }
-
-    } catch (err) {
-        console.error('Setup error:', err);
-        window.location.href = 'index.html';
-    }
+  if (status === 'success' && id) {
+    currentPaymentId = id;
+    show('loading-section');
+    document.getElementById('loading-section').innerHTML =
+      '<p class="loading">⏳ Đang xác nhận thanh toán...</p>';
+    verifyPayment(id);
+  } else if (status === 'cancelled') {
+    show('result-section');
+    hide('plan-section');
+    showResult('cancel', null);
+  }
 });
 
-// Định dạng tiền tệ
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND',
-        maximumFractionDigits: 0
-    }).format(amount);
-}
+// ========= Helper show/hide =========
+function show(id) { document.getElementById(id).style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
 
-// Tạo mã QR
-async function handleCreatePayment() {
-    try {
-        const plan = localStorage.getItem('selectedPlan') || 'PREMIUM';
-        
-        // Show loading
-        document.getElementById('paymentForm').style.display = 'none';
-        document.getElementById('loadingState').style.display = 'block';
+// ========= Tạo thanh toán =========
+async function startPayment(plan) {
+  currentPlan = plan;
+  hide('plan-section');
+  show('loading-section');
 
-        const res = await fetch(`${API_BASE}/api/payment/create`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ plan })
-        });
-
-        const data = await res.json();
-
-        if (!data.success) {
-            throw new Error(data.message || 'Lỗi tạo thanh toán');
-        }
-
-        // Lưu payment ID
-        localStorage.setItem('currentPaymentId', data.paymentId);
-
-        // Hiển thị QR code
-        document.getElementById('loadingState').style.display = 'none';
-        document.getElementById('qrState').style.display = 'block';
-        document.getElementById('qrCodeImage').src = data.qrCode;
-        document.getElementById('qrCodeImage').classList.add('show');
-
-        // Redirect to PayOS checkout
-        setTimeout(() => {
-            window.open(data.checkoutUrl, '_blank');
-        }, 500);
-
-        // Poll for payment confirmation
-        pollPaymentStatus(data.paymentId);
-
-    } catch (err) {
-        console.error('Create payment error:', err);
-        document.getElementById('loadingState').style.display = 'none';
-        document.getElementById('paymentForm').style.display = 'block';
-        showErrorState('Lỗi tạo thanh toán: ' + err.message);
-    }
-}
-
-// Poll payment status
-function pollPaymentStatus(paymentId, maxAttempts = 30) {
-    let attempts = 0;
-    const interval = setInterval(async () => {
-        attempts++;
-
-        try {
-            const res = await fetch(`${API_BASE}/api/payment?id=${paymentId}`, {
-                credentials: 'include'
-            });
-
-            const payments = await res.json();
-            const payment = payments.find(p => p._id === paymentId);
-
-            if (payment && payment.status === 'success') {
-                clearInterval(interval);
-                await handlePaymentReturn(paymentId);
-            }
-
-            if (attempts >= maxAttempts) {
-                clearInterval(interval);
-                // Cho phép user verify manually
-                console.log('Polling timeout, payment may still be processing');
-            }
-        } catch (err) {
-            console.error('Poll error:', err);
-        }
-    }, 2000); // Poll mỗi 2 giây
-}
-
-// Xử lý payment return từ PayOS
-async function handlePaymentReturn(paymentId) {
-    try {
-        document.getElementById('qrState').style.display = 'none';
-        document.getElementById('loadingState').style.display = 'block';
-
-        const res = await fetch(`${API_BASE}/api/payment/return`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ paymentId })
-        });
-
-        const data = await res.json();
-
-        if (!data.success) {
-            throw new Error(data.message);
-        }
-
-        // Show success state
-        document.getElementById('loadingState').style.display = 'none';
-        document.getElementById('successState').style.display = 'block';
-        document.getElementById('licenseKeyDisplay').textContent = data.license.key;
-
-        // Save license to localStorage
-        localStorage.setItem('licenseKey', data.license.key);
-        localStorage.setItem('licensePlan', data.license.plan);
-        localStorage.setItem('licenseExpiresAt', data.license.expiresAt);
-
-        // Clear payment data
-        localStorage.removeItem('currentPaymentId');
-        localStorage.removeItem('selectedPlan');
-        localStorage.removeItem('selectedAmount');
-
-    } catch (err) {
-        console.error('Payment return error:', err);
-        document.getElementById('loadingState').style.display = 'none';
-        showErrorState(err.message);
-    }
-}
-
-// Show error state
-function showErrorState(message) {
-    document.getElementById('paymentForm').style.display = 'none';
-    document.getElementById('loadingState').style.display = 'none';
-    document.getElementById('qrState').style.display = 'none';
-    document.getElementById('successState').style.display = 'none';
-    document.getElementById('errorState').style.display = 'block';
-    document.getElementById('errorMessage').textContent = message;
-}
-
-// Copy license key
-function copyLicenseKey() {
-    const licenseKey = document.getElementById('licenseKeyDisplay').textContent;
-    navigator.clipboard.writeText(licenseKey).then(() => {
-        const btn = event.target;
-        const originalText = btn.textContent;
-        btn.textContent = '✅ Đã copy';
-        setTimeout(() => {
-            btn.textContent = originalText;
-        }, 2000);
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/payment/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ plan }),
     });
+
+    const data = await res.json();
+
+    if (!data.success) throw new Error(data.message || 'Lỗi tạo đơn hàng');
+
+    currentPaymentId = data.paymentId;
+
+    // Hiển thị QR section
+    hide('loading-section');
+    show('qr-section');
+
+    // ✅ FIX: Render QR từ chuỗi EMVCo bằng QRCode.js (không dùng src=)
+    document.getElementById('qr-canvas').innerHTML = '';
+    new QRCode(document.getElementById('qr-canvas'), {
+      text: data.qrCode,
+      width: 220,
+      height: 220,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+    });
+
+    document.getElementById('checkout-link').href = data.checkoutUrl;
+    document.getElementById('order-code').textContent = data.paymentId;
+
+    const amounts = { PREMIUM: '75.000 ₫', PRO: '500.000 ₫' };
+    document.getElementById('amount-text').textContent = amounts[plan] || '';
+
+  } catch (err) {
+    document.getElementById('loading-section').innerHTML = `
+      <p class="error-msg">❌ ${err.message}<br><br>
+      <a href="payment.html" class="back-link">Thử lại</a></p>`;
+    console.error(err);
+  }
+}
+
+// ========= Khi user bấm "Tôi đã thanh toán xong" =========
+async function checkPayment() {
+  if (!currentPaymentId) return;
+  hide('qr-section');
+  show('loading-section');
+  document.getElementById('loading-section').innerHTML =
+    '<p class="loading">⏳ Đang xác nhận...</p>';
+  verifyPayment(currentPaymentId);
+}
+
+// ========= Gọi backend xác nhận =========
+async function verifyPayment(paymentId) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/payment/return`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ paymentId }),
+    });
+
+    const data = await res.json();
+    hide('loading-section');
+
+    if (data.success) {
+      showResult('success', data.license);
+    } else {
+      showResult('pending', null, data.message);
+    }
+
+  } catch (err) {
+    document.getElementById('loading-section').innerHTML =
+      '<p class="error-msg">❌ Lỗi xác nhận. Vui lòng thử lại.<br><br>' +
+      '<a href="payment.html" class="back-link">Thử lại</a></p>';
+  }
+}
+
+// ========= Hiển thị kết quả =========
+function showResult(type, license, message) {
+  show('result-section');
+  hide('loading-section');
+  hide('qr-section');
+  hide('plan-section');
+
+  const el = document.getElementById('result-content');
+
+  if (type === 'success') {
+    el.innerHTML = `
+      <div class="success-box">
+        <p style="font-size:1.3rem;margin-bottom:0.5rem">✅ Thanh toán thành công!</p>
+        <p style="margin-bottom:1rem">License key của bạn:</p>
+        <div class="license-key">${license?.key || 'N/A'}</div>
+        <p style="font-size:0.8rem;color:#86efac;margin-top:0.5rem">
+          Hạn sử dụng: ${license?.expiresAt
+            ? new Date(license.expiresAt).toLocaleDateString('vi-VN')
+            : 'N/A'}
+        </p>
+      </div>`;
+  } else if (type === 'cancel') {
+    el.innerHTML = `
+      <div class="cancel-box">
+        <p style="font-size:1.2rem">❌ Bạn đã hủy thanh toán.</p>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <div class="cancel-box">
+        <p>⚠️ ${message || 'Chưa xác nhận được thanh toán.'}</p>
+        <p style="font-size:0.85rem;margin-top:0.5rem">
+          Nếu bạn đã chuyển tiền, vui lòng đợi vài phút rồi thử lại.
+        </p>
+        <br>
+        <a href="payment.html" class="back-link" style="color:#fca5a5">← Thử lại</a>
+      </div>`;
+  }
 }
