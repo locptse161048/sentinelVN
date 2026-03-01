@@ -56,7 +56,9 @@ router.post('/payos', async (req, res) => {
             .filter(key => webhookData.data?.[key] !== undefined)
             .map(key => `${key}=${webhookData.data[key]}`)
             .join('&');
-
+        console.log('signatureString:', signatureString);
+        console.log('expectedSignature:', expectedSignature);
+        console.log('receivedSignature:', webhookData.signature);
         const expectedSignature = crypto
             .createHmac('sha256', process.env.PAYOS_CHECKSUM_KEY)
             .update(signatureString)
