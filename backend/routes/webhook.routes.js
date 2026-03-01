@@ -50,10 +50,21 @@ router.post('/payos', async (req, res) => {
 
         // 1. Tính signature — khai báo TRƯỚC khi dùng
         // ✅ Thứ tự alphabet — đúng
-        const signatureString = Object.keys(webhookData.data)
-            .filter(key => webhookData.data[key] !== '' &&
-                webhookData.data[key] !== null &&
-                webhookData.data[key] !== undefined)
+        // ✅ Chỉ dùng đúng 7 field PayOS quy định, sort alphabet
+        const allowedKeys = [
+            'accountNumber',
+            'amount',
+            'currency',
+            'description',
+            'orderCode',
+            'reference',
+            'transactionDateTime'
+        ];
+
+        const signatureString = allowedKeys
+            .filter(key => webhookData.data?.[key] !== undefined &&
+                webhookData.data?.[key] !== null &&
+                webhookData.data?.[key] !== '')
             .sort()
             .map(key => `${key}=${webhookData.data[key]}`)
             .join('&');
