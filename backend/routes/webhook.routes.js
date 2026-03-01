@@ -4,12 +4,49 @@ const Payment = require('../models/payment');
 const License = require('../models/license');
 const crypto = require('crypto');
 
-const { PayOS } = require('@payos/node');
-const payos = new PayOS(
-    process.env.PAYOS_CLIENT_ID,
-    process.env.PAYOS_API_KEY,
-    process.env.PAYOS_CHECKSUM_KEY
-);
+// ========= PayOS Utils (port từ payos-utils.ts) =========
+
+function sortObjDataByKey(object) {
+    return Object.keys(object)
+        .sort()
+        .reduce((obj, key) => {
+            obj[key] = object[key];
+            return obj;
+        }, {});
+}
+
+function convertObjToQueryStr(object) {
+    return Object.keys(object)
+        .filter(key => object[key] !== undefined)
+        .map(key => {
+            let value = object[key];
+            // Sort nested array
+            if (value && Array.isArray(value)) {
+                value = JSON.stringify(value.map(val => sortObjDataByKey(val)));
+            }
+            // Set empty string if null
+            if ([null, undefined, 'undefined', 'null'].includes(value)) {
+                value = '';
+            }
+            return `${key}=${value}`;
+        })
+        .join('&');
+}
+
+function verifyWebhookSignature(data, signature, checksumKey) {
+    const sortedData = sortObjDataByKey(data);
+    const dataQueryStr = convertObjToQueryStr(sortedData);
+    const expectedSignature = crypto
+        .createHmac('sha256', checksumKey)
+        .update(dataQueryStr)
+        .digest('hex');
+    console.log('dataQueryStr:', dataQueryStr);
+    console.log('expectedSignature:', expectedSignature);
+    console.log('receivedSignature:', signature);
+    return expectedSignature === signature;
+}
+
+// ========= Helpers =========
 
 function genKey(plan = 'PREMIUM') {
     function randBlock(len) {
@@ -35,7 +72,8 @@ function getExpiresDate(days = 30) {
     return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 }
 
-// POST /api/webhook/payos
+// ========= POST /api/webhook/payos =========
+
 router.post('/payos', async (req, res) => {
     try {
         const webhookData = req.body;
@@ -48,13 +86,19 @@ router.post('/payos', async (req, res) => {
 
         console.log('Webhook received:', JSON.stringify(webhookData));
 
-        // 1. Xác thực chữ ký bằng thư viện @payos/node
-        try {
-            payos.verifyPaymentWebhookData(webhookData);
-        } catch (verifyErr) {
-            console.warn('Invalid webhook signature:', verifyErr.message);
+        // 1. Xác thực chữ ký
+        const isValid = verifyWebhookSignature(
+            webhookData.data,
+            webhookData.signature,
+            process.env.PAYOS_CHECKSUM_KEY
+        );
+
+        if (!isValid) {
+            console.warn('Invalid webhook signature');
             return res.status(200).json({ success: true });
         }
+
+        console.log('✅ Webhook signature valid');
 
         // 2. Chỉ xử lý khi thanh toán thành công
         if (webhookData.code !== '00') {
