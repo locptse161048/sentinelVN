@@ -5,6 +5,8 @@ const License = require('../models/license');
 const Client = require('../models/client');
 const crypto = require('crypto');
 require('dotenv').config();
+console.log('CLIENT_ID:', process.env.PAYOS_CLIENT_ID?.slice(0, 5));
+console.log('CHECKSUM:', process.env.PAYOS_CHECKSUM_KEY?.slice(0, 5));
 const { PayOS } = require('@payos/node');
 // Khởi tạo PayOS client
 const payos = new PayOS({
