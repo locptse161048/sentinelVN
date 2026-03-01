@@ -76,7 +76,7 @@ router.post('/create', async (req, res) => {
 		};
 
 		// Gọi PayOS API
-		const createdPayment = await payos.createPaymentLink(paymentData);
+		const createdPayment = await payos.createPayment(paymentData);
 
 		res.json({
 			success: true,
