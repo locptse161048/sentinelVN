@@ -3,16 +3,15 @@ const router = express.Router();
 const Payment = require('../models/payment');
 const License = require('../models/license');
 const Client = require('../models/client');
-const { PayOS } = require('@payos/node');
 const crypto = require('crypto');
 require('dotenv').config();
-
-// Khởi tạo PayOS
-const payos = new PayOS({
-	clientId: process.env.PAYOS_CLIENT_ID,
-	apiKey: process.env.PAYOS_API_KEY,
-	checksumKey: process.env.PAYOS_CHECKSUM_KEY
-});
+const { PayOS } = require('@payos/node');
+// Khởi tạo PayOS client
+const payos = new PayOS(
+    process.env.PAYOS_CLIENT_ID,
+    process.env.PAYOS_API_KEY,
+    process.env.PAYOS_CHECKSUM_KEY
+);
 
 // Helper: Tạo License Key (match logic từ index.js)
 function genKey(plan = 'PREMIUM') {
@@ -70,7 +69,7 @@ router.post('/create', async (req, res) => {
 		const paymentData = {
 			orderCode: Number(payment._id.toString().slice(-8)), // lấy 8 chữ số cuối của ObjectId
 			amount: amount,
-			description: `Thanh toán gói ${plan} - Sentinel VN`,
+			description: `Thanh toán gói ${plan}`,
 			buyerEmail: (await Client.findById(clientId)).email,
 			cancelUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment.html?status=cancelled&id=${payment._id}`,
 			returnUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment.html?status=success&id=${payment._id}`

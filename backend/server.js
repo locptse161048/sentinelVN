@@ -8,9 +8,35 @@ dotenv.config();
 const session = require("express-session");
 const MongoStore = require('connect-mongo').default;
 const app = express();
+// CORS configuration - allow more origins in development
+const allowedOrigins = [
+  "https://sentinelvn-one.vercel.app",
+  "http://localhost:5500",
+  "http://127.0.0.1:5500",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:8000",
+  "http://127.0.0.1:8000",
+  "http://localhost:5173", // Vite
+  "http://127.0.0.1:5173",
+];
+
 app.use(cors({
-  origin: "https://sentinelvn-one.vercel.app",
-  credentials: true
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, file://, or curl)
+    if (!origin) {
+      return callback(null, true);
+    }
+    // Allow development and localhost requests
+    if (origin.includes('localhost') || origin.includes('127.0.0.1') || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // In development, allow all. In production, restrict as needed
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.set("trust proxy", 1);
 app.use(session({
