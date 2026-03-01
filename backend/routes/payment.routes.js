@@ -69,7 +69,7 @@ router.post('/create', async (req, res) => {
 		const paymentData = {
 			orderCode: Number(payment._id.toString().slice(-8)), // lấy 8 chữ số cuối của ObjectId
 			amount: amount,
-			description: `Thanh toán gói ${plan}`,
+			description: `Mua Premium ${plan}`,
 			buyerEmail: (await Client.findById(clientId)).email,
 			cancelUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment.html?status=cancelled&id=${payment._id}`,
 			returnUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment.html?status=success&id=${payment._id}`
