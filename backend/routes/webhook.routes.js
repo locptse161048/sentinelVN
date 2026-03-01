@@ -43,11 +43,13 @@ router.post('/payos', async (req, res) => {
 
         // 1. Xác thực chữ ký
         const sortedKeys = [
-            'amount', 'code', 'desc', 'orderCode', 'reference',
-            'transactionDateTime', 'counterAccountBankId',
-            'counterAccountBankName', 'counterAccountName',
-            'counterAccountNumber', 'virtualAccountName',
-            'virtualAccountNumber'
+            'amount',
+            'description',
+            'orderCode',
+            'reference',
+            'transactionDateTime',
+            'accountNumber',
+            'currency'
         ];
 
         const signatureString = sortedKeys
