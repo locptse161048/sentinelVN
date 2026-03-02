@@ -67,11 +67,22 @@ function setLoggedInUI(user) {
     const logoutBtn = document.getElementById('logoutBtn');
     const needLogin = document.getElementById('needLogin');
     const licenseArea = document.getElementById('licenseArea');
-
+    const contactSection = document.getElementById('contact');
     if (userEmail) userEmail.textContent = `Đang đăng nhập: ${user.email}`;
     if (logoutBtn) logoutBtn.classList.remove('hidden');
     if (needLogin) needLogin.classList.add('hidden');
     if (licenseArea) licenseArea.classList.remove('hidden');
+    if (contactSection) contactSection.style.display = 'none';
+    // Ẩn link Hỗ trợ trong nav
+    document.querySelectorAll('a[href="#support"]').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('a[href="#contact"]').forEach(el => el.style.display = 'none');
+    // Redirect tất cả button/link liên quan "liên hệ" → client.html tab 4
+    document.querySelectorAll('a[href="#contact"], a[data-plan="PRO"]').forEach(el => {
+        el.addEventListener('click', e => {
+            e.preventDefault();
+            window.location.href = 'client.html?tab=4';
+        });
+    });
 }
 function setLoggedOutUI() {
     const userEmail = document.getElementById('userEmail');
