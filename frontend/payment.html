@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Thanh toán - SentinelVN</title>
+  <title>Thanh toán PREMIUM - SentinelVN</title>
 
   <!-- CSS -->
   <link rel="stylesheet" href="assets/css/payment.css">
@@ -14,50 +14,29 @@
 <body>
 
 <div class="card">
-  <h2>💎 Nâng cấp tài khoản</h2>
-  <p class="subtitle">Chọn gói bạn muốn mua</p>
+  <h2> Nâng cấp PREMIUM</h2>
 
-  <!-- Bước 1: Chọn gói -->
-  <div id="plan-section">
-    <button class="plan-btn" onclick="startPayment('PREMIUM')">
-      ⭐ PREMIUM — 75.000 ₫ / 30 ngày
-    </button>
-    <br>
-    <button class="plan-btn pro" onclick="startPayment('PRO')">
-      🚀 PRO — 500.000 ₫ / 30 ngày
-    </button>
+  <!-- Loading -->
+  <div id="loading-section">
+    <p class="loading"> Đang tạo mã QR...</p>
   </div>
 
-  <!-- Bước 2: Loading -->
-  <div id="loading-section" style="display:none">
-    <p class="loading">⏳ Đang tạo mã QR...</p>
-  </div>
-
-  <!-- Bước 3: Hiển thị QR -->
-  <div id="qr-section">
+  <!-- Hiển thị QR -->
+  <div id="qr-section" style="display:none">
     <p style="color:#94a3b8; margin-bottom:0.5rem">Quét mã QR để thanh toán</p>
     <div class="qr-box">
-      <!-- ✅ FIX: dùng div thay img, QRCode.js sẽ render vào đây -->
       <div id="qr-canvas"></div>
     </div>
     <div class="amount" id="amount-text"></div>
     <div class="order-id">Mã đơn: <span id="order-code"></span></div>
     <a id="checkout-link" class="link-btn" href="#" target="_blank">🔗 Thanh toán qua link</a>
     <br><br>
-    <button
-      onclick="checkPayment()"
-      style="background:#22c55e;color:white;border:none;padding:0.6rem 1.5rem;border-radius:8px;cursor:pointer;font-size:0.9rem">
-      ✅ Tôi đã thanh toán xong
-    </button>
-    <br><br>
     <a href="index.html" class="back-link">← Quay lại</a>
   </div>
 
-  <!-- Bước 4: Kết quả -->
-  <div id="result-section">
+  <!-- Kết quả -->
+  <div id="result-section" style="display:none">
     <div id="result-content"></div>
-    <br>
-    <a href="index.html" class="back-link">← Quay về trang chủ</a>
   </div>
 </div>
 

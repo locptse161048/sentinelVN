@@ -39,7 +39,7 @@ function genKey(plan = 'PREMIUM') {
 		for (let i = 0; i < 10; i++) {
 			hexStr += Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
 		}
-		return `PRO-${hexStr.slice(0,4)}-${hexStr.slice(4,8)}-${hexStr.slice(8,12)}-${hexStr.slice(12,16)}`.toUpperCase();
+		return `PRO-${hexStr.slice(0, 4)}-${hexStr.slice(4, 8)}-${hexStr.slice(8, 12)}-${hexStr.slice(12, 16)}`.toUpperCase();
 	}
 }
 
@@ -58,7 +58,7 @@ router.post('/create', async (req, res) => {
 		const { plan } = req.body;
 		const clientId = req.session.userId;
 
-		const planConfig = { PREMIUM: 75000, PRO: 500000 };
+		const planConfig = { PREMIUM: 75000};
 		const amount = planConfig[plan] || 75000;
 		const orderCode = Number(Date.now().toString().slice(-8));
 
@@ -79,7 +79,7 @@ router.post('/create', async (req, res) => {
 			amount,
 			description: `Mua goi ${plan}`,
 			cancelUrl: `${process.env.FRONTEND_URL}/payment.html?status=cancelled&id=${payment._id}`,
-			returnUrl:  `${process.env.FRONTEND_URL}/payment.html?status=success&id=${payment._id}`,
+			returnUrl: `${process.env.FRONTEND_URL}/payment.html?status=success&id=${payment._id}`,
 		};
 
 		const signature = generateSignature(paymentData, process.env.PAYOS_CHECKSUM_KEY);
@@ -95,7 +95,7 @@ router.post('/create', async (req, res) => {
 			headers: {
 				'Content-Type': 'application/json',
 				'x-client-id': process.env.PAYOS_CLIENT_ID,
-				'x-api-key':   process.env.PAYOS_API_KEY,
+				'x-api-key': process.env.PAYOS_API_KEY,
 			},
 			body: JSON.stringify(payload),
 		});
@@ -108,10 +108,10 @@ router.post('/create', async (req, res) => {
 		}
 
 		res.json({
-			success:     true,
-			paymentId:   payment._id,
+			success: true,
+			paymentId: payment._id,
 			checkoutUrl: result.data.checkoutUrl,
-			qrCode:      result.data.qrCode,
+			qrCode: result.data.qrCode,
 		});
 
 	} catch (err) {
@@ -174,20 +174,20 @@ router.post('/webhook', async (req, res) => {
 
 		// 5. Cập nhật Payment → success
 		await Payment.findByIdAndUpdate(payment._id, {
-			status:        'success',
+			status: 'success',
 			transactionId: webhookData.data.reference || String(orderCode)
 		});
 
 		// 6. Tạo License
 		const licenseKey = genKey(payment.plan);
-		const expiresAt  = getExpiresDate(30);
+		const expiresAt = getExpiresDate(30);
 
 		await License.create({
-			id:       webhookData.data.reference || String(orderCode),
+			id: webhookData.data.reference || String(orderCode),
 			clientId: payment.clientId,
-			key:      licenseKey,
-			plan:     payment.plan,
-			amount:   payment.amount,
+			key: licenseKey,
+			plan: payment.plan,
+			amount: payment.amount,
 			expiresAt,
 		});
 
@@ -225,8 +225,8 @@ router.post('/return', async (req, res) => {
 				success: true,
 				message: 'Thanh toán đã được xác nhận',
 				license: license ? {
-					key:       license.key,
-					plan:      license.plan,
+					key: license.key,
+					plan: license.plan,
 					expiresAt: license.expiresAt
 				} : null
 			});
@@ -240,7 +240,7 @@ router.post('/return', async (req, res) => {
 					method: 'GET',
 					headers: {
 						'x-client-id': process.env.PAYOS_CLIENT_ID,
-						'x-api-key':   process.env.PAYOS_API_KEY,
+						'x-api-key': process.env.PAYOS_API_KEY,
 					}
 				}
 			);
@@ -255,20 +255,20 @@ router.post('/return', async (req, res) => {
 
 			// Đã thanh toán → cập nhật Payment
 			await Payment.findByIdAndUpdate(paymentId, {
-				status:        'success',
+				status: 'success',
 				transactionId: verifyData.data.id || String(payment.orderCode)
 			});
 
 			// Tạo License
 			const licenseKey = genKey(payment.plan);
-			const expiresAt  = getExpiresDate(30);
+			const expiresAt = getExpiresDate(30);
 
 			await License.create({
-				id:       verifyData.data.id,
+				id: verifyData.data.id,
 				clientId,
-				key:      licenseKey,
-				plan:     payment.plan,
-				amount:   payment.amount,
+				key: licenseKey,
+				plan: payment.plan,
+				amount: payment.amount,
 				expiresAt,
 			});
 
@@ -310,8 +310,8 @@ router.get('/license/active', async (req, res) => {
 		res.json({
 			success: true,
 			license: {
-				key:       license.key,
-				plan:      license.plan,
+				key: license.key,
+				plan: license.plan,
 				expiresAt: license.expiresAt
 			}
 		});
@@ -333,6 +333,40 @@ router.get('/', async (req, res) => {
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
+// ========= POST /cancel =========
+router.post('/cancel', async (req, res) => {
+	try {
+		const { paymentId } = req.body;
 
+		const payment = await Payment.findById(paymentId);
+		if (!payment) {
+			return res.status(404).json({ success: false, message: 'Không tìm thấy đơn' });
+		}
+
+		// Hủy trên PayOS
+		const cancelRes = await fetch(
+			`https://api-merchant.payos.vn/v2/payment-requests/${payment.orderCode}/cancel`,
+			{
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'x-client-id': process.env.PAYOS_CLIENT_ID,
+					'x-api-key': process.env.PAYOS_API_KEY,
+				},
+				body: JSON.stringify({ cancellationReason: 'Hết thời gian thanh toán' })
+			}
+		);
+		const cancelData = await cancelRes.json();
+		console.log('Cancel response:', JSON.stringify(cancelData));
+
+		// Cập nhật DB
+		await Payment.findByIdAndUpdate(paymentId, { status: 'failed' });
+
+		res.json({ success: true });
+	} catch (err) {
+		console.error('Cancel error:', err.message);
+		res.status(500).json({ success: false, message: 'Lỗi hủy đơn' });
+	}
+});
 // ⚠️ module.exports LUÔN ở cuối cùng
 module.exports = router;

@@ -2,14 +2,19 @@ const BACKEND_URL = 'https://sentinelvn.onrender.com';
 
 let currentPaymentId = null;
 let currentPlan = null;
+let pollingInterval = null;
+let countdownInterval = null;
 
 // ========= Kiểm tra nếu PayOS redirect về sau thanh toán =========
 window.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
   const status = params.get('status');
   const id = params.get('id');
+  if (!status && !id) {
+    startPayment('PREMIUM');
+    return;
+  }
 
-  // Tự động chọn plan nếu có query ?plan=PREMIUM
   const planFromQuery = params.get('plan');
   if (planFromQuery === 'PREMIUM' || planFromQuery === 'PRO') {
     startPayment(planFromQuery);
@@ -48,16 +53,14 @@ async function startPayment(plan) {
     });
 
     const data = await res.json();
-
     if (!data.success) throw new Error(data.message || 'Lỗi tạo đơn hàng');
 
     currentPaymentId = data.paymentId;
 
-    // Hiển thị QR section
     hide('loading-section');
     show('qr-section');
 
-    // ✅ FIX: Render QR từ chuỗi EMVCo bằng QRCode.js (không dùng src=)
+    // Render QR
     document.getElementById('qr-canvas').innerHTML = '';
     new QRCode(document.getElementById('qr-canvas'), {
       text: data.qrCode,
@@ -73,6 +76,9 @@ async function startPayment(plan) {
     const amounts = { PREMIUM: '75.000 ₫', PRO: '500.000 ₫' };
     document.getElementById('amount-text').textContent = amounts[plan] || '';
 
+    // Bắt đầu polling
+    startPolling();
+
   } catch (err) {
     document.getElementById('loading-section').innerHTML = `
       <p class="error-msg">❌ ${err.message}<br><br>
@@ -81,17 +87,67 @@ async function startPayment(plan) {
   }
 }
 
-// ========= Khi user bấm "Tôi đã thanh toán xong" =========
-async function checkPayment() {
-  if (!currentPaymentId) return;
-  hide('qr-section');
-  show('loading-section');
-  document.getElementById('loading-section').innerHTML =
-    '<p class="loading">⏳ Đang xác nhận...</p>';
-  verifyPayment(currentPaymentId);
+// ========= Auto Polling =========
+function startPolling() {
+  stopPolling();
+  console.log('🔄 Bắt đầu polling...');
+
+  pollingInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/payment/return`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ paymentId: currentPaymentId }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        stopPolling();
+        showResult('success', data.license);
+      }
+    } catch (err) {
+      console.warn('Polling error:', err.message);
+    }
+  }, 3000);
+
+  // Sau 10 phút → hủy đơn và dừng polling
+  setTimeout(async () => {
+    if (pollingInterval) {
+      stopPolling();
+      console.log('⏰ Polling dừng sau 10 phút → hủy đơn');
+      await cancelPayment();
+      showResult('timeout', null);
+    }
+  }, 10 * 60 * 1000);
 }
 
-// ========= Gọi backend xác nhận =========
+function stopPolling() {
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+}
+
+// ========= Hủy đơn thanh toán =========
+async function cancelPayment() {
+  if (!currentPaymentId) return;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/payment/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ paymentId: currentPaymentId }),
+    });
+    const data = await res.json();
+    console.log('Đã hủy đơn:', data);
+  } catch (err) {
+    console.error('Lỗi hủy đơn:', err.message);
+  }
+}
+
+// ========= Gọi backend xác nhận (dùng khi PayOS redirect) =========
 async function verifyPayment(paymentId) {
   try {
     const res = await fetch(`${BACKEND_URL}/api/payment/return`, {
@@ -109,7 +165,6 @@ async function verifyPayment(paymentId) {
     } else {
       showResult('pending', null, data.message);
     }
-
   } catch (err) {
     document.getElementById('loading-section').innerHTML =
       '<p class="error-msg">❌ Lỗi xác nhận. Vui lòng thử lại.<br><br>' +
@@ -117,8 +172,28 @@ async function verifyPayment(paymentId) {
   }
 }
 
+// ========= Countdown 30s rồi redirect =========
+function startCountdown(seconds, onComplete) {
+  // Dừng countdown cũ nếu có
+  if (countdownInterval) clearInterval(countdownInterval);
+
+  let remaining = seconds;
+  const el = document.getElementById('countdown-text');
+  if (el) el.textContent = remaining;
+
+  countdownInterval = setInterval(() => {
+    remaining--;
+    if (el) el.textContent = remaining;
+    if (remaining <= 0) {
+      clearInterval(countdownInterval);
+      onComplete();
+    }
+  }, 1000);
+}
+
 // ========= Hiển thị kết quả =========
 function showResult(type, license, message) {
+  stopPolling();
   show('result-section');
   hide('loading-section');
   hide('qr-section');
@@ -130,19 +205,47 @@ function showResult(type, license, message) {
     el.innerHTML = `
       <div class="success-box">
         <p style="font-size:1.3rem;margin-bottom:0.5rem">✅ Thanh toán thành công!</p>
-        <p style="margin-bottom:1rem">License key của bạn:</p>
+        <p style="margin-bottom:0.5rem">License key của bạn:</p>
         <div class="license-key">${license?.key || 'N/A'}</div>
-        <p style="font-size:0.8rem;color:#86efac;margin-top:0.5rem">
+        <p style="font-size:0.8rem;color:#86efac;margin-top:0.5rem;margin-bottom:1.2rem">
           Hạn sử dụng: ${license?.expiresAt
-            ? new Date(license.expiresAt).toLocaleDateString('vi-VN')
-            : 'N/A'}
+        ? new Date(license.expiresAt).toLocaleDateString('vi-VN')
+        : 'N/A'}
         </p>
+        <p style="color:#86efac;font-size:0.85rem;margin-bottom:0.8rem">
+          Tự động quay về trang chủ sau <span id="countdown-text">30</span> giây...
+        </p>
+        <a href="index.html"
+           style="display:inline-block;background:#22c55e;color:white;padding:0.6rem 1.5rem;
+                  border-radius:8px;text-decoration:none;font-size:0.95rem;">
+          🏠 Quay về trang chủ ngay
+        </a>
       </div>`;
+
+    // Bắt đầu đếm ngược 30 giây
+    startCountdown(30, () => {
+      window.location.href = 'index.html';
+    });
+
   } else if (type === 'cancel') {
     el.innerHTML = `
       <div class="cancel-box">
         <p style="font-size:1.2rem">❌ Bạn đã hủy thanh toán.</p>
+        <br>
+        <a href="index.html" class="back-link">← Quay về trang chủ</a>
       </div>`;
+
+  } else if (type === 'timeout') {
+    el.innerHTML = `
+      <div class="cancel-box">
+        <p style="font-size:1.1rem">⏰ Đơn thanh toán đã hết hạn.</p>
+        <p style="font-size:0.85rem;margin-top:0.5rem">
+          Đơn hàng đã bị hủy do quá 10 phút không thanh toán.
+        </p>
+        <br>
+        <a href="payment.html" class="back-link" style="color:#fca5a5">← Tạo đơn mới</a>
+      </div>`;
+
   } else {
     el.innerHTML = `
       <div class="cancel-box">
