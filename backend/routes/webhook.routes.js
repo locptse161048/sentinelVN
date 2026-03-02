@@ -4,7 +4,14 @@ const Payment = require('../models/payment');
 const License = require('../models/license');
 const crypto = require('crypto');
 
-// ========= PayOS Utils (port từ payos-utils.ts) =========
+const { PayOS } = require('@payos/node');
+const payos = new PayOS(
+    process.env.PAYOS_CLIENT_ID,
+    process.env.PAYOS_API_KEY,
+    process.env.PAYOS_CHECKSUM_KEY
+);
+
+// ========= PayOS Utils =========
 
 function sortObjDataByKey(object) {
     return Object.keys(object)
@@ -20,11 +27,9 @@ function convertObjToQueryStr(object) {
         .filter(key => object[key] !== undefined)
         .map(key => {
             let value = object[key];
-            // Sort nested array
             if (value && Array.isArray(value)) {
                 value = JSON.stringify(value.map(val => sortObjDataByKey(val)));
             }
-            // Set empty string if null
             if ([null, undefined, 'undefined', 'null'].includes(value)) {
                 value = '';
             }
@@ -40,9 +45,6 @@ function verifyWebhookSignature(data, signature, checksumKey) {
         .createHmac('sha256', checksumKey)
         .update(dataQueryStr)
         .digest('hex');
-    console.log('dataQueryStr:', dataQueryStr);
-    console.log('expectedSignature:', expectedSignature);
-    console.log('receivedSignature:', signature);
     return expectedSignature === signature;
 }
 
@@ -68,8 +70,56 @@ function genKey(plan = 'PREMIUM') {
     }
 }
 
-function getExpiresDate(days = 30) {
-    return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+// ========= Core: Xử lý cấp/gia hạn license =========
+
+async function processLicense(clientId, plan, paymentRef, paymentAmount) {
+    const now = new Date();
+
+    // Tìm license hiện tại của client (nếu có)
+    const existingLicense = await License.findOne({ clientId, plan });
+
+    if (!existingLicense) {
+        // ── Chưa có license → Tạo mới ──
+        const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const licenseKey = genKey(plan);
+
+        const license = await License.create({
+            id:       paymentRef,
+            clientId,
+            key:      licenseKey,
+            plan,
+            amount:   paymentAmount,
+            status:   'active',
+            expiresAt,
+        });
+
+        console.log('✅ License created:', licenseKey);
+        return license;
+
+    } else if (existingLicense.status === 'active' && existingLicense.expiresAt > now) {
+        // ── Đang active → Gia hạn thêm 30 ngày từ ngày hết hạn hiện tại ──
+        const newExpiresAt = new Date(existingLicense.expiresAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+        await License.findByIdAndUpdate(existingLicense._id, {
+            expiresAt: newExpiresAt,
+            status:    'active',
+        });
+
+        console.log('✅ License extended:', existingLicense.key, '→', newExpiresAt);
+        return { ...existingLicense.toObject(), expiresAt: newExpiresAt };
+
+    } else {
+        // ── Đã expired → Tính lại từ ngày hôm nay +30 ngày ──
+        const newExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+        await License.findByIdAndUpdate(existingLicense._id, {
+            expiresAt: newExpiresAt,
+            status:    'active',
+        });
+
+        console.log('✅ License renewed:', existingLicense.key, '→', newExpiresAt);
+        return { ...existingLicense.toObject(), expiresAt: newExpiresAt };
+    }
 }
 
 // ========= POST /api/webhook/payos =========
@@ -126,20 +176,13 @@ router.post('/payos', async (req, res) => {
             transactionId: webhookData.data.reference || String(orderCode)
         });
 
-        // 6. Tạo License
-        const licenseKey = genKey(payment.plan);
-        const expiresAt  = getExpiresDate(30);
-
-        await License.create({
-            id:       webhookData.data.reference || String(orderCode),
-            clientId: payment.clientId,
-            key:      licenseKey,
-            plan:     payment.plan,
-            amount:   payment.amount,
-            expiresAt,
-        });
-
-        console.log('✅ License created via webhook:', licenseKey);
+        // 6. Cấp hoặc gia hạn license
+        await processLicense(
+            payment.clientId,
+            payment.plan,
+            webhookData.data.reference || String(orderCode),
+            payment.amount
+        );
 
         return res.json({ received: true });
 

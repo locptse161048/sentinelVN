@@ -46,10 +46,14 @@ function genKey(plan = 'PREMIUM') {
 // Cập nhật hoặc tạo license (1 client = 1 key per plan)
 async function processLicense(clientId, plan, licenseId, paymentAmount, paymentCreatedAt = new Date()) {
     const now = new Date();
+    
+    console.log(`[PROCESS LICENSE] Finding existing license - clientId: ${clientId}, plan: ${plan}`);
     const existingLicense = await License.findOne({ clientId, plan });
+    console.log(`[PROCESS LICENSE] Existing license found: ${existingLicense ? existingLicense.key : 'None'}`);
 
     if (!existingLicense) {
-        // Tạo license mới nếu chưa có
+        // Tạo license mới
+        console.log(`[PROCESS LICENSE] Creating new license`);
         const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
         return await License.create({
             id: licenseId,
@@ -62,26 +66,32 @@ async function processLicense(clientId, plan, licenseId, paymentAmount, paymentC
         });
     } else {
         // Đã có license → update expiresAt
+        console.log(`[PROCESS LICENSE] Updating existing license - Current status: ${existingLicense.status}, expiresAt: ${existingLicense.expiresAt}`);
         let newExpiresAt;
 
-        if (existingLicense.status === 'active' && existingLicense.expiresAt > now) {
-            // License chưa hết hạn → +30 ngày từ ngày hết hạn hiện tại
+        if (existingLicense.status === 'active') {
+            // Status active → +30 ngày từ ngày hết hạn hiện tại
+            console.log(`[PROCESS LICENSE] License is active - Adding 30 days to current expiresAt`);
             newExpiresAt = new Date(existingLicense.expiresAt.getTime() + 30 * 24 * 60 * 60 * 1000);
         } else {
-            // License hết hạn hoặc expired → +30 ngày từ ngày thanh toán
-            newExpiresAt = new Date(paymentCreatedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+            // Status expired → +30 ngày từ ngày hiện tại
+            console.log(`[PROCESS LICENSE] License is expired - Setting expiresAt to now + 30 days`);
+            newExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
         }
+
+        console.log(`[PROCESS LICENSE] New expiresAt: ${newExpiresAt}`);
 
         const updatedLicense = await License.findByIdAndUpdate(
             existingLicense._id,
             {
                 expiresAt: newExpiresAt,
                 status: 'active',
-                amount: paymentAmount, // Cập nhật amount mới nhất
+                amount: paymentAmount,
             },
             { new: true }
         );
 
+        console.log(`[PROCESS LICENSE] License updated successfully`);
         return updatedLicense;
     }
 }
