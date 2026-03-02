@@ -73,10 +73,9 @@ function setLoggedInUI(user) {
     if (needLogin) needLogin.classList.add('hidden');
     if (licenseArea) licenseArea.classList.remove('hidden');
     if (contactSection) contactSection.style.display = 'none';
-    // Ẩn link Hỗ trợ trong nav
+    // Ẩn link "Hỗ trợ" và "Liên hệ" trong nav (chỉ ẩn nav, không ẩn button PRO)
     document.querySelectorAll('a[href="#support"]').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('a[href="#contact"]').forEach(el => el.style.display = 'none');
-    // Redirect tất cả button/link liên quan "liên hệ" → client.html tab 4
+    // Redirect button PRO và section contact → client.html tab 4
     document.querySelectorAll('a[href="#contact"], a[data-plan="PRO"]').forEach(el => {
         el.addEventListener('click', e => {
             e.preventDefault();
