@@ -79,7 +79,7 @@ function setLoggedInUI(user) {
     document.querySelectorAll('a[href="#contact"], a[data-plan="PRO"]').forEach(el => {
         el.addEventListener('click', e => {
             e.preventDefault();
-            window.location.href = 'client.html?tab=4';
+            window.location.href = 'client.html?tab=4&subject=Liên hệ báo giá gói PRO';
         });
     });
 }

@@ -290,6 +290,14 @@ async function logout() {
   await loadClientInfo();
   await renderPaymentHistory();
   await renderSentMessages();
-  const tabFromQuery = new URLSearchParams(window.location.search).get('tab');
+  const params = new URLSearchParams(window.location.search);
+  const tabFromQuery = params.get('tab');
   if (tabFromQuery) showTab(Number(tabFromQuery));
+
+  // ✅ Thêm — tự điền subject nếu có query ?subject=...
+  const subjectFromQuery = params.get('subject');
+  if (subjectFromQuery) {
+    const subjectInput = document.querySelector('#supportForm input');
+    if (subjectInput) subjectInput.value = subjectFromQuery;
+  }
 })();
