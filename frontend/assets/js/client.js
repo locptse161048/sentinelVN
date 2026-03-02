@@ -1,40 +1,6 @@
 /* ===== CONFIG ===== */
 const API_BASE = "https://sentinelvn.onrender.com";
 
-// 🔴 Global error handler - capture all logs
-const allLogs = [];
-const originalLog = console.log;
-const originalError = console.error;
-const originalWarn = console.warn;
-
-console.log = function(...args) {
-  originalLog.apply(console, args);
-  allLogs.push('[LOG] ' + args.join(' '));
-};
-
-console.error = function(...args) {
-  originalError.apply(console, args);
-  allLogs.push('[ERROR] ' + args.join(' '));
-};
-
-console.warn = function(...args) {
-  originalWarn.apply(console, args);
-  allLogs.push('[WARN] ' + args.join(' '));
-};
-
-window.onerror = function(msg, url, lineNo, columnNo, error) {
-  const errorMsg = "[WINDOW ERROR] " + msg + " at " + url + ":" + lineNo + ":" + columnNo;
-  originalError(errorMsg);
-  allLogs.push(errorMsg);
-  return false;
-};
-
-window.onunhandledrejection = function(event) {
-  const errorMsg = "[UNHANDLED REJECTION] " + event.reason;
-  originalError(errorMsg);
-  allLogs.push(errorMsg);
-};
-
 // Tự động mở tab nếu có query ?tab=N
 const tabFromQuery = new URLSearchParams(window.location.search).get('tab');
 if (tabFromQuery) showTab(Number(tabFromQuery));
@@ -44,13 +10,10 @@ async function checkSession() {
   let retries = 0;
   const maxRetries = 3;
 
-  console.log("[CLIENT] 🔍 checkSession() started");
-
   while (retries < maxRetries) {
     try {
-      console.log(`[CLIENT] 📡 Attempt ${retries + 1}/${maxRetries} - Fetching session...`);
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
+      const timeout = setTimeout(() => controller.abort(), 5000);
 
       const res = await fetch(`${API_BASE}/api/auth/session`, {
         credentials: "include",
@@ -58,22 +21,17 @@ async function checkSession() {
       });
 
       clearTimeout(timeout);
-      console.log(`[CLIENT] Response status: ${res.status}`);
 
       if (res.ok) {
         const user = await res.json();
-        console.log("[CLIENT] ✅ Session valid. User:", user);
         return user;
       }
 
-      console.warn(`[CLIENT] ⚠️  Response not OK: ${res.status}`);
       retries++;
       if (retries < maxRetries) {
-        // Exponential backoff: 300ms, 600ms, 1000ms
         await new Promise(r => setTimeout(r, 300 * Math.pow(2, retries - 1)));
       }
     } catch (err) {
-      console.warn(`[CLIENT] ❌ Session check attempt ${retries + 1} failed:`, err.message);
       retries++;
       if (retries < maxRetries) {
         await new Promise(r => setTimeout(r, 300 * Math.pow(2, retries - 1)));
@@ -81,7 +39,6 @@ async function checkSession() {
     }
   }
 
-  console.error("[CLIENT] ❌❌❌ Session check failed after 3 attempts. Redirecting to index.html");
   window.location.href = "index.html";
   return null;
 }
@@ -92,11 +49,8 @@ async function loadClientInfo() {
   let retries = 0;
   const maxRetries = 2;
   
-  console.log("[CLIENT] 👤 loadClientInfo() started");
-  
   while (retries < maxRetries) {
     try {
-      console.log(`[CLIENT] 📡 Fetching /api/client/me (attempt ${retries + 1}/${maxRetries})...`);
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
       const res = await fetch(`${API_BASE}/api/client/me`, {
@@ -104,20 +58,10 @@ async function loadClientInfo() {
         signal: controller.signal
       });
       clearTimeout(timeout);
-      console.log(`[CLIENT] Response status: ${res.status}`);
       
       if (!res.ok) {
-        try {
-          const errorData = await res.json();
-          console.warn(`[CLIENT] ⚠️  /api/client/me returned ${res.status}:`, errorData);
-        } catch {
-          console.warn(`[CLIENT] ⚠️  /api/client/me returned ${res.status} (non-JSON response)`);
-        }
-        
         retries++;
         if (retries >= maxRetries) {
-          console.error("[CLIENT] ❌ Failed to load client info - Max retries reached");
-          console.error("[CLIENT] ❌ This means /api/client/me ended or backend is not responding");
           window.location.href = "index.html";
           return null;
         }
@@ -126,7 +70,6 @@ async function loadClientInfo() {
       }
       
       const user = await res.json();
-      console.log("[CLIENT] ✅ User loaded:", user);
       
       if (user.status === "tạm ngưng") {
         alert("Tài khoản của bạn hiện đã bị tạm ngưng");
@@ -134,45 +77,18 @@ async function loadClientInfo() {
         return null;
       }
       
-      // Safely set UI elements
       const accNameEl = document.getElementById("accName");
       const accEmailEl = document.getElementById("accEmail");
-      const subInfoEl = document.getElementById("subInfo");
       
-      if (!accNameEl || !accEmailEl || !subInfoEl) {
-        console.error("[CLIENT] ❌ Required UI elements not found!");
-        console.error("[CLIENT] ❌ accNameEl:", accNameEl);
-        console.error("[CLIENT] ❌ accEmailEl:", accEmailEl);
-        console.error("[CLIENT] ❌ subInfoEl:", subInfoEl);
-        throw new Error("Missing UI elements: accName, accEmail, or subInfo");
+      if (accNameEl && accEmailEl) {
+        accNameEl.textContent = user.fullName || "Chưa cập nhật";
+        accEmailEl.textContent = user.email;
       }
       
-      accNameEl.textContent = user.fullName || "Chưa cập nhật";
-      accEmailEl.textContent = user.email;
-      subInfoEl.textContent = user.plan ? `Gói: ${user.plan}` : "Bạn đang sử dụng gói FREE.";
-      
-      console.log("[CLIENT] ✅ UI elements updated successfully");
       return user;
     } catch (err) {
-      console.warn(`[CLIENT] ❌ Load client info attempt ${retries + 1} failed - Error Type: ${err.name}`);
-      console.warn(`[CLIENT] ❌ Error Message: ${err.message}`);
-      console.warn(`[CLIENT] ❌ Full Error:`, err);
-      
-      // Kiểm tra xem có phải lỗi timeout hay không
-      if (err.name === 'AbortError') {
-        console.error(`[CLIENT] ❌ Request timeout - backend không phản hồi trong 5s`);
-      } else {
-        console.error(`[CLIENT] ❌ Network error or other issue: ${err.name}`);
-      }
-      
       retries++;
       if (retries >= maxRetries) {
-        console.error("[CLIENT] ❌❌❌ Failed to load client info after retries");
-        console.error("[CLIENT] ⚠️  This could be:");
-        console.error("[CLIENT]    - Backend server không hoạt động");
-        console.error("[CLIENT]    - Session không được gửi đi");
-        console.error("[CLIENT]    - CORS blocked the request");
-        console.error("[CLIENT]    - Network connection issue");
         window.location.href = "index.html";
         return null;
       }
@@ -189,11 +105,9 @@ async function renderPaymentHistory() {
     return;
   }
 
-  console.log("[CLIENT] 💳 renderPaymentHistory() started");
   historyList.innerHTML = "<li>Đang tải...</li>";
 
   try {
-    console.log("[CLIENT] 📡 Fetching /api/client/payments...");
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
@@ -203,16 +117,13 @@ async function renderPaymentHistory() {
     });
 
     clearTimeout(timeout);
-    console.log(`[CLIENT] Payment history response status: ${res.status}`);
 
     if (!res.ok) {
-      console.warn(`[CLIENT] ❌ Payment history fetch failed: ${res.status}`);
       historyList.innerHTML = "<li>Không thể tải lịch sử giao dịch.</li>";
       return;
     }
 
     const payments = await res.json();
-    console.log(`[CLIENT] ✅ Loaded ${payments.length} payments`);
 
     if (!payments.length) {
       historyList.innerHTML = "<li>Chưa có giao dịch nào.</li>";
@@ -228,7 +139,6 @@ async function renderPaymentHistory() {
       historyList.appendChild(li);
     });
   } catch (err) {
-    console.error("[CLIENT] ❌ Error loading payment history:", err.message, err);
     historyList.innerHTML = "<li>Không thể tải lịch sử giao dịch.</li>";
   }
 }
@@ -241,11 +151,9 @@ async function renderSentMessages() {
     return;
   }
 
-  console.log("[CLIENT] 📨 renderSentMessages() started");
   sentMessagesList.innerHTML = "<li>Đang tải...</li>";
 
   try {
-    console.log("[CLIENT] 📡 Fetching /api/client/support...");
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
@@ -255,16 +163,13 @@ async function renderSentMessages() {
     });
 
     clearTimeout(timeout);
-    console.log(`[CLIENT] Support messages response status: ${res.status}`);
 
     if (!res.ok) {
-      console.warn(`[CLIENT] ❌ Support messages fetch failed: ${res.status}`);
       sentMessagesList.innerHTML = "<li>Không thể tải yêu cầu hỗ trợ.</li>";
       return;
     }
 
     const myMessages = await res.json();
-    console.log(`[CLIENT] ✅ Loaded ${myMessages.length} support messages`);
 
     if (!myMessages.length) {
       sentMessagesList.innerHTML = "<li>Bạn chưa gửi yêu cầu nào.</li>";
@@ -294,7 +199,6 @@ async function renderSentMessages() {
       sentMessagesList.appendChild(li);
     });
   } catch (err) {
-    console.error("[CLIENT] ❌ Error loading support messages:", err.message, err);
     sentMessagesList.innerHTML = "<li>Không thể tải yêu cầu hỗ trợ.</li>";
   }
 }
@@ -352,7 +256,6 @@ if (supportForm) {
       supportForm.reset();
       renderSentMessages();
     } catch (err) {
-      console.error("Support form error:", err);
       document.getElementById("supportMsg").textContent =
         "❌ Có lỗi xảy ra. Vui lòng thử lại.";
     }
@@ -367,11 +270,9 @@ async function renderLicenseTable() {
     return;
   }
 
-  console.log("[CLIENT] 🖤 renderLicenseTable() started");
   licenseTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4">Đang tải...</td></tr>`;
 
   try {
-    console.log("[CLIENT] 📡 Fetching /api/payment/licenses...");
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
@@ -381,20 +282,17 @@ async function renderLicenseTable() {
     });
 
     clearTimeout(timeout);
-    console.log(`[CLIENT] License table response status: ${res.status}`);
 
     if (!res.ok) {
-      console.warn(`[CLIENT] ❌ License fetch failed: ${res.status}`);
       licenseTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-white/60">Không thể tải license.</td></tr>`;
       return;
     }
 
     const data = await res.json();
     const licenses = data.licenses || [];
-    console.log(`[CLIENT] ✅ Loaded ${licenses.length} licenses`);
 
     if (!licenses.length) {
-      licenseTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-white/60">Chưa có license nào. Hãy mua PREMIUM để bắt đầu.</td></tr>`;
+      licenseTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-white/60">Bạn đang sử dụng gói FREE</td></tr>`;
       return;
     }
 
@@ -423,7 +321,6 @@ async function renderLicenseTable() {
       licenseTableBody.appendChild(tr);
     });
   } catch (err) {
-    console.error("[CLIENT] ❌ Error loading license table:", err.message, err);
     licenseTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-white/60">Không thể tải license.</td></tr>`;
   }
 }
@@ -453,195 +350,34 @@ async function logout() {
 
 /* ===== INIT PAGE ===== */
 (async () => {
-  console.log("[CLIENT] 🚀 INIT PAGE started");
-  
   try {
     const session = await checkSession();
     if (!session) {
-      const msg = "[CLIENT] ❌❌❌ Session check returned null. Exiting.";
-      console.error(msg);
-      showErrorModal([], "❌ Session Authentication Failed");
       return;
     }
     
-    console.log("[CLIENT] ✅ Session valid. Role:", session.role);
-    
-    // Nếu là admin thì chuyển sang admin.html
     if (session.role === "admin") {
-      console.log("[CLIENT] 👨‍💼 Admin detected. Redirecting to admin.html");
       window.location.href = "admin.html";
       return;
     }
     
-    // Nếu là client thì load dashboard
-    console.log("[CLIENT] 📊 Loading client dashboard...");
-    
     await loadClientInfo();
-    console.log("[CLIENT] ✅ loadClientInfo() completed");
-    
     await renderPaymentHistory();
-    console.log("[CLIENT] ✅ renderPaymentHistory() completed");
-    
     await renderLicenseTable();
-    console.log("[CLIENT] ✅ renderLicenseTable() completed");
-    
     await renderSentMessages();
-    console.log("[CLIENT] ✅ renderSentMessages() completed");
     
     const params = new URLSearchParams(window.location.search);
     const tabFromQuery = params.get('tab');
     if (tabFromQuery) {
-      console.log("[CLIENT] 📑 Opening tab " + tabFromQuery);
       showTab(Number(tabFromQuery));
     }
 
-    // ✅ Thêm — tự điền subject nếu có query ?subject=...
     const subjectFromQuery = params.get('subject');
     if (subjectFromQuery) {
-      console.log("[CLIENT] 📝 Pre-filling subject: " + subjectFromQuery);
       const subjectInput = document.querySelector('#supportForm input');
       if (subjectInput) subjectInput.value = subjectFromQuery;
     }
-    
-    console.log("[CLIENT] ✅✅✅ INIT PAGE completed successfully");
   } catch (err) {
-    const msg = "[CLIENT] ❌ CRITICAL ERROR: " + err.message;
-    console.error(msg, err);
-    console.error("Stack trace:", err.stack);
-    // Delay a bit to ensure logs are captured
-    setTimeout(() => {
-      showErrorModal([], "❌ Critical Error During Page Load");
-    }, 500);
+    // Silent error handling
   }
 })();
-
-/* ===== Show error modal to catch logs ===== */
-function showErrorModal(errorLogs, title) {
-  const modal = document.createElement('div');
-  modal.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.9);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-  `;
-  
-  const content = document.createElement('div');
-  content.style.cssText = `
-    background: #1a1a1a;
-    border: 2px solid #ff6b6b;
-    border-radius: 8px;
-    padding: 30px;
-    max-width: 700px;
-    max-height: 80vh;
-    overflow-y: auto;
-    color: white;
-    font-family: monospace;
-    font-size: 13px;
-  `;
-  
-  const titleEl = document.createElement('h2');
-  titleEl.style.cssText = 'color: #ff6b6b; margin-top: 0; margin-bottom: 20px; font-size: 18px;';
-  titleEl.textContent = '⚠️ ' + title;
-  
-  const logContent = document.createElement('div');
-  logContent.style.cssText = `
-    background: #000;
-    border: 1px solid #666;
-    padding: 15px;
-    border-radius: 4px;
-    max-height: 450px;
-    overflow-y: auto;
-    margin-bottom: 20px;
-    line-height: 1.5;
-    white-space: pre-wrap;
-    word-break: break-word;
-  `;
-  
-  // Combine errorLogs + allLogs
-  const combinedLogs = [...errorLogs, ...allLogs];
-  
-  combinedLogs.forEach(log => {
-    const line = document.createElement('div');
-    line.textContent = log;
-    if (log.includes('ERROR') || log.includes('❌')) {
-      line.style.color = '#ff6b6b';
-    } else if (log.includes('✅') || log.includes('completed')) {
-      line.style.color = '#51cf66';
-    } else if (log.includes('[CLIENT]')) {
-      line.style.color = '#a6e3a1';
-    } else {
-      line.style.color = '#aaa';
-    }
-    logContent.appendChild(line);
-  });
-  
-  const instructions = document.createElement('p');
-  instructions.style.cssText = 'color: #ffd93d; margin: 15px 0; font-size: 12px;';
-  instructions.innerHTML = '💡 Tip: Copy these logs and share with developer<br>🔍 Look for [ERROR] or ❌ marks';
-  
-  const buttons = document.createElement('div');
-  buttons.style.cssText = 'display: flex; gap: 10px; margin-top: 20px;';
-  
-  const continueBtn = document.createElement('button');
-  continueBtn.textContent = '← Go Back to Home';
-  continueBtn.style.cssText = `
-    flex: 1;
-    padding: 12px 20px;
-    background: #4c6ef5;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: bold;
-  `;
-  continueBtn.onmouseover = () => continueBtn.style.background = '#364fc7';
-  continueBtn.onmouseout = () => continueBtn.style.background = '#4c6ef5';
-  continueBtn.onclick = () => {
-    window.location.href = 'index.html';
-  };
-  
-  const copyBtn = document.createElement('button');
-  copyBtn.textContent = '📋 Copy All Logs';
-  copyBtn.style.cssText = `
-    flex: 1;
-    padding: 12px 20px;
-    background: #51cf66;
-    color: black;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: bold;
-  `;
-  copyBtn.onmouseover = () => copyBtn.style.background = '#40c057';
-  copyBtn.onmouseout = () => copyBtn.style.background = '#51cf66';
-  copyBtn.onclick = () => {
-    const allLogsText = combinedLogs.join('\n');
-    navigator.clipboard.writeText(allLogsText).then(() => {
-      copyBtn.textContent = '✅ Copied to Clipboard!';
-      setTimeout(() => {
-        copyBtn.textContent = '📋 Copy All Logs';
-      }, 2000);
-    }).catch(err => {
-      console.error("Copy failed:", err);
-      alert("Failed to copy. Please manually select and copy the logs above.");
-    });
-  };
-  
-  buttons.appendChild(copyBtn);
-  buttons.appendChild(continueBtn);
-  
-  content.appendChild(titleEl);
-  content.appendChild(instructions);
-  content.appendChild(logContent);
-  content.appendChild(buttons);
-  modal.appendChild(content);
-  document.body.appendChild(modal);
-}
