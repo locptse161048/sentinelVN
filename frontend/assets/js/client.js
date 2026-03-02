@@ -134,11 +134,24 @@ async function loadClientInfo() {
         return null;
       }
       
-      document.getElementById("accName").textContent = user.fullName || "Chưa cập nhật";
-      document.getElementById("accEmail").textContent = user.email;
-      document.getElementById("subInfo").textContent =
-        user.plan ? `Gói: ${user.plan}` : "Bạn đang sử dụng gói FREE.";
-
+      // Safely set UI elements
+      const accNameEl = document.getElementById("accName");
+      const accEmailEl = document.getElementById("accEmail");
+      const subInfoEl = document.getElementById("subInfo");
+      
+      if (!accNameEl || !accEmailEl || !subInfoEl) {
+        console.error("[CLIENT] ❌ Required UI elements not found!");
+        console.error("[CLIENT] ❌ accNameEl:", accNameEl);
+        console.error("[CLIENT] ❌ accEmailEl:", accEmailEl);
+        console.error("[CLIENT] ❌ subInfoEl:", subInfoEl);
+        throw new Error("Missing UI elements: accName, accEmail, or subInfo");
+      }
+      
+      accNameEl.textContent = user.fullName || "Chưa cập nhật";
+      accEmailEl.textContent = user.email;
+      subInfoEl.textContent = user.plan ? `Gói: ${user.plan}` : "Bạn đang sử dụng gói FREE.";
+      
+      console.log("[CLIENT] ✅ UI elements updated successfully");
       return user;
     } catch (err) {
       console.warn(`[CLIENT] ❌ Load client info attempt ${retries + 1} failed - Error Type: ${err.name}`);
