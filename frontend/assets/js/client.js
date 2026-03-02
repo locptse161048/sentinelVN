@@ -141,10 +141,25 @@ async function loadClientInfo() {
 
       return user;
     } catch (err) {
-      console.warn(`[CLIENT] ❌ Load client info attempt ${retries + 1} failed:`, err.message, err);
+      console.warn(`[CLIENT] ❌ Load client info attempt ${retries + 1} failed - Error Type: ${err.name}`);
+      console.warn(`[CLIENT] ❌ Error Message: ${err.message}`);
+      console.warn(`[CLIENT] ❌ Full Error:`, err);
+      
+      // Kiểm tra xem có phải lỗi timeout hay không
+      if (err.name === 'AbortError') {
+        console.error(`[CLIENT] ❌ Request timeout - backend không phản hồi trong 5s`);
+      } else {
+        console.error(`[CLIENT] ❌ Network error or other issue: ${err.name}`);
+      }
+      
       retries++;
       if (retries >= maxRetries) {
         console.error("[CLIENT] ❌❌❌ Failed to load client info after retries");
+        console.error("[CLIENT] ⚠️  This could be:");
+        console.error("[CLIENT]    - Backend server không hoạt động");
+        console.error("[CLIENT]    - Session không được gửi đi");
+        console.error("[CLIENT]    - CORS blocked the request");
+        console.error("[CLIENT]    - Network connection issue");
         window.location.href = "index.html";
         return null;
       }
