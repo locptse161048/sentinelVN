@@ -99,13 +99,12 @@ async function loadClientInfo() {
 
 /* ===== PAYMENT HISTORY ===== */
 async function renderPaymentHistory() {
-  const historyList = document.getElementById("historyList");
-  if (!historyList) {
-    console.log("[CLIENT] ℹ️  historyList element not found (tab 3)");
+  const paymentTableBody = document.getElementById("paymentTableBody");
+  if (!paymentTableBody) {
     return;
   }
 
-  historyList.innerHTML = "<li>Đang tải...</li>";
+  paymentTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4">Đang tải...</td></tr>`;
 
   try {
     const controller = new AbortController();
@@ -119,27 +118,39 @@ async function renderPaymentHistory() {
     clearTimeout(timeout);
 
     if (!res.ok) {
-      historyList.innerHTML = "<li>Không thể tải lịch sử giao dịch.</li>";
+      paymentTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-white/60">Không thể tải lịch sử giao dịch.</td></tr>`;
       return;
     }
 
     const payments = await res.json();
 
     if (!payments.length) {
-      historyList.innerHTML = "<li>Chưa có giao dịch nào.</li>";
+      paymentTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-white/60">Chưa có giao dịch nào.</td></tr>`;
       return;
     }
 
-    historyList.innerHTML = "";
+    paymentTableBody.innerHTML = "";
 
     payments.reverse().forEach(item => {
-      const li = document.createElement("li");
-      li.className = "border-b border-white/10 pb-2";
-      li.textContent = `${item.plan} - ${item.amount}đ - ${item.status} - ${new Date(item.createdAt).toLocaleString()}`;
-      historyList.appendChild(li);
+      const tr = document.createElement("tr");
+      tr.className = "border-b border-white/10 hover:bg-white/5";
+
+      const amountText = `${item.amount?.toLocaleString('vi-VN') || 'N/A'}đ`;
+      const createdDate = new Date(item.createdAt).toLocaleString('vi-VN');
+
+      tr.innerHTML = `
+        <td class="py-2 px-2">${amountText}</td>
+        <td class="py-2 px-2">${item.plan || 'N/A'}</td>
+        <td class="py-2 px-2">${item.method || 'N/A'}</td>
+        <td class="py-2 px-2 font-mono text-xs">${item.orderCode || 'N/A'}</td>
+        <td class="py-2 px-2 font-mono text-xs max-w-xs truncate" title="${item.transactionId || 'N/A'}">${item.transactionId || 'N/A'}</td>
+        <td class="py-2 px-2 text-white/70">${createdDate}</td>
+      `;
+
+      paymentTableBody.appendChild(tr);
     });
   } catch (err) {
-    historyList.innerHTML = "<li>Không thể tải lịch sử giao dịch.</li>";
+    paymentTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-white/60">Không thể tải lịch sử giao dịch.</td></tr>`;
   }
 }
 
