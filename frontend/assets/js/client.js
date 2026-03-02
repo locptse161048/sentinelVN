@@ -1,8 +1,44 @@
 /* ===== CONFIG ===== */
 const API_BASE = "https://sentinelvn.onrender.com";
+
+// 🔴 Global error handler - capture all logs
+const allLogs = [];
+const originalLog = console.log;
+const originalError = console.error;
+const originalWarn = console.warn;
+
+console.log = function(...args) {
+  originalLog.apply(console, args);
+  allLogs.push('[LOG] ' + args.join(' '));
+};
+
+console.error = function(...args) {
+  originalError.apply(console, args);
+  allLogs.push('[ERROR] ' + args.join(' '));
+};
+
+console.warn = function(...args) {
+  originalWarn.apply(console, args);
+  allLogs.push('[WARN] ' + args.join(' '));
+};
+
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+  const errorMsg = "[WINDOW ERROR] " + msg + " at " + url + ":" + lineNo + ":" + columnNo;
+  originalError(errorMsg);
+  allLogs.push(errorMsg);
+  return false;
+};
+
+window.onunhandledrejection = function(event) {
+  const errorMsg = "[UNHANDLED REJECTION] " + event.reason;
+  originalError(errorMsg);
+  allLogs.push(errorMsg);
+};
+
 // Tự động mở tab nếu có query ?tab=N
 const tabFromQuery = new URLSearchParams(window.location.search).get('tab');
 if (tabFromQuery) showTab(Number(tabFromQuery));
+
 /* ===== CHECK SESSION FROM BACKEND ===== */
 async function checkSession() {
   let retries = 0;
@@ -384,50 +420,193 @@ async function logout() {
 (async () => {
   console.log("[CLIENT] 🚀 INIT PAGE started");
   
-  const session = await checkSession();
-  if (!session) {
-    console.error("[CLIENT] ❌❌❌ Session check returned null. Exiting.");
-    return;
-  }
-  
-  console.log("[CLIENT] ✅ Session valid. Role:", session.role);
-  
-  // Nếu là admin thì chuyển sang admin.html
-  if (session.role === "admin") {
-    console.log("[CLIENT] 👨‍💼 Admin detected. Redirecting to admin.html");
-    window.location.href = "admin.html";
-    return;
-  }
-  
-  // Nếu là client thì load dashboard
-  console.log("[CLIENT] 📊 Loading client dashboard...");
-  
-  await loadClientInfo();
-  console.log("[CLIENT] ✅ loadClientInfo() completed");
-  
-  await renderPaymentHistory();
-  console.log("[CLIENT] ✅ renderPaymentHistory() completed");
-  
-  await renderLicenseTable();
-  console.log("[CLIENT] ✅ renderLicenseTable() completed");
-  
-  await renderSentMessages();
-  console.log("[CLIENT] ✅ renderSentMessages() completed");
-  
-  const params = new URLSearchParams(window.location.search);
-  const tabFromQuery = params.get('tab');
-  if (tabFromQuery) {
-    console.log("[CLIENT] 📑 Opening tab " + tabFromQuery);
-    showTab(Number(tabFromQuery));
-  }
+  try {
+    const session = await checkSession();
+    if (!session) {
+      const msg = "[CLIENT] ❌❌❌ Session check returned null. Exiting.";
+      console.error(msg);
+      showErrorModal([], "❌ Session Authentication Failed");
+      return;
+    }
+    
+    console.log("[CLIENT] ✅ Session valid. Role:", session.role);
+    
+    // Nếu là admin thì chuyển sang admin.html
+    if (session.role === "admin") {
+      console.log("[CLIENT] 👨‍💼 Admin detected. Redirecting to admin.html");
+      window.location.href = "admin.html";
+      return;
+    }
+    
+    // Nếu là client thì load dashboard
+    console.log("[CLIENT] 📊 Loading client dashboard...");
+    
+    await loadClientInfo();
+    console.log("[CLIENT] ✅ loadClientInfo() completed");
+    
+    await renderPaymentHistory();
+    console.log("[CLIENT] ✅ renderPaymentHistory() completed");
+    
+    await renderLicenseTable();
+    console.log("[CLIENT] ✅ renderLicenseTable() completed");
+    
+    await renderSentMessages();
+    console.log("[CLIENT] ✅ renderSentMessages() completed");
+    
+    const params = new URLSearchParams(window.location.search);
+    const tabFromQuery = params.get('tab');
+    if (tabFromQuery) {
+      console.log("[CLIENT] 📑 Opening tab " + tabFromQuery);
+      showTab(Number(tabFromQuery));
+    }
 
-  // ✅ Thêm — tự điền subject nếu có query ?subject=...
-  const subjectFromQuery = params.get('subject');
-  if (subjectFromQuery) {
-    console.log("[CLIENT] 📝 Pre-filling subject: " + subjectFromQuery);
-    const subjectInput = document.querySelector('#supportForm input');
-    if (subjectInput) subjectInput.value = subjectFromQuery;
+    // ✅ Thêm — tự điền subject nếu có query ?subject=...
+    const subjectFromQuery = params.get('subject');
+    if (subjectFromQuery) {
+      console.log("[CLIENT] 📝 Pre-filling subject: " + subjectFromQuery);
+      const subjectInput = document.querySelector('#supportForm input');
+      if (subjectInput) subjectInput.value = subjectFromQuery;
+    }
+    
+    console.log("[CLIENT] ✅✅✅ INIT PAGE completed successfully");
+  } catch (err) {
+    const msg = "[CLIENT] ❌ CRITICAL ERROR: " + err.message;
+    console.error(msg, err);
+    console.error("Stack trace:", err.stack);
+    // Delay a bit to ensure logs are captured
+    setTimeout(() => {
+      showErrorModal([], "❌ Critical Error During Page Load");
+    }, 500);
   }
-  
-  console.log("[CLIENT] ✅✅✅ INIT PAGE completed successfully");
 })();
+
+/* ===== Show error modal to catch logs ===== */
+function showErrorModal(errorLogs, title) {
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  `;
+  
+  const content = document.createElement('div');
+  content.style.cssText = `
+    background: #1a1a1a;
+    border: 2px solid #ff6b6b;
+    border-radius: 8px;
+    padding: 30px;
+    max-width: 700px;
+    max-height: 80vh;
+    overflow-y: auto;
+    color: white;
+    font-family: monospace;
+    font-size: 13px;
+  `;
+  
+  const titleEl = document.createElement('h2');
+  titleEl.style.cssText = 'color: #ff6b6b; margin-top: 0; margin-bottom: 20px; font-size: 18px;';
+  titleEl.textContent = '⚠️ ' + title;
+  
+  const logContent = document.createElement('div');
+  logContent.style.cssText = `
+    background: #000;
+    border: 1px solid #666;
+    padding: 15px;
+    border-radius: 4px;
+    max-height: 450px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  `;
+  
+  // Combine errorLogs + allLogs
+  const combinedLogs = [...errorLogs, ...allLogs];
+  
+  combinedLogs.forEach(log => {
+    const line = document.createElement('div');
+    line.textContent = log;
+    if (log.includes('ERROR') || log.includes('❌')) {
+      line.style.color = '#ff6b6b';
+    } else if (log.includes('✅') || log.includes('completed')) {
+      line.style.color = '#51cf66';
+    } else if (log.includes('[CLIENT]')) {
+      line.style.color = '#a6e3a1';
+    } else {
+      line.style.color = '#aaa';
+    }
+    logContent.appendChild(line);
+  });
+  
+  const instructions = document.createElement('p');
+  instructions.style.cssText = 'color: #ffd93d; margin: 15px 0; font-size: 12px;';
+  instructions.innerHTML = '💡 Tip: Copy these logs and share with developer<br>🔍 Look for [ERROR] or ❌ marks';
+  
+  const buttons = document.createElement('div');
+  buttons.style.cssText = 'display: flex; gap: 10px; margin-top: 20px;';
+  
+  const continueBtn = document.createElement('button');
+  continueBtn.textContent = '← Go Back to Home';
+  continueBtn.style.cssText = `
+    flex: 1;
+    padding: 12px 20px;
+    background: #4c6ef5;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+  `;
+  continueBtn.onmouseover = () => continueBtn.style.background = '#364fc7';
+  continueBtn.onmouseout = () => continueBtn.style.background = '#4c6ef5';
+  continueBtn.onclick = () => {
+    window.location.href = 'index.html';
+  };
+  
+  const copyBtn = document.createElement('button');
+  copyBtn.textContent = '📋 Copy All Logs';
+  copyBtn.style.cssText = `
+    flex: 1;
+    padding: 12px 20px;
+    background: #51cf66;
+    color: black;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+  `;
+  copyBtn.onmouseover = () => copyBtn.style.background = '#40c057';
+  copyBtn.onmouseout = () => copyBtn.style.background = '#51cf66';
+  copyBtn.onclick = () => {
+    const allLogsText = combinedLogs.join('\n');
+    navigator.clipboard.writeText(allLogsText).then(() => {
+      copyBtn.textContent = '✅ Copied to Clipboard!';
+      setTimeout(() => {
+        copyBtn.textContent = '📋 Copy All Logs';
+      }, 2000);
+    }).catch(err => {
+      console.error("Copy failed:", err);
+      alert("Failed to copy. Please manually select and copy the logs above.");
+    });
+  };
+  
+  buttons.appendChild(copyBtn);
+  buttons.appendChild(continueBtn);
+  
+  content.appendChild(titleEl);
+  content.appendChild(instructions);
+  content.appendChild(logContent);
+  content.appendChild(buttons);
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+}
