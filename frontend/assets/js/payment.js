@@ -35,8 +35,15 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ========= Helper show/hide =========
-function show(id) { document.getElementById(id).style.display = 'block'; }
-function hide(id) { document.getElementById(id).style.display = 'none'; }
+// ✅ Sửa thành — kiểm tra null trước
+function show(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'block';
+}
+function hide(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
 
 // ========= Tạo thanh toán =========
 async function startPayment(plan) {
