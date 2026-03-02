@@ -8,8 +8,11 @@ async function checkSession() {
   let retries = 0;
   const maxRetries = 3;
 
+  console.log("[CLIENT] 🔍 checkSession() started");
+
   while (retries < maxRetries) {
     try {
+      console.log(`[CLIENT] 📡 Attempt ${retries + 1}/${maxRetries} - Fetching session...`);
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
@@ -19,18 +22,22 @@ async function checkSession() {
       });
 
       clearTimeout(timeout);
+      console.log(`[CLIENT] Response status: ${res.status}`);
 
       if (res.ok) {
-        return await res.json();
+        const user = await res.json();
+        console.log("[CLIENT] ✅ Session valid. User:", user);
+        return user;
       }
 
+      console.warn(`[CLIENT] ⚠️  Response not OK: ${res.status}`);
       retries++;
       if (retries < maxRetries) {
         // Exponential backoff: 300ms, 600ms, 1000ms
         await new Promise(r => setTimeout(r, 300 * Math.pow(2, retries - 1)));
       }
     } catch (err) {
-      console.warn(`Session check attempt ${retries + 1} failed:`, err.message);
+      console.warn(`[CLIENT] ❌ Session check attempt ${retries + 1} failed:`, err.message);
       retries++;
       if (retries < maxRetries) {
         await new Promise(r => setTimeout(r, 300 * Math.pow(2, retries - 1)));
@@ -38,7 +45,7 @@ async function checkSession() {
     }
   }
 
-  console.error("Session check failed after 3 attempts");
+  console.error("[CLIENT] ❌❌❌ Session check failed after 3 attempts. Redirecting to index.html");
   window.location.href = "index.html";
   return null;
 }
@@ -48,8 +55,12 @@ async function checkSession() {
 async function loadClientInfo() {
   let retries = 0;
   const maxRetries = 2;
+  
+  console.log("[CLIENT] 👤 loadClientInfo() started");
+  
   while (retries < maxRetries) {
     try {
+      console.log(`[CLIENT] 📡 Fetching /api/client/me (attempt ${retries + 1}/${maxRetries})...`);
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
       const res = await fetch(`${API_BASE}/api/client/me`, {
@@ -57,22 +68,29 @@ async function loadClientInfo() {
         signal: controller.signal
       });
       clearTimeout(timeout);
+      console.log(`[CLIENT] Response status: ${res.status}`);
+      
       if (!res.ok) {
+        console.warn(`[CLIENT] ⚠️  /api/client/me returned ${res.status}`);
         retries++;
         if (retries >= maxRetries) {
-          console.error("Failed to load client info");
+          console.error("[CLIENT] ❌ Failed to load client info - Max retries reached");
           window.location.href = "index.html";
           return null;
         }
         await new Promise(r => setTimeout(r, 300 * Math.pow(2, retries - 1)));
         continue;
       }
+      
       const user = await res.json();
+      console.log("[CLIENT] ✅ User loaded:", user);
+      
       if (user.status === "tạm ngưng") {
         alert("Tài khoản của bạn hiện đã bị tạm ngưng");
         await logout();
         return null;
       }
+      
       document.getElementById("accName").textContent = user.fullName || "Chưa cập nhật";
       document.getElementById("accEmail").textContent = user.email;
       document.getElementById("subInfo").textContent =
@@ -80,10 +98,10 @@ async function loadClientInfo() {
 
       return user;
     } catch (err) {
-      console.warn(`Load client info attempt ${retries + 1} failed:`, err.message);
+      console.warn(`[CLIENT] ❌ Load client info attempt ${retries + 1} failed:`, err.message, err);
       retries++;
       if (retries >= maxRetries) {
-        console.error("Failed to load client info after retries");
+        console.error("[CLIENT] ❌❌❌ Failed to load client info after retries");
         window.location.href = "index.html";
         return null;
       }
@@ -95,11 +113,16 @@ async function loadClientInfo() {
 /* ===== PAYMENT HISTORY ===== */
 async function renderPaymentHistory() {
   const historyList = document.getElementById("historyList");
-  if (!historyList) return;
+  if (!historyList) {
+    console.log("[CLIENT] ℹ️  historyList element not found (tab 3)");
+    return;
+  }
 
+  console.log("[CLIENT] 💳 renderPaymentHistory() started");
   historyList.innerHTML = "<li>Đang tải...</li>";
 
   try {
+    console.log("[CLIENT] 📡 Fetching /api/client/payments...");
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
@@ -109,13 +132,16 @@ async function renderPaymentHistory() {
     });
 
     clearTimeout(timeout);
+    console.log(`[CLIENT] Payment history response status: ${res.status}`);
 
     if (!res.ok) {
+      console.warn(`[CLIENT] ❌ Payment history fetch failed: ${res.status}`);
       historyList.innerHTML = "<li>Không thể tải lịch sử giao dịch.</li>";
       return;
     }
 
     const payments = await res.json();
+    console.log(`[CLIENT] ✅ Loaded ${payments.length} payments`);
 
     if (!payments.length) {
       historyList.innerHTML = "<li>Chưa có giao dịch nào.</li>";
@@ -131,7 +157,7 @@ async function renderPaymentHistory() {
       historyList.appendChild(li);
     });
   } catch (err) {
-    console.error("Error loading payment history:", err);
+    console.error("[CLIENT] ❌ Error loading payment history:", err.message, err);
     historyList.innerHTML = "<li>Không thể tải lịch sử giao dịch.</li>";
   }
 }
@@ -139,11 +165,16 @@ async function renderPaymentHistory() {
 /* ===== SENT SUPPORT MESSAGES ===== */
 async function renderSentMessages() {
   const sentMessagesList = document.getElementById("sentMessagesList");
-  if (!sentMessagesList) return;
+  if (!sentMessagesList) {
+    console.log("[CLIENT] ℹ️  sentMessagesList element not found (tab 5)");
+    return;
+  }
 
+  console.log("[CLIENT] 📨 renderSentMessages() started");
   sentMessagesList.innerHTML = "<li>Đang tải...</li>";
 
   try {
+    console.log("[CLIENT] 📡 Fetching /api/client/support...");
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
@@ -153,13 +184,16 @@ async function renderSentMessages() {
     });
 
     clearTimeout(timeout);
+    console.log(`[CLIENT] Support messages response status: ${res.status}`);
 
     if (!res.ok) {
+      console.warn(`[CLIENT] ❌ Support messages fetch failed: ${res.status}`);
       sentMessagesList.innerHTML = "<li>Không thể tải yêu cầu hỗ trợ.</li>";
       return;
     }
 
     const myMessages = await res.json();
+    console.log(`[CLIENT] ✅ Loaded ${myMessages.length} support messages`);
 
     if (!myMessages.length) {
       sentMessagesList.innerHTML = "<li>Bạn chưa gửi yêu cầu nào.</li>";
@@ -189,7 +223,7 @@ async function renderSentMessages() {
       sentMessagesList.appendChild(li);
     });
   } catch (err) {
-    console.error("Error loading support messages:", err);
+    console.error("[CLIENT] ❌ Error loading support messages:", err.message, err);
     sentMessagesList.innerHTML = "<li>Không thể tải yêu cầu hỗ trợ.</li>";
   }
 }
@@ -257,11 +291,16 @@ if (supportForm) {
 /* ===== RENDER LICENSE TABLE ===== */
 async function renderLicenseTable() {
   const licenseTableBody = document.getElementById("licenseTableBody");
-  if (!licenseTableBody) return;
+  if (!licenseTableBody) {
+    console.log("[CLIENT] ℹ️  licenseTableBody element not found (tab 2)");
+    return;
+  }
 
+  console.log("[CLIENT] 🖤 renderLicenseTable() started");
   licenseTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4">Đang tải...</td></tr>`;
 
   try {
+    console.log("[CLIENT] 📡 Fetching /api/payment/licenses...");
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
@@ -271,14 +310,17 @@ async function renderLicenseTable() {
     });
 
     clearTimeout(timeout);
+    console.log(`[CLIENT] License table response status: ${res.status}`);
 
     if (!res.ok) {
+      console.warn(`[CLIENT] ❌ License fetch failed: ${res.status}`);
       licenseTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-white/60">Không thể tải license.</td></tr>`;
       return;
     }
 
     const data = await res.json();
     const licenses = data.licenses || [];
+    console.log(`[CLIENT] ✅ Loaded ${licenses.length} licenses`);
 
     if (!licenses.length) {
       licenseTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-white/60">Chưa có license nào. Hãy mua PREMIUM để bắt đầu.</td></tr>`;
@@ -310,7 +352,7 @@ async function renderLicenseTable() {
       licenseTableBody.appendChild(tr);
     });
   } catch (err) {
-    console.error("Error loading license table:", err);
+    console.error("[CLIENT] ❌ Error loading license table:", err.message, err);
     licenseTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-white/60">Không thể tải license.</td></tr>`;
   }
 }
@@ -340,26 +382,52 @@ async function logout() {
 
 /* ===== INIT PAGE ===== */
 (async () => {
+  console.log("[CLIENT] 🚀 INIT PAGE started");
+  
   const session = await checkSession();
-  if (!session) return;
+  if (!session) {
+    console.error("[CLIENT] ❌❌❌ Session check returned null. Exiting.");
+    return;
+  }
+  
+  console.log("[CLIENT] ✅ Session valid. Role:", session.role);
+  
   // Nếu là admin thì chuyển sang admin.html
   if (session.role === "admin") {
+    console.log("[CLIENT] 👨‍💼 Admin detected. Redirecting to admin.html");
     window.location.href = "admin.html";
     return;
   }
+  
   // Nếu là client thì load dashboard
+  console.log("[CLIENT] 📊 Loading client dashboard...");
+  
   await loadClientInfo();
+  console.log("[CLIENT] ✅ loadClientInfo() completed");
+  
   await renderPaymentHistory();
+  console.log("[CLIENT] ✅ renderPaymentHistory() completed");
+  
   await renderLicenseTable();
+  console.log("[CLIENT] ✅ renderLicenseTable() completed");
+  
   await renderSentMessages();
+  console.log("[CLIENT] ✅ renderSentMessages() completed");
+  
   const params = new URLSearchParams(window.location.search);
   const tabFromQuery = params.get('tab');
-  if (tabFromQuery) showTab(Number(tabFromQuery));
+  if (tabFromQuery) {
+    console.log("[CLIENT] 📑 Opening tab " + tabFromQuery);
+    showTab(Number(tabFromQuery));
+  }
 
   // ✅ Thêm — tự điền subject nếu có query ?subject=...
   const subjectFromQuery = params.get('subject');
   if (subjectFromQuery) {
+    console.log("[CLIENT] 📝 Pre-filling subject: " + subjectFromQuery);
     const subjectInput = document.querySelector('#supportForm input');
     if (subjectInput) subjectInput.value = subjectFromQuery;
   }
+  
+  console.log("[CLIENT] ✅✅✅ INIT PAGE completed successfully");
 })();
