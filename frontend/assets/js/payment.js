@@ -212,12 +212,8 @@ function showResult(type, license, message) {
     el.innerHTML = `
       <div class="success-box">
         <p style="font-size:1.3rem;margin-bottom:0.5rem">✅ Thanh toán thành công!</p>
-        <p style="margin-bottom:0.5rem">License key của bạn:</p>
-        <div class="license-key">${license?.key || 'N/A'}</div>
-        <p style="font-size:0.8rem;color:#86efac;margin-top:0.5rem;margin-bottom:1.2rem">
-          Hạn sử dụng: ${license?.expiresAt
-        ? new Date(license.expiresAt).toLocaleDateString('vi-VN')
-        : 'N/A'}
+        <p style="margin-bottom:1.2rem;color:#86efac;font-size:0.95rem;">
+          License của bạn đã được tạo. Bạn có thể xem chi tiết ở tab "Gói đã đăng ký".
         </p>
         <p style="color:#86efac;font-size:0.85rem;margin-bottom:0.8rem">
           Tự động quay về trang chủ sau <span id="countdown-text">30</span> giây...

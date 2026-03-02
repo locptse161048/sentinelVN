@@ -82,7 +82,25 @@
         <!-- SUBSCRIPTION -->
         <div id="content2" class="card p-6 hidden">
           <h2 class="text-xl font-semibold mb-4">Gói đã đăng ký</h2>
-          <p id="subInfo">Chưa đăng ký gói nào.</p>
+          <div class="overflow-x-auto">
+            <table id="licenseTable" class="w-full text-sm text-white/80">
+              <thead>
+                <tr class="border-b border-white/20">
+                  <th class="text-left py-2 px-2">License Key</th>
+                  <th class="text-left py-2 px-2">Gói</th>
+                  <th class="text-left py-2 px-2">Số tiền</th>
+                  <th class="text-left py-2 px-2">Trạng thái</th>
+                  <th class="text-left py-2 px-2">Ngày đăng ký</th>
+                  <th class="text-left py-2 px-2">Ngày hết hạn</th>
+                </tr>
+              </thead>
+              <tbody id="licenseTableBody">
+                <tr>
+                  <td colspan="6" class="text-center py-4 text-white/60">Chưa có license nào. Hãy mua PREMIUM để bắt đầu.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- HISTORY -->

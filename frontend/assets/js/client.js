@@ -254,6 +254,67 @@ if (supportForm) {
   });
 }
 
+/* ===== RENDER LICENSE TABLE ===== */
+async function renderLicenseTable() {
+  const licenseTableBody = document.getElementById("licenseTableBody");
+  if (!licenseTableBody) return;
+
+  licenseTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4">Đang tải...</td></tr>`;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const res = await fetch(`${API_BASE}/api/payment/licenses`, {
+      credentials: "include",
+      signal: controller.signal
+    });
+
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      licenseTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-white/60">Không thể tải license.</td></tr>`;
+      return;
+    }
+
+    const data = await res.json();
+    const licenses = data.licenses || [];
+
+    if (!licenses.length) {
+      licenseTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-white/60">Chưa có license nào. Hãy mua PREMIUM để bắt đầu.</td></tr>`;
+      return;
+    }
+
+    licenseTableBody.innerHTML = "";
+
+    licenses.forEach(lic => {
+      const tr = document.createElement("tr");
+      tr.className = "border-b border-white/10 hover:bg-white/5";
+
+      const createdDate = new Date(lic.createdAt).toLocaleDateString('vi-VN');
+      const expiresDate = new Date(lic.expiresAt).toLocaleDateString('vi-VN');
+      const statusText = lic.status === 'active' 
+        ? '<span style="color:#86efac">🟢 Hoạt động</span>' 
+        : '<span style="color:#fca5a5">🔴 Hết hạn</span>';
+      const amountText = `${lic.amount?.toLocaleString('vi-VN') || 'N/A'}đ`;
+
+      tr.innerHTML = `
+        <td class="py-2 px-2 text-white/90 font-mono text-xs">${lic.key}</td>
+        <td class="py-2 px-2">${lic.plan}</td>
+        <td class="py-2 px-2">${amountText}</td>
+        <td class="py-2 px-2">${statusText}</td>
+        <td class="py-2 px-2 text-white/70">${createdDate}</td>
+        <td class="py-2 px-2 text-white/70">${expiresDate}</td>
+      `;
+
+      licenseTableBody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error("Error loading license table:", err);
+    licenseTableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-white/60">Không thể tải license.</td></tr>`;
+  }
+}
+
 /* ===== TAB SWITCH ===== */
 function showTab(n) {
   document.querySelectorAll("[id^='content']").forEach(c =>
@@ -289,6 +350,7 @@ async function logout() {
   // Nếu là client thì load dashboard
   await loadClientInfo();
   await renderPaymentHistory();
+  await renderLicenseTable();
   await renderSentMessages();
   const params = new URLSearchParams(window.location.search);
   const tabFromQuery = params.get('tab');

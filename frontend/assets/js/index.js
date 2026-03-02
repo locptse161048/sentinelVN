@@ -1,7 +1,6 @@
-
-
 document.getElementById('year').textContent = new Date().getFullYear();
 const API_BASE = 'https://sentinelvn.onrender.com';
+
 // ========= Auth session check on page load =========
 document.addEventListener("DOMContentLoaded", async () => {
     try {
@@ -20,25 +19,21 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
         const user = await res.json();
-        setLoggedInUI(user);
+        await setLoggedInUI(user);  // ← await vì hàm async
         setupAccountButtons(user);
     } catch (err) {
         console.warn("Session check failed on page load:", err.message);
         setLoggedOutUI();
     }
 });
-// ========= LocalStorage model =========
 
+// ========= Helpers =========
 const $ = (q, root = document) => root.querySelector(q);
 const $$ = (q, root = document) => Array.from(root.querySelectorAll(q));
 const fmtDate = ts => new Date(ts).toLocaleDateString('vi-VN');
 const addDays = (ts, days) => new Date(ts + days * 24 * 3600 * 1000).getTime();
 
-// ---- License Key Generator ----
-// PREMIUM (dev, 75k/tháng): SNTL-9X2B-G7QM
-// PRO (doanh nghiệp): PRO-XXXX-XXXX-XXXX-XXXX
 function genKey(plan = 'PREMIUM') {
-    // helper tạo block A-Z0-9
     function randBlock(len) {
         const bytes = crypto.getRandomValues(new Uint8Array(len));
         const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -60,29 +55,49 @@ function genKey(plan = 'PREMIUM') {
     }
 }
 
-
-// Kiểm tra session khi load trang
-function setLoggedInUI(user) {
+// ========= setLoggedInUI — async để dùng await =========
+async function setLoggedInUI(user) {
     const userEmail = document.getElementById('userEmail');
     const logoutBtn = document.getElementById('logoutBtn');
     const needLogin = document.getElementById('needLogin');
     const licenseArea = document.getElementById('licenseArea');
     const contactSection = document.getElementById('contact');
+
     if (userEmail) userEmail.textContent = `Đang đăng nhập: ${user.email}`;
     if (logoutBtn) logoutBtn.classList.remove('hidden');
     if (needLogin) needLogin.classList.add('hidden');
     if (licenseArea) licenseArea.classList.remove('hidden');
+
+    // Ẩn section #contact (form liên hệ dùng thử)
     if (contactSection) contactSection.style.display = 'none';
-    // Ẩn link "Hỗ trợ" và "Liên hệ" trong nav (chỉ ẩn nav, không ẩn button PRO)
+
+    // Ẩn link "Hỗ trợ" trong nav
     document.querySelectorAll('a[href="#support"]').forEach(el => el.style.display = 'none');
-    // Redirect button PRO và section contact → client.html tab 4
+
+    // Redirect button PRO → client.html tab 4
     document.querySelectorAll('a[href="#contact"], a[data-plan="PRO"]').forEach(el => {
         el.addEventListener('click', e => {
             e.preventDefault();
             window.location.href = 'client.html?tab=4&subject=Liên hệ báo giá gói PRO';
         });
     });
+
+    // ✅ Kiểm tra license → đổi button PREMIUM thành "Gia hạn"
+    try {
+        const licenseRes = await fetch(`${API_BASE}/api/payment/license/active`, {
+            credentials: 'include'
+        });
+        const licenseData = await licenseRes.json();
+
+        const premiumBtn = document.querySelector('a[data-plan="PREMIUM"]');
+        if (premiumBtn && licenseData.success) {
+            premiumBtn.textContent = '🔄 Gia hạn PREMIUM';
+        }
+    } catch (err) {
+        console.warn('Không thể kiểm tra license:', err.message);
+    }
 }
+
 function setLoggedOutUI() {
     const userEmail = document.getElementById('userEmail');
     const logoutBtn = document.getElementById('logoutBtn');
@@ -98,7 +113,7 @@ function setLoggedOutUI() {
 // ========= Pricing -> preselect plan =========
 $$('a[href="#checkout"][data-plan]').forEach(a => {
     a.addEventListener('click', () => {
-        const plan = a.getAttribute('data-plan'); // PREMIUM / PRO
+        const plan = a.getAttribute('data-plan');
         setTimeout(() => { $('#planSelect').value = plan; }, 0);
     });
 });
@@ -109,10 +124,13 @@ $$('a[href="#checkout"][data-plan]').forEach(a => {
     if (m) $('#planSelect').value = m[1].toUpperCase();
 })();
 
+// ========= Global variable: Lưu plan khi bấm button =========
+let pendingRedirectPlan = null;
+
 // ========= Sync click pricing -> select plan checkout =========
 $$('a[data-plan]').forEach(a => {
     a.addEventListener('click', () => {
-        const p = a.getAttribute('data-plan'); // PREMIUM | PRO
+        const p = a.getAttribute('data-plan');
         setTimeout(() => {
             const sel = $('#planSelect');
             if (sel) sel.value = p;
@@ -120,7 +138,7 @@ $$('a[data-plan]').forEach(a => {
     });
 });
 
-
+// ========= Require login buttons =========
 document.querySelectorAll('.require-login').forEach(btn => {
     btn.addEventListener('click', async e => {
         e.preventDefault();
@@ -137,12 +155,15 @@ document.querySelectorAll('.require-login').forEach(btn => {
             clearTimeout(timeout);
 
             if (!res.ok) {
+                // ❌ Chưa đăng nhập → Hiện modal + lưu plan
+                pendingRedirectPlan = btn.getAttribute("data-plan");
                 const authModal = document.getElementById('authModal');
                 authModal.classList.remove('hidden');
                 authModal.classList.add('flex');
                 return;
             }
 
+            // ✅ Đã đăng nhập → Redirect tới page tương ứng
             const user = await res.json();
             const plan = btn.getAttribute("data-plan");
 
@@ -153,6 +174,7 @@ document.querySelectorAll('.require-login').forEach(btn => {
             }
         } catch (err) {
             console.error("require-login check failed:", err.message);
+            pendingRedirectPlan = btn.getAttribute("data-plan");
             const authModal = document.getElementById('authModal');
             authModal.classList.remove('hidden');
             authModal.classList.add('flex');
@@ -160,16 +182,12 @@ document.querySelectorAll('.require-login').forEach(btn => {
     });
 });
 
-
-
-// ========= Smooth scroll anchors (FIXED HEADER) =========
-const HEADER_HEIGHT = 64; // chiều cao header (h-16)
+// ========= Smooth scroll anchors =========
+const HEADER_HEIGHT = 64;
 
 document.querySelectorAll('a[href^="#"]').forEach(link => {
     link.addEventListener('click', e => {
         const targetId = link.getAttribute('href');
-
-        // Fix: bỏ qua href="#" thuần (không có id thực)
         if (!targetId || targetId === '#') return;
 
         const targetEl = document.querySelector(targetId);
@@ -182,17 +200,12 @@ document.querySelectorAll('a[href^="#"]').forEach(link => {
             window.pageYOffset -
             HEADER_HEIGHT;
 
-        window.scrollTo({
-            top: targetPosition,
-            behavior: 'smooth'
-        });
-
+        window.scrollTo({ top: targetPosition, behavior: 'smooth' });
         history.pushState(null, '', targetId);
     });
 });
 
-
-// ========= Session check with retry logic  =========
+// ========= Session check / Auth modal =========
 document.addEventListener('DOMContentLoaded', () => {
     const authModal = document.getElementById('authModal');
     const openAuth = document.getElementById('openAuth');
@@ -223,7 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 window.location.href = "client.html";
             }
-
         } catch (err) {
             console.error("Auth check failed:", err.message);
             authModal.classList.remove('hidden');
@@ -247,16 +259,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-
-
-/* ===== CONST ===== */
-/*const ADMIN_EMAIL = 'admin@admin.com';
-const ADMIN_PASSWORD = 'Thisisadmin';*/
-
+// ========= Auth Form =========
 let mode = 'login';
 
-
-/* ELEMENTS */
 const loginTab = document.getElementById('loginTab');
 const signupTab = document.getElementById('signupTab');
 const forgotLink = document.getElementById('forgotLink');
@@ -266,39 +271,25 @@ const msg = document.getElementById('msg');
 const form = document.getElementById('authForm');
 switchMode('login');
 
-
-/* MODE SWITCH */
 loginTab.onclick = () => switchMode('login');
 signupTab.onclick = () => switchMode('signup');
 forgotLink.onclick = () => location.href = 'forgot.html';
 
 function switchMode(m) {
     mode = m;
-    // Xóa active trước
     loginTab.classList.remove('active');
     signupTab.classList.remove('active');
-    // Thêm active cho tab đúng
     if (m === 'login') {
         loginTab.classList.add('active');
     } else {
         signupTab.classList.add('active');
     }
-    title.textContent = m === 'login'
-        ? 'Đăng nhập hệ thống'
-        : 'Đăng ký tài khoản';
-    submitBtn.textContent = m === 'login'
-        ? 'Đăng nhập'
-        : 'Đăng ký';
+    title.textContent = m === 'login' ? 'Đăng nhập hệ thống' : 'Đăng ký tài khoản';
+    submitBtn.textContent = m === 'login' ? 'Đăng nhập' : 'Đăng ký';
     msg.textContent = '';
     const nameField = form.querySelector('input[name="name"]');
-    if (nameField) {
-        nameField.style.display = m === 'signup' ? 'block' : 'none';
-    }
-
+    if (nameField) nameField.style.display = m === 'signup' ? 'block' : 'none';
 }
-
-
-/* SUBMIT */
 
 form.onsubmit = async e => {
     e.preventDefault();
@@ -307,18 +298,10 @@ form.onsubmit = async e => {
     const password = form.password.value;
     const nameInput = form.name ? form.name.value.trim() : "";
 
-
-    /* ===== SIGNUP ===== */
     if (mode === 'signup') {
-        if (!email || !password) {
-            msg.textContent = '⚠️ Vui lòng nhập đầy đủ thông tin.';
-            return;
-        }
-        if (password.length < 6) {
-            msg.textContent = '⚠️ Mật khẩu phải tối thiểu 6 ký tự.';
-            return;
-        }
-        // Gọi API đăng ký
+        if (!email || !password) { msg.textContent = '⚠️ Vui lòng nhập đầy đủ thông tin.'; return; }
+        if (password.length < 6) { msg.textContent = '⚠️ Mật khẩu phải tối thiểu 6 ký tự.'; return; }
+
         const res = await fetch(`${API_BASE}/api/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -334,41 +317,36 @@ form.onsubmit = async e => {
         return;
     }
 
-    /* ===== LOGIN ===== */
     const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: "include", // rất quan trọng
+        credentials: "include",
         body: JSON.stringify({ email, password })
     });
 
     const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-        msg.textContent = data.message || 'Đăng nhập thất bại.';
-        return;
-    }
+    if (!res.ok) { msg.textContent = data.message || 'Đăng nhập thất bại.'; return; }
 
     if (data.user && data.user.status === 'tạm ngưng') {
         msg.textContent = '❌ Tài khoản của bạn hiện đã bị tạm ngưng';
         return;
     }
 
-    // Sau khi login thành công
-    setLoggedInUI(data.user);
+    await setLoggedInUI(data.user);  // ← await
     setupAccountButtons(data.user);
-    // Ẩn modal nếu đang mở
+
     const authModal = document.getElementById('authModal');
     authModal.classList.add('hidden');
     authModal.classList.remove('flex');
-    document.getElementById('authModal')?.classList.add('hidden');
 
-
+    // ✅ Redirect tới index.html sau khi login thành công
+    // User đã có session, lần tới khi bấm "Mua PREMIUM" sẽ thẳng tới payment
+    window.location.href = 'index.html';
+    pendingRedirectPlan = null;
 };
 
-
-// ===== HEADER LOGOUT HANDLER =====
-
+// ========= Header logout / account buttons =========
 function setupAccountButtons(user) {
     const openAuthBtn = document.getElementById("openAuth");
     const openAuthBtn_m = document.getElementById("openAuth_m");
@@ -399,7 +377,6 @@ function setupAccountButtons(user) {
 
     logoutBtn?.classList.remove("hidden");
     logoutBtn_m?.classList.remove("hidden");
-
     logoutBtn?.addEventListener("click", doLogout);
     logoutBtn_m?.addEventListener("click", doLogout);
 }

@@ -42,6 +42,49 @@ function genKey(plan = 'PREMIUM') {
 		return `PRO-${hexStr.slice(0, 4)}-${hexStr.slice(4, 8)}-${hexStr.slice(8, 12)}-${hexStr.slice(12, 16)}`.toUpperCase();
 	}
 }
+// ========= Xác thực webhook từ PayOS =========
+// Cập nhật hoặc tạo license (1 client = 1 key per plan)
+async function processLicense(clientId, plan, licenseId, paymentAmount, paymentCreatedAt = new Date()) {
+    const now = new Date();
+    const existingLicense = await License.findOne({ clientId, plan });
+
+    if (!existingLicense) {
+        // Tạo license mới nếu chưa có
+        const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        return await License.create({
+            id: licenseId,
+            clientId,
+            key: genKey(plan),
+            plan,
+            amount: paymentAmount,
+            status: 'active',
+            expiresAt,
+        });
+    } else {
+        // Đã có license → update expiresAt
+        let newExpiresAt;
+
+        if (existingLicense.status === 'active' && existingLicense.expiresAt > now) {
+            // License chưa hết hạn → +30 ngày từ ngày hết hạn hiện tại
+            newExpiresAt = new Date(existingLicense.expiresAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+        } else {
+            // License hết hạn hoặc expired → +30 ngày từ ngày thanh toán
+            newExpiresAt = new Date(paymentCreatedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+        }
+
+        const updatedLicense = await License.findByIdAndUpdate(
+            existingLicense._id,
+            {
+                expiresAt: newExpiresAt,
+                status: 'active',
+                amount: paymentAmount, // Cập nhật amount mới nhất
+            },
+            { new: true }
+        );
+
+        return updatedLicense;
+    }
+}
 
 function getExpiresDate(days = 30) {
 	return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
@@ -173,25 +216,25 @@ router.post('/webhook', async (req, res) => {
 		}
 
 		// 5. Cập nhật Payment → success
-		await Payment.findByIdAndUpdate(payment._id, {
-			status: 'success',
-			transactionId: webhookData.data.reference || String(orderCode)
-		});
+		const updatedPayment = await Payment.findByIdAndUpdate(
+			payment._id,
+			{
+				status: 'success',
+				transactionId: webhookData.data.reference || String(orderCode)
+			},
+			{ new: true }
+		);
 
-		// 6. Tạo License
-		const licenseKey = genKey(payment.plan);
-		const expiresAt = getExpiresDate(30);
+		// 6. Xử lý License (create hoặc update)
+		const license = await processLicense(
+			payment.clientId,
+			payment.plan,
+			webhookData.data.reference || String(orderCode),
+			payment.amount,
+			updatedPayment.createdAt
+		);
 
-		await License.create({
-			id: webhookData.data.reference || String(orderCode),
-			clientId: payment.clientId,
-			key: licenseKey,
-			plan: payment.plan,
-			amount: payment.amount,
-			expiresAt,
-		});
-
-		console.log('✅ License created via webhook:', licenseKey);
+		console.log('✅ License processed via webhook:', license.key);
 
 		// 7. Trả 200 để PayOS không retry
 		return res.json({ received: true });
@@ -218,8 +261,10 @@ router.post('/return', async (req, res) => {
 		if (payment.status === 'success') {
 			const license = await License.findOne({
 				clientId,
+				plan: payment.plan,
+				status: 'active',
 				expiresAt: { $gt: new Date() }
-			}).sort({ createdAt: -1 });
+			});
 
 			return res.json({
 				success: true,
@@ -254,28 +299,28 @@ router.post('/return', async (req, res) => {
 			}
 
 			// Đã thanh toán → cập nhật Payment
-			await Payment.findByIdAndUpdate(paymentId, {
-				status: 'success',
-				transactionId: verifyData.data.id || String(payment.orderCode)
-			});
+			const updatedPayment = await Payment.findByIdAndUpdate(
+				paymentId,
+				{
+					status: 'success',
+					transactionId: verifyData.data.id || String(payment.orderCode)
+				},
+				{ new: true }
+			);
 
-			// Tạo License
-			const licenseKey = genKey(payment.plan);
-			const expiresAt = getExpiresDate(30);
-
-			await License.create({
-				id: verifyData.data.id,
+			// Xử lý License (create hoặc update)
+			const license = await processLicense(
 				clientId,
-				key: licenseKey,
-				plan: payment.plan,
-				amount: payment.amount,
-				expiresAt,
-			});
+				payment.plan,
+				verifyData.data.id,
+				payment.amount,
+				updatedPayment.createdAt
+			);
 
 			return res.json({
 				success: true,
 				message: 'Thanh toán thành công',
-				license: { key: licenseKey, plan: payment.plan, expiresAt }
+				license: { key: license.key, plan: license.plan, expiresAt: license.expiresAt }
 			});
 
 		} catch (payosError) {
@@ -293,6 +338,33 @@ router.post('/return', async (req, res) => {
 	}
 });
 
+// ========= GET /licenses (Lấy tất cả license của client) =========
+router.get('/licenses', async (req, res) => {
+	try {
+		const clientId = req.session.userId;
+		const licenses = await License.find({ clientId }).sort({ createdAt: -1 });
+
+		if (!licenses.length) {
+			return res.json({ success: false, licenses: [], message: 'Chưa có license nào' });
+		}
+
+		res.json({
+			success: true,
+			licenses: licenses.map(lic => ({
+				key: lic.key,
+				plan: lic.plan,
+				amount: lic.amount,
+				status: lic.status,
+				createdAt: lic.createdAt,
+				expiresAt: lic.expiresAt
+			}))
+		});
+	} catch (err) {
+		console.error("Error fetching licenses:", err);
+		res.status(500).json({ success: false, message: 'Lỗi server' });
+	}
+});
+
 // ========= GET /license/active =========
 
 router.get('/license/active', async (req, res) => {
@@ -300,8 +372,10 @@ router.get('/license/active', async (req, res) => {
 		const clientId = req.session.userId;
 		const license = await License.findOne({
 			clientId,
+			plan: 'PREMIUM',
+			status: 'active',
 			expiresAt: { $gt: new Date() }
-		}).sort({ createdAt: -1 });
+		});
 
 		if (!license) {
 			return res.json({ success: false, message: 'Chưa có license' });
@@ -312,6 +386,7 @@ router.get('/license/active', async (req, res) => {
 			license: {
 				key: license.key,
 				plan: license.plan,
+				status: license.status,
 				expiresAt: license.expiresAt
 			}
 		});
