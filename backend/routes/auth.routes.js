@@ -38,11 +38,14 @@ router.post('/login', async (req, res) => {
 		const match = await bcrypt.compare(password, user.passwordHash);
 		if (!match) return res.status(400).json({ message: 'Sai email hoặc mật khẩu' });
 		req.session.userId = user._id;
+		console.log("[AUTH LOGIN] 🔐 Session set - UserId:", req.session.userId);
 
 		req.session.save(err => {
 			if (err) {
+				console.error("[AUTH LOGIN] ❌ Session save error:", err);
 				return res.status(500).json({ message: "Session error" });
 			}
+			console.log("[AUTH LOGIN] ✅ Session saved successfully, Cookie:", req.session);
 			res.json({
 				message: "Đăng nhập thành công",
 				user: {
@@ -53,6 +56,7 @@ router.post('/login', async (req, res) => {
 			});
 		});
 	} catch (err) {
+		console.error("[AUTH LOGIN] Server error:", err);
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
@@ -67,13 +71,20 @@ router.post('/logout', (req, res) => {
 
 // Kiểm tra session
 router.get('/session', async (req, res) => {
+	console.log("[AUTH SESSION] Checking session - UserId:", req.session?.userId);
+	
 	if (!req.session.userId) {
+		console.warn("[AUTH SESSION] ❌ No userId in session");
 		return res.status(401).json({ message: "Chưa đăng nhập" });
 	}
+	
 	const user = await Client.findById(req.session.userId);
 	if (!user) {
+		console.warn("[AUTH SESSION] ❌ User not found for userId:", req.session.userId);
 		return res.status(401).json({ message: "User không tồn tại" });
 	}
+	
+	console.log("[AUTH SESSION] ✅ Session valid for user:", user.email);
 	res.json({
 		email: user.email,
 		role: user.role,

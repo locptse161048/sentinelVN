@@ -68,11 +68,22 @@ const adminMiddleware = require('./middleware/adminMiddleware');
 
 // Routes
 app.use('/api/auth', require('./routes/auth.routes'));
+console.log("[STARTUP] ✅ /api/auth mounted");
+
 app.use('/api/admin', adminMiddleware, require('./routes/admin.routes'));
+console.log("[STARTUP] ✅ /api/admin mounted");
+
 app.use('/api/client', authMiddleware, require('./routes/client.routes'));
+console.log("[STARTUP] ✅ /api/client mounted (with authMiddleware)");
+
 app.use('/api/payment', authMiddleware, require('./routes/payment.routes'));
+console.log("[STARTUP] ✅ /api/payment mounted (with authMiddleware)");
+
 app.use('/api/support', authMiddleware, require('./routes/support.routes'));
+console.log("[STARTUP] ✅ /api/support mounted (with authMiddleware)");
+
 app.use('/api/webhook', require('./routes/webhook.routes'));
+console.log("[STARTUP] ✅ /api/webhook mounted");
 app.get('/', (req, res) => {
   res.send('Sentinel VN Backend API');
 });

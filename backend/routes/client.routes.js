@@ -8,10 +8,16 @@ const SupportMsg = require('../models/supportMsg');
 // Lấy thông tin tài khoản hiện tại
 router.get('/me', async (req, res) => {
 	try {
+		console.log("[BACKEND] GET /api/client/me - Session userId:", req.session.userId);
+		
 		const user = await Client.findById(req.session.userId);
 		if (!user) {
+			console.error("[BACKEND] User not found with ID:", req.session.userId);
 			return res.status(404).json({ message: "User không tồn tại" });
 		}
+		
+		console.log("[BACKEND] ✅ User found:", user.email);
+		
 		res.json({
 			email: user.email,
 			fullName: user.fullName,
@@ -19,7 +25,7 @@ router.get('/me', async (req, res) => {
 			status: user.status
 		});
 	} catch (err) {
-		console.error("Error fetching user info:", err);
+		console.error("[BACKEND] Error fetching user info:", err);
 		res.status(500).json({ message: "Lỗi server" });
 	}
 });

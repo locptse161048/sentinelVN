@@ -107,10 +107,17 @@ async function loadClientInfo() {
       console.log(`[CLIENT] Response status: ${res.status}`);
       
       if (!res.ok) {
-        console.warn(`[CLIENT] ⚠️  /api/client/me returned ${res.status}`);
+        try {
+          const errorData = await res.json();
+          console.warn(`[CLIENT] ⚠️  /api/client/me returned ${res.status}:`, errorData);
+        } catch {
+          console.warn(`[CLIENT] ⚠️  /api/client/me returned ${res.status} (non-JSON response)`);
+        }
+        
         retries++;
         if (retries >= maxRetries) {
           console.error("[CLIENT] ❌ Failed to load client info - Max retries reached");
+          console.error("[CLIENT] ❌ This means /api/client/me ended or backend is not responding");
           window.location.href = "index.html";
           return null;
         }
