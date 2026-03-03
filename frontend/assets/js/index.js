@@ -82,7 +82,8 @@ async function setLoggedInUI(user) {
         if (heroSection) heroSection.style.display = 'none';
 
         // Ẩn nav menu
-        document.querySelector('nav')?.style.display = 'none';
+        var navEl = document.querySelector('nav');
+        if (navEl) navEl.style.display = 'none';
 
         // Ẩn tất cả buttons action (Mua, Dùng miễn phí, Liên hệ báo giá)
         document.querySelectorAll('.require-login, a[href="#contact"]').forEach(btn => {
