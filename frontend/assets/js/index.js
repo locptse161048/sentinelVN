@@ -340,9 +340,12 @@ form.onsubmit = async e => {
     authModal.classList.add('hidden');
     authModal.classList.remove('flex');
 
-    // ✅ Redirect tới index.html sau khi login thành công
-    // User đã có session, lần tới khi bấm "Mua PREMIUM" sẽ thẳng tới payment
-    window.location.href = 'index.html';
+    // ✅ Redirect based on role
+    if (data.user.role === 'admin') {
+        window.location.href = 'admin.html';
+    } else {
+        window.location.href = 'client.html';
+    }
     pendingRedirectPlan = null;
 };
 
