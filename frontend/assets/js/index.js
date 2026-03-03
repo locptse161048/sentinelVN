@@ -68,9 +68,35 @@ async function setLoggedInUI(user) {
     if (needLogin) needLogin.classList.add('hidden');
     if (licenseArea) licenseArea.classList.remove('hidden');
 
-    // Ẩn section #contact (form liên hệ dùng thử)
-    if (contactSection) contactSection.style.display = 'none';
+    // ✅ Nếu là ADMIN → Chỉ hiện bảng giá
+    if (user.role === 'admin') {
+        // Ẩn tất cả sections
+        document.querySelectorAll('section').forEach(section => {
+            if (section.id !== 'pricing') {
+                section.style.display = 'none';
+            }
+        });
 
+        // Ẩn hero section (vì nó là div, không phải section)
+        const heroSection = document.querySelector('section#home');
+        if (heroSection) heroSection.style.display = 'none';
+
+        // Ẩn nav menu
+        document.querySelector('nav')?.style.display = 'none';
+
+        // Ẩn tất cả buttons action (Mua, Dùng miễn phí, Liên hệ báo giá)
+        document.querySelectorAll('.require-login, a[href="#contact"]').forEach(btn => {
+            btn.style.display = 'none';
+        });
+
+        // Ẩn form liên hệ
+        if (contactSection) contactSection.style.display = 'none';
+
+        return; // Không cần kiểm tra license khi là admin
+    }
+
+    // ===== LOGIC CHO CLIENT =====
+    
     // Ẩn link "Hỗ trợ" trong nav
     document.querySelectorAll('a[href="#support"]').forEach(el => el.style.display = 'none');
 
