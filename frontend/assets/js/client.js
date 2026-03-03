@@ -248,11 +248,11 @@ if (supportForm) {
       }
 
       // Gửi yêu cầu mới
-      const res = await fetch(`${API_BASE}/api/support`, {
+      const res = await fetch(`${API_BASE}/api/client/support`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ subject, message })
+        body: JSON.stringify({ message })
       });
 
       if (!res.ok) {

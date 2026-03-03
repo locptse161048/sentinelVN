@@ -52,7 +52,7 @@ router.get('/account', async (req, res) => {
 // Lấy gói đã đăng ký
 router.get('/license', async (req, res) => {
 	try {
-		const license = await License.findOne({ client: req.session.userId, status: 'active' });
+		const license = await License.findOne({ clientId: req.session.userId, status: 'active' });
 		res.json(license || { message: 'Chưa đăng ký gói nào.' });
 	} catch (err) {
 		console.error("Error fetching license:", err);
@@ -63,7 +63,7 @@ router.get('/license', async (req, res) => {
 // Lấy lịch sử chi tiêu
 router.get('/payments', async (req, res) => {
 	try {
-		const payments = await Payment.find({ client: req.session.userId }).sort({ date: -1 });
+		const payments = await Payment.find({ clientId: req.session.userId }).sort({ createdAt: -1 });
 		res.json(payments);
 	} catch (err) {
 		console.error("Error fetching payments:", err);
