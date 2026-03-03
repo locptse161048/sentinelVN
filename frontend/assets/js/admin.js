@@ -167,8 +167,6 @@ async function renderAccounts(keyword = "") {
     });
 }
 
-renderAccounts();
-
 async function deleteUser(userId) {
     if (!confirm("Bạn có chắc muốn xóa tài khoản này?")) return;
 
