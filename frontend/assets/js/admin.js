@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const user = await res.json();
 
-        if (!user.isAdmin) {   // nếu bạn dùng MongoDB field isAdmin
+        if (user.role !== 'admin') {
             window.location.href = "index.html";
         }
     } catch (err) {

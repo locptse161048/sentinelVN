@@ -106,7 +106,7 @@ router.get('/me', async (req, res) => {
 		res.json({
 			email: user.email,
 			fullName: user.fullName,
-			role: user.isAdmin ? "admin" : "client",
+			role: user.role,
 			plan: user.plan,
 			status: user.status
 		});

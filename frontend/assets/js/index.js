@@ -336,6 +336,9 @@ form.onsubmit = async e => {
     await setLoggedInUI(data.user);  // ← await
     setupAccountButtons(data.user);
 
+    // 💾 Lưu role vào localStorage để admin.js check
+    localStorage.setItem('sentinel_session', JSON.stringify({ role: data.user.role }));
+
     const authModal = document.getElementById('authModal');
     authModal.classList.add('hidden');
     authModal.classList.remove('flex');
