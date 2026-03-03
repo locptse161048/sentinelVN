@@ -91,7 +91,7 @@ async function setLoggedInUI(user) {
 
         const premiumBtn = document.querySelector('a[data-plan="PREMIUM"]');
         if (premiumBtn && licenseData.success) {
-            premiumBtn.textContent = '🔄 Gia hạn PREMIUM';
+            premiumBtn.textContent = 'Gia hạn PREMIUM';
         }
     } catch (err) {
         console.warn('Không thể kiểm tra license:', err.message);
