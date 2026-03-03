@@ -1,14 +1,15 @@
-const sess = JSON.parse(localStorage.getItem('sentinel_session'));
-if (!sess || sess.role !== 'admin') location.href = '/index.html';
+// ✅ Không dùng localStorage - Kiểm tra session qua API
+const API_BASE = 'https://sentinelvn.onrender.com';
 
 function logout() {
-    localStorage.removeItem('sentinel_session');
-    location.href = '/index.html';
+    fetch(`${API_BASE}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include"
+    }).then(() => {
+        window.location.href = '/index.html';
+    });
 }
 
-/* ===== SUPPORT MESSAGES ===== */
-
-const API_BASE = 'https://sentinelvn.onrender.com';
 /* ===== CHECK ADMIN SESSION ===== */
 document.addEventListener("DOMContentLoaded", async () => {
     try {
@@ -43,7 +44,8 @@ async function fetchSupportMessages() {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);
 
-        const res = await fetch(`${API_BASE}/support`, {
+        const res = await fetch(`${API_BASE}/api/admin/support`, {
+            credentials: "include",
             signal: controller.signal
         });
 
@@ -61,7 +63,7 @@ async function renderSupportMessages(keyword = "") {
     supportContainer.innerHTML = "Đang tải...";
     let messages = await fetchSupportMessages();
     if (keyword) {
-        messages = messages.filter(msg => (msg.subject || '').toLowerCase().includes(keyword));
+        messages = messages.filter(msg => (msg.title || '').toLowerCase().includes(keyword));
     }
     if (messages.length === 0) {
         supportContainer.innerHTML = `<div class=\"text-white/50\">Không tìm thấy tin nhắn phù hợp.</div>`;
@@ -76,14 +78,14 @@ async function renderSupportMessages(keyword = "") {
         supportContainer.innerHTML += `
         <div class=\"border border-white/10 rounded-lg p-3 bg-white/5\">
             <div class=\"flex justify-between items-center\">
-                <div class=\"text-sm text-brand-400 font-semibold\">${msg.clientId || ''}</div>
+                <div class=\"text-sm text-brand-400 font-semibold\">${msg.email || ''}</div>
                 ${statusText}
             </div>
-            <div class=\"text-sm font-semibold mt-1\">${msg.subject}</div>
+            <div class=\"text-sm font-semibold mt-1\">${msg.title}</div>
             <div class=\"text-sm text-white/80 mt-1\">${msg.message}</div>
             <div class=\"text-xs text-white/40 mt-2\">${new Date(msg.createdAt).toLocaleString()}</div>
             ${msg.status !== "resolved"
-                ? `<button onclick=\"markResolved('${msg.id}')\" class=\"mt-2 px-3 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20\">Đánh dấu hoàn thành</button>`
+                ? `<button onclick=\"markResolved('${msg._id}')\" class=\"mt-2 px-3 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20\">Đánh dấu hoàn thành</button>`
                 : ""
             }
         </div>`;
@@ -117,8 +119,8 @@ async function fetchAccounts() {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);
 
-        const res = await fetch(`${API_BASE}/admin/clients`, {
-            headers: { 'Authorization': `Bearer ${sess.token}` },
+        const res = await fetch(`${API_BASE}/api/admin/clients`, {
+            credentials: "include",
             signal: controller.signal
         });
 
@@ -152,73 +154,100 @@ async function renderAccounts(keyword = "") {
                         <td class=\"p-2\">${user.licenseKey || '-'}<\/td>
                         <td class=\"p-2\">${user.email}<\/td>
                         <td class=\"p-2 ${statusColor}\">${statusText}<\/td>
-                        <td class=\"p-2\">${user.plan || '-'}<\/td>
+                        <td class=\"p-2\">${user.plan || 'Free'}<\/td>
                         <td class=\"p-2\">${user.createdAt ? new Date(user.createdAt).toLocaleDateString("vi-VN") : '-'}<\/td>
-                        <td class=\"p-2\">${user.expiresAt ? new Date(user.expiresAt).toLocaleDateString("vi-VN") : '-'}<\/td>
+                        <td class=\"p-2\">-<\/td>
                         <td class=\"p-2 space-x-3\">
-                                <button onclick=\"deleteUser('${user.id}')\" class=\"px-2 py-1 text-xs border border-red-400 rounded hover:bg-red-400/20\">Xóa</button>
-                                <button onclick=\"togglePlan('${user.id}')\" class=\"px-2 py-1 text-xs border border-brand-400 rounded hover:bg-brand-400/20\">Đổi gói</button>
-                                <button onclick=\"extendUser('${user.id}')\" class=\"px-2 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20\">Gia hạn 30 ngày</button>
-                                <button onclick=\"toggleStatus('${user.id}')\" class=\"px-2 py-1 text-xs border border-yellow-400 rounded hover:bg-yellow-400/20\">Đổi trạng thái</button>
+                                <button onclick=\"deleteUser('${user._id}')\" class=\"px-2 py-1 text-xs border border-red-400 rounded hover:bg-red-400/20\">Xóa</button>
+                                <button onclick=\"togglePlan('${user._id}')\" class=\"px-2 py-1 text-xs border border-brand-400 rounded hover:bg-brand-400/20\">Đổi gói</button>
+                                <button onclick=\"extendUser('${user._id}')\" class=\"px-2 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20\">Gia hạn 30 ngày</button>
+                                <button onclick=\"toggleStatus('${user._id}')\" class=\"px-2 py-1 text-xs border border-yellow-400 rounded hover:bg-yellow-400/20\">Đổi trạng thái</button>
                         </td>
                 </tr>`;
     });
 }
 
 renderAccounts();
-function deleteUser(email) {
+
+async function deleteUser(userId) {
     if (!confirm("Bạn có chắc muốn xóa tài khoản này?")) return;
 
-    const users = JSON.parse(localStorage.getItem(LS_USERS) || "{}");
-    delete users[email];
-    localStorage.setItem(LS_USERS, JSON.stringify(users));
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/client/${userId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
 
-    renderAccounts();
-}
+        if (!res.ok) {
+            alert('Không thể xóa tài khoản');
+            return;
+        }
 
-function togglePlan(email) {
-    const users = JSON.parse(localStorage.getItem(LS_USERS) || "{}");
-
-    if (users[email].plan === "Free") {
-        users[email].plan = "PREMIUM";
-    } else if (users[email].plan === "PREMIUM") {
-        users[email].plan = "PRO";
-    } else {
-        users[email].plan = "Free";
+        renderAccounts();
+    } catch (err) {
+        console.error("Error deleting user:", err);
+        alert('Lỗi khi xóa tài khoản');
     }
-
-    localStorage.setItem(LS_USERS, JSON.stringify(users));
-    renderAccounts();
 }
-function extendUser(email) {
-    const users = JSON.parse(localStorage.getItem(LS_USERS) || "{}");
-    if (!users[email]) return;
-    const currentExpire = new Date(users[email].expiresAt);
-    const newExpire = new Date(
-        currentExpire.getTime() + 30 * 24 * 60 * 60 * 1000
-    );
-    users[email].expiresAt = newExpire.toISOString();
 
-    localStorage.setItem(LS_USERS, JSON.stringify(users));
+async function togglePlan(userId) {
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/client/${userId}/toggle-plan`, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
 
-    renderAccounts();
-}
-function toggleStatus(email) {
-    const users = JSON.parse(localStorage.getItem(LS_USERS) || "{}");
-    if (!users[email]) return;
+        if (!res.ok) {
+            alert('Không thể đổi gói');
+            return;
+        }
 
-    if (!users[email].status) {
-        users[email].status = "active";
+        renderAccounts();
+    } catch (err) {
+        console.error("Error toggling plan:", err);
+        alert('Lỗi khi đổi gói');
     }
+}
 
-    users[email].status =
-        users[email].status === "active"
-            ? "suspended"
-            : "active";
+async function extendUser(userId) {
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/client/${userId}/extend`, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
 
-    localStorage.setItem(LS_USERS, JSON.stringify(users));
+        if (!res.ok) {
+            alert('Không thể gia hạn tài khoản');
+            return;
+        }
 
-    renderAccounts();
+        renderAccounts();
+    } catch (err) {
+        console.error("Error extending user:", err);
+        alert('Lỗi khi gia hạn');
+    }
+}
+
+async function toggleStatus(userId) {
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/client/${userId}/toggle-status`, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!res.ok) {
+            alert('Không thể đổi trạng thái');
+            return;
+        }
+
+        renderAccounts();
+    } catch (err) {
+        console.error("Error toggling status:", err);
+        alert('Lỗi khi đổi trạng thái');
+    }
 }
 
 function handleAccountSearch() {
@@ -230,19 +259,26 @@ function handleAccountSearch() {
     renderAccounts(keyword);
 }
 renderAccounts();
-function markResolved(id) {
-    const messages = JSON.parse(
-        localStorage.getItem("support_messages") || "[]"
-    );
 
-    const index = messages.findIndex(m => m.id === id);
-    if (index === -1) return;
+async function markResolved(messageId) {
+    try {
+        const res = await fetch(`${API_BASE}/api/admin/support/${messageId}`, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'resolved' })
+        });
 
-    messages[index].status = "resolved";
+        if (!res.ok) {
+            alert('Không thể cập nhật trạng thái');
+            return;
+        }
 
-    localStorage.setItem("support_messages", JSON.stringify(messages));
-
-    location.reload(); // reload để cập nhật giao diện
+        renderSupportMessages();
+    } catch (err) {
+        console.error("Error marking resolved:", err);
+        alert('Lỗi khi cập nhật trạng thái');
+    }
 }
 function handleSupportSearch() {
     const keyword = document

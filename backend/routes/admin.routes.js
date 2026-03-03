@@ -61,4 +61,86 @@ router.patch('/support/:id', async (req, res) => {
 	}
 });
 
+// ========= CLIENT MANAGEMENT =========
+
+// Xóa client
+router.delete('/client/:clientId', async (req, res) => {
+	try {
+		const client = await Client.findByIdAndDelete(req.params.clientId);
+		if (!client) {
+			return res.status(404).json({ message: 'Client không tồn tại' });
+		}
+		res.json({ message: 'Đã xóa client', client });
+	} catch (err) {
+		console.error("Error deleting client:", err);
+		res.status(500).json({ message: 'Lỗi server' });
+	}
+});
+
+// Đổi gói (Free → PREMIUM → PRO → Free)
+router.patch('/client/:clientId/toggle-plan', async (req, res) => {
+	try {
+		const client = await Client.findById(req.params.clientId);
+		if (!client) {
+			return res.status(404).json({ message: 'Client không tồn tại' });
+		}
+
+		const plans = ['Free', 'PREMIUM', 'PRO'];
+		const currentIndex = plans.indexOf(client.plan || 'Free');
+		const nextIndex = (currentIndex + 1) % plans.length;
+		client.plan = plans[nextIndex];
+
+		await client.save();
+		res.json({ message: 'Đã đổi gói', client });
+	} catch (err) {
+		console.error("Error toggling plan:", err);
+		res.status(500).json({ message: 'Lỗi server' });
+	}
+});
+
+// Gia hạn 30 ngày
+router.patch('/client/:clientId/extend', async (req, res) => {
+	try {
+		const License = require('../models/license');
+		const client = await Client.findById(req.params.clientId);
+		if (!client) {
+			return res.status(404).json({ message: 'Client không tồn tại' });
+		}
+
+		// Gia hạn tất cả các license active của client
+		const licenses = await License.find({ clientId: req.params.clientId, status: 'active' });
+		const updatedLicenses = [];
+
+		for (let lic of licenses) {
+			const newExpiresAt = new Date(lic.expiresAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+			lic.expiresAt = newExpiresAt;
+			await lic.save();
+			updatedLicenses.push(lic);
+		}
+
+		res.json({ message: 'Đã gia hạn thêm 30 ngày', licenses: updatedLicenses });
+	} catch (err) {
+		console.error("Error extending license:", err);
+		res.status(500).json({ message: 'Lỗi server' });
+	}
+});
+
+// Đổi trạng thái (đang hoạt động ↔ tạm ngưng)
+router.patch('/client/:clientId/toggle-status', async (req, res) => {
+	try {
+		const client = await Client.findById(req.params.clientId);
+		if (!client) {
+			return res.status(404).json({ message: 'Client không tồn tại' });
+		}
+
+		client.status = client.status === 'đang hoạt động' ? 'tạm ngưng' : 'đang hoạt động';
+		await client.save();
+
+		res.json({ message: 'Đã đổi trạng thái', client });
+	} catch (err) {
+		console.error("Error toggling status:", err);
+		res.status(500).json({ message: 'Lỗi server' });
+	}
+});
+
 module.exports = router;
