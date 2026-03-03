@@ -73,12 +73,13 @@ router.get('/payments', async (req, res) => {
 
 // Gửi tin nhắn hỗ trợ
 router.post('/support', async (req, res) => {
-	const { message } = req.body;
+	const { title, message } = req.body;
 	try {
 		const user = await Client.findById(req.session.userId);
 		const supportMsg = await SupportMsg.create({ 
 			client: req.session.userId, 
-			email: user.email, 
+			email: user.email,
+			title,
 			message 
 		});
 		res.json({ message: 'Đã gửi hỗ trợ', supportMsg });

@@ -200,7 +200,7 @@ async function renderSentMessages() {
 
       li.innerHTML = `
         <div class="flex justify-between items-center">
-          <div class="text-brand-400 font-semibold">${msg.subject}</div>
+          <div class="text-brand-400 font-semibold">${msg.title}</div>
           <div class="text-xs">${statusText}</div>
         </div>
         <div class="text-white/60 text-xs mb-1">${new Date(msg.createdAt).toLocaleString()}</div>
@@ -252,7 +252,7 @@ if (supportForm) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ message })
+        body: JSON.stringify({ title: subject, message })
       });
 
       if (!res.ok) {
