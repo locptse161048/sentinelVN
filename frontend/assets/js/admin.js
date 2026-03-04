@@ -62,15 +62,32 @@ async function fetchSupportMessages() {
 async function renderSupportMessages(keyword = "") {
     supportContainer.innerHTML = "Đang tải...";
     let messages = await fetchSupportMessages();
+    
+    // Tìm kiếm chỉ theo email
     if (keyword) {
-        messages = messages.filter(msg => (msg.title || '').toLowerCase().includes(keyword) || (msg.email || '').toLowerCase().includes(keyword));
+        messages = messages.filter(msg => (msg.email || '').toLowerCase().includes(keyword));
     }
+    
+    // Sắp xếp: pending messages lên trên, sau đó resolved messages
+    messages.sort((a, b) => {
+        if (a.status === 'pending' && b.status !== 'pending') return -1;
+        if (a.status !== 'pending' && b.status === 'pending') return 1;
+        return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+    
+    // Cập nhật số lượng tin nhắn pending
+    const pendingCount = messages.filter(msg => msg.status === 'pending').length;
+    const pendingCountEl = document.getElementById('pendingCount');
+    if (pendingCountEl) {
+        pendingCountEl.textContent = pendingCount;
+    }
+    
     if (messages.length === 0) {
         supportContainer.innerHTML = `<div class=\"text-white/50\">Không tìm thấy tin nhắn phù hợp.</div>`;
         return;
     }
     supportContainer.innerHTML = "";
-    [...messages].reverse().forEach(msg => {
+    messages.forEach(msg => {
         const statusText =
             msg.status === "resolved"
                 ? '<span class="text-green-400 text-xs">Đã phản hồi</span>'
