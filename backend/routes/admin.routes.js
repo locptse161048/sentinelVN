@@ -6,8 +6,24 @@ const SupportMsg = require('../models/supportMsg');
 // Lấy danh sách tất cả clients
 router.get('/clients', async (req, res) => {
 	try {
+		const License = require('../models/license');
 		const clients = await Client.find({ role: 'client' }).select('-passwordHash');
-		res.json(clients);
+		
+		// Thêm thông tin license cho mỗi client
+		const clientsWithLicense = await Promise.all(clients.map(async (client) => {
+			const license = await License.findOne({ clientId: client._id });
+			const clientObj = client.toObject();
+			if (license) {
+				clientObj.licenseKey = license.key;
+				clientObj.licenseStatus = license.status;
+				clientObj.plan = license.plan;
+				clientObj.licenseCreatedAt = license.createdAt;
+				clientObj.licenseExpiresAt = license.expiresAt;
+			}
+			return clientObj;
+		}));
+		
+		res.json(clientsWithLicense);
 	} catch (err) {
 		console.error("Error fetching clients:", err);
 		res.status(500).json({ message: 'Lỗi server' });
@@ -133,8 +149,15 @@ router.patch('/client/:clientId/toggle-status', async (req, res) => {
 			return res.status(404).json({ message: 'Client không tồn tại' });
 		}
 
-		client.status = client.status === 'đang hoạt động' ? 'tạm ngưng' : 'đang hoạt động';
+		const License = require('../models/license');
+		const newStatus = client.status === 'đang hoạt động' ? 'tạm ngưng' : 'đang hoạt động';
+		client.status = newStatus;
 		await client.save();
+
+		// Đồng bộ trạng thái license
+		let licenseStatus = 'active';
+		if (newStatus === 'tạm ngưng') licenseStatus = 'tạm ngưng';
+		await License.updateMany({ clientId: client._id }, { status: licenseStatus });
 
 		res.json({ message: 'Đã đổi trạng thái', client });
 	} catch (err) {

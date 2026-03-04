@@ -63,7 +63,7 @@ async function renderSupportMessages(keyword = "") {
     supportContainer.innerHTML = "Đang tải...";
     let messages = await fetchSupportMessages();
     if (keyword) {
-        messages = messages.filter(msg => (msg.title || '').toLowerCase().includes(keyword));
+        messages = messages.filter(msg => (msg.title || '').toLowerCase().includes(keyword) || (msg.email || '').toLowerCase().includes(keyword));
     }
     if (messages.length === 0) {
         supportContainer.innerHTML = `<div class=\"text-white/50\">Không tìm thấy tin nhắn phù hợp.</div>`;
@@ -136,34 +136,40 @@ async function fetchAccounts() {
 
 async function renderAccounts(keyword = "") {
     const accountTable = document.getElementById("accountTable");
-    accountTable.innerHTML = "<tr><td colspan='7'>Đang tải...</td></tr>";
+    accountTable.innerHTML = "<tr><td colspan='9'>Đang tải...</td></tr>";
     let users = await fetchAccounts();
     if (keyword) {
         users = users.filter(u => (u.email || '').toLowerCase().includes(keyword));
     }
     if (!users.length) {
-        accountTable.innerHTML = `<tr><td colspan='7' class='p-4 text-center text-white/50'>Chưa có tài khoản nào</td></tr>`;
+        accountTable.innerHTML = `<tr><td colspan='9' class='p-4 text-center text-white/50'>Chưa có tài khoản nào</td></tr>`;
         return;
     }
     users.forEach(user => {
         const isActive = user.status === "đang hoạt động";
         const statusText = isActive ? "Đang hoạt động" : "Tạm ngưng";
         const statusColor = isActive ? "text-green-400" : "text-red-400";
+        
+        const licenseStatusMap = { 'active': 'Đang hoạt động', 'tạm ngưng': 'Tạm ngưng', 'expired': 'Hết hạn' };
+        const licenseStatusText = licenseStatusMap[user.licenseStatus] || '-';
+        const licenseStatusColor = user.licenseStatus === 'active' ? 'text-green-400' : (user.licenseStatus === 'tạm ngưng' ? 'text-yellow-400' : 'text-red-400');
+        
         accountTable.innerHTML += `
-                <tr class=\"border-t border-white/10\">
-                        <td class=\"p-2\">${user.licenseKey || '-'}<\/td>
-                        <td class=\"p-2\">${user.email}<\/td>
-                        <td class=\"p-2 ${statusColor}\">${statusText}<\/td>
-                        <td class=\"p-2\">${user.plan || 'Free'}<\/td>
-                        <td class=\"p-2\">${user.createdAt ? new Date(user.createdAt).toLocaleDateString("vi-VN") : '-'}<\/td>
-                        <td class=\"p-2\">-<\/td>
-                        <td class=\"p-2 space-x-3\">
-                                <button onclick=\"deleteUser('${user._id}')\" class=\"px-2 py-1 text-xs border border-red-400 rounded hover:bg-red-400/20\">Xóa</button>
-                                <button onclick=\"togglePlan('${user._id}')\" class=\"px-2 py-1 text-xs border border-brand-400 rounded hover:bg-brand-400/20\">Đổi gói</button>
-                                <button onclick=\"extendUser('${user._id}')\" class=\"px-2 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20\">Gia hạn 30 ngày</button>
-                                <button onclick=\"toggleStatus('${user._id}')\" class=\"px-2 py-1 text-xs border border-yellow-400 rounded hover:bg-yellow-400/20\">Đổi trạng thái</button>
-                        </td>
-                </tr>`;
+            <tr class="border-t border-white/10">
+                <td class="p-2">${user.licenseKey || '-'}<\/td>
+                <td class="p-2">${user.email}<\/td>
+                <td class="p-2 ${statusColor}">${statusText}<\/td>
+                <td class="p-2">${user.createdAt ? new Date(user.createdAt).toLocaleDateString("vi-VN") : '-'}<\/td>
+                <td class="p-2">${user.plan || '-'}<\/td>
+                <td class="p-2 ${licenseStatusColor}">${licenseStatusText}<\/td>
+                <td class=\"p-2\">${user.licenseCreatedAt ? new Date(user.licenseCreatedAt).toLocaleDateString("vi-VN") : '-' }<\/td>
+                <td class=\"p-2\">${user.licenseExpiresAt ? new Date(user.licenseExpiresAt).toLocaleDateString("vi-VN") : '-' }<\/td>
+                <td class=\"p-2 space-x-3\">
+                    <button onclick=\"togglePlan('${user._id}')\" class=\"px-2 py-1 text-xs border border-brand-400 rounded hover:bg-brand-400/20\">Đổi gói</button>
+                    <button onclick=\"extendUser('${user._id}')\" class=\"px-2 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20\">Gia hạn 30 ngày</button>
+                    <button onclick=\"toggleStatus('${user._id}')\" class=\"px-2 py-1 text-xs border border-yellow-400 rounded hover:bg-yellow-400/20\">Đổi trạng thái tài khoản</button>
+                </td>
+            </tr>`;
     });
 }
 

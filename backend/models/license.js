@@ -6,7 +6,7 @@ const LicenseSchema = new mongoose.Schema({
 	key: { type: String, unique: true, required: true },
 	plan: { type: String, enum: ['PREMIUM', 'PRO'], required: true },
 	amount: { type: Number, required: true },
-	status: { type: String, enum: ['active', 'expired'], default: 'active' },
+	status: { type: String, enum: ['active', 'expired', 'tạm ngưng'], default: 'active' },
 	createdAt: { type: Date, default: Date.now },
 	expiresAt: { type: Date, required: true },
 });
