@@ -101,6 +101,7 @@ async function loadClientInfo() {
       await new Promise(r => setTimeout(r, 300 * Math.pow(2, retries - 1)));
     }
   }
+  console.log('User data from API:', user);
 }
 
 /* ===== PAYMENT HISTORY ===== */
