@@ -9,18 +9,21 @@ const SupportMsg = require('../models/supportMsg');
 router.get('/me', async (req, res) => {
 	try {
 		console.log("[BACKEND] GET /api/client/me - Session userId:", req.session.userId);
-		
+
 		const user = await Client.findById(req.session.userId);
 		if (!user) {
 			console.error("[BACKEND] User not found with ID:", req.session.userId);
 			return res.status(404).json({ message: "User không tồn tại" });
 		}
-		
+
 		console.log("[BACKEND] ✅ User found:", user.email);
-		
+
 		res.json({
 			email: user.email,
 			fullName: user.fullName,
+			gender: user.gender,
+			phone: user.phone,
+			address: user.address,
 			plan: user.plan,
 			status: user.status
 		});
@@ -79,11 +82,11 @@ router.post('/support', async (req, res) => {
 	const { title, message } = req.body;
 	try {
 		const user = await Client.findById(req.session.userId);
-		const supportMsg = await SupportMsg.create({ 
-			client: req.session.userId, 
+		const supportMsg = await SupportMsg.create({
+			client: req.session.userId,
 			email: user.email,
 			title,
-			message 
+			message
 		});
 		res.json({ message: 'Đã gửi hỗ trợ', supportMsg });
 	} catch (err) {
