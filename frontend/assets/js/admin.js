@@ -168,7 +168,7 @@ async function renderAccounts(keyword = "") {
         const statusText = isActive ? "Đang hoạt động" : "Tạm ngưng";
         const statusColor = isActive ? "text-green-400" : "text-red-400";
 
-        const licenseStatusMap = { 'active': 'Đang hoạt động', 'suspend': 'Tạm ngưng', 'expired': 'Hết hạn' };
+        const licenseStatusMap = { 'active': 'Đang hoạt động', 'tạm ngưng': 'Tạm ngưng', 'expired': 'Hết hạn' };
         const licenseStatusText = licenseStatusMap[user.licenseStatus] || '-';
         const licenseStatusColor = user.licenseStatus === 'active' ? 'text-green-400' : 'text-red-400';
 
