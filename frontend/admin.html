@@ -6,19 +6,15 @@
   <title>Admin — Sentinel VN</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Orbitron:wght@700&display=swap"
     rel="stylesheet">
   <link href="assets/css/admin.css" rel="stylesheet">
-
-
 </head>
 
 <body class="min-h-screen px-4 py-8">
 
-
-
-  <div class="max-w-7xl mx-auto">
+  <!-- Đổi max-w-7xl → max-w-full để tận dụng toàn bộ chiều ngang màn hình -->
+  <div class="max-w-full mx-auto px-2">
 
     <!-- HEADER -->
     <div class="flex items-center justify-between mb-6">
@@ -31,13 +27,12 @@
       </a>
       <button onclick="logout()" class="btn">Đăng xuất</button>
     </div>
+
     <!-- TAB MENU -->
     <div class="flex gap-3 mb-6">
-
       <button onclick="showTab('supportTab')" id="supportBtn" class="btn">
         Tin nhắn Hỗ trợ
       </button>
-
       <button onclick="showTab('accountTab')" id="accountBtn" class="btn">
         Quản lý Tài khoản
       </button>
@@ -50,33 +45,31 @@
           Tin nhắn <span class="text-brand-400">Hỗ trợ</span>
         </h2>
         <div class="relative mb-4">
-
           <input id="supportSearch" class="input w-full pl-12 pr-4" placeholder="Tìm theo Email..."
             onkeydown="if(event.key==='Enter') handleSupportSearch()">
-
           <button type="button" onclick="handleSupportSearch()"
             class="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white/50 hover:text-brand-400 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-              stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
             </svg>
           </button>
-
         </div>
 
         <div class="mb-4 p-3 bg-white/5 border border-white/10 rounded-lg">
-          <div class="text-sm text-white/70">Số tin nhắn chờ xử lý: <span id="pendingCount" class="font-bold text-red-500">0</span></div>
+          <div class="text-sm text-white/70">Số tin nhắn chờ xử lý:
+            <span id="pendingCount" class="font-bold text-red-500">0</span>
+          </div>
         </div>
 
         <div id="supportMessages" class="space-y-3"></div>
-
       </div>
-
     </div>
+
     <!-- ================= ACCOUNT TAB ================= -->
     <div id="accountTab" class="hidden">
 
+      <!-- card không giới hạn chiều ngang, padding đủ dùng -->
       <div class="card p-4">
         <h2 class="text-lg font-semibold mb-3">
           Quản lý <span class="text-brand-400">Tài khoản</span>
@@ -84,13 +77,11 @@
         <div class="relative mb-4">
           <button onclick="handleAccountSearch()"
             class="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-brand-400 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
-              stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
             </svg>
           </button>
-
           <input id="accountSearch" class="input w-full pl-10" placeholder="Tìm Email hoặc License"
             onkeydown="if(event.key==='Enter') handleAccountSearch()">
         </div>
@@ -100,17 +91,18 @@
             <table class="w-full text-sm border border-white/10" id="accountTableMain">
               <thead class="bg-white/5 sticky top-0">
                 <tr>
-                  <th class="p-2 text-left resize-col" style="width: 120px;">License Key<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 150px;">Email<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 100px;">Giới tính<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 120px;">SĐT<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 180px;">Địa chỉ<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 130px;">Trạng thái TK<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 120px;">Ngày tạo TK<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 100px;">Gói<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 130px;">Trạng thái gói<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 120px;">Ngày mua<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 120px;">Hết hạn<span class="resize-handle"></span></th>
+                  <!-- Tất cả cột đều ở width nhỏ nhất khi load, kéo handle để mở rộng -->
+                  <th class="p-2 text-left resize-col" style="width: 80px;">License Key<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 100px;">Email<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 60px;">Giới tính<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 80px;">SĐT<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 80px;">Địa chỉ<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 90px;">Trạng thái TK<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 80px;">Ngày tạo TK<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 60px;">Gói<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 90px;">Trạng thái gói<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 80px;">Ngày mua<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 80px;">Hết hạn<span class="resize-handle"></span></th>
                   <th class="p-2 text-left" style="width: 80px;">Hành động</th>
                 </tr>
               </thead>
@@ -122,7 +114,10 @@
       </div>
 
     </div>
-    <script src="assets/js/admin.js"></script>
+
+  </div>
+
+  <script src="assets/js/admin.js"></script>
 </body>
 
 </html>

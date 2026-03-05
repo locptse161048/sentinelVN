@@ -482,7 +482,7 @@ body {
 #accountTableMain {
   table-layout: fixed;
   border-collapse: collapse;
-  min-width: 1200px;
+  min-width: 90%;
 }
 
 #accountTableMain th {
