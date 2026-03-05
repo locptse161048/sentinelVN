@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 
 // Đăng ký
 router.post('/register', async (req, res) => {
-	const { email, password, fullName } = req.body;
+	const { email, password, fullName, gender, phone, address } = req.body;
 	if (!fullName) {
 		return res.status(400).json({ message: "Vui lòng nhập họ và tên" });
 	}
@@ -17,6 +17,9 @@ router.post('/register', async (req, res) => {
 		const user = await Client.create({
 			email,
 			fullName: fullName || "",
+			gender: gender || null,
+			phone: phone || null,
+			address: address || null,
 			passwordHash: hash,
 			role: 'client',
 			status: 'đang hoạt động'
@@ -88,7 +91,10 @@ router.get('/session', async (req, res) => {
 	res.json({
 		email: user.email,
 		role: user.role,
-		fullName: user.fullName
+		fullName: user.fullName,
+		gender: user.gender,
+		phone: user.phone,
+		address: user.address
 	});
 });
 // Lấy thông tin người dùng
@@ -106,6 +112,9 @@ router.get('/me', async (req, res) => {
 		res.json({
 			email: user.email,
 			fullName: user.fullName,
+			gender: user.gender,
+			phone: user.phone,
+			address: user.address,
 			role: user.role,
 			plan: user.plan,
 			status: user.status

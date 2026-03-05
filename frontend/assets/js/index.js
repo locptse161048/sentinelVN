@@ -315,7 +315,13 @@ function switchMode(m) {
     submitBtn.textContent = m === 'login' ? 'Đăng nhập' : 'Đăng ký';
     msg.textContent = '';
     const nameField = form.querySelector('input[name="name"]');
+    const genderField = form.querySelector('select[name="gender"]');
+    const phoneField = form.querySelector('input[name="phone"]');
+    const addressField = form.querySelector('input[name="address"]');
     if (nameField) nameField.style.display = m === 'signup' ? 'block' : 'none';
+    if (genderField) genderField.style.display = m === 'signup' ? 'block' : 'none';
+    if (phoneField) phoneField.style.display = m === 'signup' ? 'block' : 'none';
+    if (addressField) addressField.style.display = m === 'signup' ? 'block' : 'none';
 }
 
 form.onsubmit = async e => {
@@ -328,11 +334,15 @@ form.onsubmit = async e => {
     if (mode === 'signup') {
         if (!email || !password) { msg.textContent = '⚠️ Vui lòng nhập đầy đủ thông tin.'; return; }
         if (password.length < 6) { msg.textContent = '⚠️ Mật khẩu phải tối thiểu 6 ký tự.'; return; }
+        
+        const gender = form.gender ? form.gender.value : '';
+        const phone = form.phone ? form.phone.value.trim() : '';
+        const address = form.address ? form.address.value.trim() : '';
 
         const res = await fetch(`${API_BASE}/api/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, fullName: nameInput })
+            body: JSON.stringify({ email, password, fullName: nameInput, gender, phone, address })
         });
         if (!res.ok) {
             const data = await res.json().catch(() => ({}));

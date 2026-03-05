@@ -1340,3 +1340,112 @@ body {
     padding-right: 2rem;
   }
 }
+/* ===== RESIZABLE TABLE ===== */
+.resizable-table-wrapper {
+  position: relative;
+  user-select: none;
+  overflow: auto;
+}
+
+#accountTableMain {
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+#accountTableMain th {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#accountTableMain td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resize-col {
+  position: relative;
+  padding-right: 8px !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: transparent;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+.resize-handle:hover {
+  background-color: rgba(6, 182, 212, 0.5);
+}
+
+.resize-handle.active {
+  background-color: rgba(6, 182, 212, 0.8);
+}
+
+/* ===== DROPDOWN MENU ===== */
+.dropdown-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-toggle {
+  padding: 6px 10px;
+  border: 1px solid rgba(6, 182, 212, 0.6);
+  background-color: transparent;
+  color: rgba(6, 182, 212, 0.8);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.dropdown-toggle:hover {
+  background-color: rgba(6, 182, 212, 0.1);
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #1a1a2e;
+  min-width: 200px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  padding: 8px 0;
+  z-index: 100;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+}
+
+.dropdown-content.show {
+  display: block;
+}
+
+.dropdown-content button {
+  color: rgba(255, 255, 255, 0.8);
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.dropdown-content button:hover {
+  background-color: rgba(6, 182, 212, 0.15);
+  padding-left: 20px;
+}

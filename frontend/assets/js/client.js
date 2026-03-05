@@ -79,10 +79,16 @@ async function loadClientInfo() {
       
       const accNameEl = document.getElementById("accName");
       const accEmailEl = document.getElementById("accEmail");
+      const accGenderEl = document.getElementById("accGender");
+      const accPhoneEl = document.getElementById("accPhone");
+      const accAddressEl = document.getElementById("accAddress");
       
       if (accNameEl && accEmailEl) {
         accNameEl.textContent = user.fullName || "Chưa cập nhật";
         accEmailEl.textContent = user.email;
+        accGenderEl.textContent = user.gender ? (user.gender === 'nam' ? 'Nam' : user.gender === 'nữ' ? 'Nữ' : 'Khác') : "Chưa cập nhật";
+        accPhoneEl.textContent = user.phone || "Chưa cập nhật";
+        accAddressEl.textContent = user.address || "Chưa cập nhật";
       }
       
       return user;

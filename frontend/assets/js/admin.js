@@ -69,10 +69,11 @@ async function renderSupportMessages(keyword = "") {
     }
     
     // Sắp xếp: pending messages lên trên, sau đó resolved messages
+    // Trong mỗi nhóm, sắp xếp theo createdAt (cũ lên trên, mới xuống dưới)
     messages.sort((a, b) => {
         if (a.status === 'pending' && b.status !== 'pending') return -1;
         if (a.status !== 'pending' && b.status === 'pending') return 1;
-        return new Date(b.createdAt) - new Date(a.createdAt);
+        return new Date(a.createdAt) - new Date(b.createdAt);
     });
     
     // Cập nhật số lượng tin nhắn pending
@@ -83,7 +84,7 @@ async function renderSupportMessages(keyword = "") {
     }
     
     if (messages.length === 0) {
-        supportContainer.innerHTML = `<div class=\"text-white/50\">Không tìm thấy tin nhắn phù hợp.</div>`;
+        supportContainer.innerHTML = `<div class=\"text-white/50\">Không tìm thấy email phù hợp.</div>`;
         return;
     }
     supportContainer.innerHTML = "";
@@ -153,13 +154,13 @@ async function fetchAccounts() {
 
 async function renderAccounts(keyword = "") {
     const accountTable = document.getElementById("accountTable");
-    accountTable.innerHTML = "<tr><td colspan='9'>Đang tải...</td></tr>";
+    accountTable.innerHTML = "<tr><td colspan='12'>Đang tải...</td></tr>";
     let users = await fetchAccounts();
     if (keyword) {
         users = users.filter(u => (u.email || '').toLowerCase().includes(keyword));
     }
     if (!users.length) {
-        accountTable.innerHTML = `<tr><td colspan='9' class='p-4 text-center text-white/50'>Chưa có tài khoản nào</td></tr>`;
+        accountTable.innerHTML = `<tr><td colspan='12' class='p-4 text-center text-white/50'>Chưa có tài khoản nào</td></tr>`;
         return;
     }
     users.forEach(user => {
@@ -171,23 +172,43 @@ async function renderAccounts(keyword = "") {
         const licenseStatusText = licenseStatusMap[user.licenseStatus] || '-';
         const licenseStatusColor = user.licenseStatus === 'active' ? 'text-green-400' : (user.licenseStatus === 'tạm ngưng' ? 'text-yellow-400' : 'text-red-400');
         
+        const genderMap = { 'nam': 'Nam', 'nữ': 'Nữ', 'khác': 'Khác' };
+        const genderText = user.gender ? genderMap[user.gender] : '-';
+        const phoneText = user.phone || '-';
+        const addressText = user.address || '-';
+        
+        const createdDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString("vi-VN") : '-';
+        const licenseCreatedDate = user.licenseCreatedAt ? new Date(user.licenseCreatedAt).toLocaleDateString("vi-VN") : '-';
+        const licenseExpiresDate = user.licenseExpiresAt ? new Date(user.licenseExpiresAt).toLocaleDateString("vi-VN") : '-';
+        
         accountTable.innerHTML += `
-            <tr class="border-t border-white/10">
-                <td class="p-2">${user.licenseKey || '-'}<\/td>
-                <td class="p-2">${user.email}<\/td>
-                <td class="p-2 ${statusColor}">${statusText}<\/td>
-                <td class="p-2">${user.createdAt ? new Date(user.createdAt).toLocaleDateString("vi-VN") : '-'}<\/td>
-                <td class="p-2">${user.plan || '-'}<\/td>
-                <td class="p-2 ${licenseStatusColor}">${licenseStatusText}<\/td>
-                <td class=\"p-2\">${user.licenseCreatedAt ? new Date(user.licenseCreatedAt).toLocaleDateString("vi-VN") : '-' }<\/td>
-                <td class=\"p-2\">${user.licenseExpiresAt ? new Date(user.licenseExpiresAt).toLocaleDateString("vi-VN") : '-' }<\/td>
-                <td class=\"p-2 space-x-3\">
-                    <button onclick=\"togglePlan('${user._id}')\" class=\"px-2 py-1 text-xs border border-brand-400 rounded hover:bg-brand-400/20\">Đổi gói</button>
-                    <button onclick=\"extendUser('${user._id}')\" class=\"px-2 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20\">Gia hạn 30 ngày</button>
-                    <button onclick=\"toggleStatus('${user._id}')\" class=\"px-2 py-1 text-xs border border-yellow-400 rounded hover:bg-yellow-400/20\">Đổi trạng thái tài khoản</button>
+            <tr class="border-t border-white/10 hover:bg-white/5">
+                <td class="p-2 truncate">${user.licenseKey || '-'}<\/td>
+                <td class="p-2 truncate">${user.email}<\/td>
+                <td class="p-2 truncate">${genderText}<\/td>
+                <td class="p-2 truncate">${phoneText}<\/td>
+                <td class="p-2 truncate">${addressText}<\/td>
+                <td class="p-2 truncate ${statusColor}">${statusText}<\/td>
+                <td class="p-2 truncate">${createdDate}<\/td>
+                <td class="p-2 truncate">${user.plan || '-'}<\/td>
+                <td class="p-2 truncate ${licenseStatusColor}">${licenseStatusText}<\/td>
+                <td class="p-2 truncate">${licenseCreatedDate}<\/td>
+                <td class="p-2 truncate">${licenseExpiresDate}<\/td>
+                <td class="p-2">
+                    <div class="dropdown-menu">
+                        <button class="dropdown-toggle" onclick="toggleDropdown(this)">⋮ Menu</button>
+                        <div class="dropdown-content">
+                            <button onclick="togglePlan('${user._id}')" class="text-brand-400">Đổi gói</button>
+                            <button onclick="extendUser('${user._id}')" class="text-green-400">Gia hạn 30 ngày</button>
+                            <button onclick="toggleStatus('${user._id}')" class="text-yellow-400">Đổi trạng thái</button>
+                        </div>
+                    </div>
                 </td>
             </tr>`;
     });
+    
+    // Khởi tạo resize columns sau khi render
+    initResizeColumns();
 }
 
 async function deleteUser(userId) {
@@ -309,4 +330,65 @@ function handleSupportSearch() {
 
     renderSupportMessages(keyword);
 }
+
+/* ===== DROPDOWN MENU ===== */
+function toggleDropdown(btn) {
+    const content = btn.nextElementSibling;
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.dropdown-content.show').forEach(el => {
+        if (el !== content) el.classList.remove('show');
+    });
+    
+    content.classList.toggle('show');
+}
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('.dropdown-content').forEach(el => el.classList.remove('show'));
+});
+
+/* ===== RESIZABLE TABLE COLUMNS ===== */
+let resizingCol = null;
+let startX = 0;
+let startWidth = 0;
+
+function initResizeColumns() {
+    const handles = document.querySelectorAll('.resize-handle');
+    
+    handles.forEach(handle => {
+        handle.addEventListener('mousedown', (e) => {
+            resizingCol = e.target.parentElement;
+            startX = e.clientX;
+            startWidth = resizingCol.offsetWidth;
+            
+            handle.classList.add('active');
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = 'col-resize';
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+    });
+}
+
+function onMouseMove(e) {
+    if (!resizingCol) return;
+    
+    const diff = e.clientX - startX;
+    const newWidth = Math.max(60, startWidth + diff);
+    resizingCol.style.width = newWidth + 'px';
+}
+
+function onMouseUp() {
+    if (resizingCol) {
+        resizingCol.querySelector('.resize-handle').classList.remove('active');
+    }
+    resizingCol = null;
+    document.body.style.userSelect = 'auto';
+    document.body.style.cursor = 'auto';
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+}
+
 renderSupportMessages();
+renderAccounts();

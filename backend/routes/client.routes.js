@@ -40,6 +40,9 @@ router.get('/account', async (req, res) => {
 		res.json({
 			email: user.email,
 			fullName: user.fullName,
+			gender: user.gender,
+			phone: user.phone,
+			address: user.address,
 			plan: user.plan,
 			status: user.status
 		});

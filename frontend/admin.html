@@ -66,7 +66,7 @@
         </div>
 
         <div class="mb-4 p-3 bg-white/5 border border-white/10 rounded-lg">
-          <div class="text-sm text-white/70">Số tin nhắn chờ xử lý: <span id="pendingCount" class="font-bold text-yellow-400">0</span></div>
+          <div class="text-sm text-white/70">Số tin nhắn chờ xử lý: <span id="pendingCount" class="font-bold text-red-500">0</span></div>
         </div>
 
         <div id="supportMessages" class="space-y-3"></div>
@@ -96,22 +96,27 @@
         </div>
 
         <div class="overflow-x-auto">
-          <table class="w-full text-sm border border-white/10">
-            <thead class="bg-white/5">
-              <tr>
-                <th class="p-2 text-left">License Key</th>
-                <th class="p-2 text-left">Email</th>
-                <th class="p-2 text-left">Trạng thái tài khoản</th>
-                <th class="p-2 text-left">Ngày tạo tài khoản</th>
-                <th class="p-2 text-left">Gói</th>
-                <th class="p-2 text-left">Trạng thái gói</th>
-                <th class="p-2 text-left">Ngày mua License</th>
-                <th class="p-2 text-left">Ngày hết hạn License</th>
-                <th class="p-2 text-left">Hành động</th>
-              </tr>
-            </thead>
-            <tbody id="accountTable"></tbody>
-          </table>
+          <div id="resizableTableContainer" class="resizable-table-wrapper">
+            <table class="w-full text-sm border border-white/10" id="accountTableMain">
+              <thead class="bg-white/5 sticky top-0">
+                <tr>
+                  <th class="p-2 text-left resize-col" style="width: 120px;">License Key<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 150px;">Email<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 100px;">Giới tính<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 120px;">SĐT<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 180px;">Địa chỉ<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 130px;">Trạng thái TK<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 120px;">Ngày tạo TK<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 100px;">Gói<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 130px;">Trạng thái gói<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 120px;">Ngày mua<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 120px;">Hết hạn<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left" style="width: 80px;">Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="accountTable"></tbody>
+            </table>
+          </div>
         </div>
 
       </div>
