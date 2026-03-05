@@ -338,17 +338,34 @@ function handleSupportSearch() {
 
 /* ===== DROPDOWN MENU ===== */
 function toggleDropdown(btn) {
-    event.stopPropagation();
-    const content = btn.nextElementSibling;
-    
-    // Close all other dropdowns
-    document.querySelectorAll('.dropdown-content.show').forEach(el => {
-        if (el !== content) el.classList.remove('show');
-    });
-    
-    content.classList.toggle('show');
-}
+  event.stopPropagation();
+  const content = btn.nextElementSibling;
+  const isShowing = content.classList.contains('show');
 
+  // Đóng tất cả dropdown khác
+  document.querySelectorAll('.dropdown-content.show').forEach(el => {
+    el.classList.remove('show');
+    el.style.top = '';
+    el.style.left = '';
+  });
+
+  if (!isShowing) {
+    content.classList.add('show');
+
+    // Tính vị trí của button để đặt dropdown đúng chỗ (dùng fixed positioning)
+    const rect = btn.getBoundingClientRect();
+    content.style.top = (rect.bottom + 4) + 'px';
+    content.style.left = rect.left + 'px';
+
+    // Nếu dropdown bị lệch ra ngoài màn hình bên phải → căn phải
+    requestAnimationFrame(() => {
+      const menuRect = content.getBoundingClientRect();
+      if (menuRect.right > window.innerWidth - 8) {
+        content.style.left = (rect.right - menuRect.width) + 'px';
+      }
+    });
+  }
+}
 // Close dropdown khi click ngoài
 document.addEventListener('click', function(event) {
     // Không đóng nếu click trên button hoặc dropdown content

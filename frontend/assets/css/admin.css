@@ -1419,17 +1419,14 @@ body {
 
 .dropdown-content {
   display: none;
-  position: absolute;
-  background-color: #1a1a2e;
-  min-width: 200px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-  padding: 8px 0;
-  z-index: 100;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  top: 100%;
-  left: 0;
-  margin-top: 4px;
+  position: fixed; /* ← đổi absolute → fixed để thoát khỏi overflow:hidden */
+  background-color: #0d1117;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(31, 227, 255, 0.2);
+  padding: 4px 0;
+  z-index: 9999; /* ← đủ cao để che mọi thứ */
+  border: 1px solid rgba(31, 227, 255, 0.25);
+  border-radius: 8px;
 }
 
 .dropdown-content.show {
@@ -1437,19 +1434,24 @@ body {
 }
 
 .dropdown-content button {
-  color: rgba(255, 255, 255, 0.8);
+  display: block;
+  width: 100%;
   padding: 10px 16px;
   border: none;
   background: none;
   text-align: left;
-  width: 100%;
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-content button:last-child {
+  border-bottom: none;
 }
 
 .dropdown-content button:hover {
-  background-color: rgba(6, 182, 212, 0.15);
-  padding-left: 20px;
+  background-color: rgba(31, 227, 255, 0.08);
+  padding-left: 22px;
 }
