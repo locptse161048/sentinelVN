@@ -183,13 +183,13 @@ async function renderAccounts(keyword = "") {
         
         accountTable.innerHTML += `
             <tr class="border-t border-white/10 hover:bg-white/5">
-                <td class="p-2 truncate flex items-center gap-2 group">
+                <td class="p-2 truncate relative group">
                     <span>${user.licenseKey || '-'}</span>
-                    <button class="opacity-0 group-hover:opacity-100 text-xs px-2 py-1 border border-cyan-400 rounded hover:bg-cyan-400/20 transition" onclick="copyToClipboard('${user.licenseKey || ''}', this)">📋</button>
+                    <button class="absolute right-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-xs px-2 py-1 border border-cyan-400 rounded hover:bg-cyan-400/20 transition" onclick="copyToClipboard('${user.licenseKey || ''}', this)" title="Copy License Key">📋</button>
                 </td>
-                <td class="p-2 truncate flex items-center gap-2 group">
+                <td class="p-2 truncate relative group">
                     <span>${user.email}</span>
-                    <button class="opacity-0 group-hover:opacity-100 text-xs px-2 py-1 border border-cyan-400 rounded hover:bg-cyan-400/20 transition" onclick="copyToClipboard('${user.email}', this)">📋</button>
+                    <button class="absolute right-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-xs px-2 py-1 border border-cyan-400 rounded hover:bg-cyan-400/20 transition" onclick="copyToClipboard('${user.email}', this)" title="Copy Email">📋</button>
                 </td>
                 <td class="p-2 truncate">${genderText}</td>
                 <td class="p-2 truncate">${phoneText}</td>
@@ -306,7 +306,6 @@ function handleAccountSearch() {
 
     renderAccounts(keyword);
 }
-renderAccounts();
 
 async function markResolved(messageId) {
     try {

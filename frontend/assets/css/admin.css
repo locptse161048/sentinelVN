@@ -1362,21 +1362,7 @@ body {
   white-space: nowrap;
   overflow: visible;
   text-overflow: ellipsis;
-}
-
-/* Copy button styling */
-.group {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.group-hover\:opacity-100:hover {
-  opacity: 1 !important;
-}
-
-.opacity-0 {
-  opacity: 0;
+  position: relative;
 }
 
 .resize-col {
