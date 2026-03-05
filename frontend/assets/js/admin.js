@@ -38,7 +38,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         window.location.href = "index.html";
     }
 });
+
 const supportContainer = document.getElementById("supportMessages");
+
 async function fetchSupportMessages() {
     try {
         const controller = new AbortController();
@@ -62,31 +64,28 @@ async function fetchSupportMessages() {
 async function renderSupportMessages(keyword = "") {
     supportContainer.innerHTML = "Đang tải...";
     let messages = await fetchSupportMessages();
-    
-    // Tìm kiếm chỉ theo email
+
     if (keyword) {
         messages = messages.filter(msg => (msg.email || '').toLowerCase().includes(keyword));
     }
-    
-    // Sắp xếp: pending messages lên trên, sau đó resolved messages
-    // Trong mỗi nhóm, sắp xếp theo createdAt (cũ lên trên, mới xuống dưới)
+
     messages.sort((a, b) => {
         if (a.status === 'pending' && b.status !== 'pending') return -1;
         if (a.status !== 'pending' && b.status === 'pending') return 1;
         return new Date(a.createdAt) - new Date(b.createdAt);
     });
-    
-    // Cập nhật số lượng tin nhắn pending
+
     const pendingCount = messages.filter(msg => msg.status === 'pending').length;
     const pendingCountEl = document.getElementById('pendingCount');
     if (pendingCountEl) {
         pendingCountEl.textContent = pendingCount;
     }
-    
+
     if (messages.length === 0) {
-        supportContainer.innerHTML = `<div class=\"text-white/50\">Không tìm thấy email phù hợp.</div>`;
+        supportContainer.innerHTML = `<div class="text-white/50">Không tìm thấy email phù hợp.</div>`;
         return;
     }
+
     supportContainer.innerHTML = "";
     messages.forEach(msg => {
         const statusText =
@@ -94,16 +93,16 @@ async function renderSupportMessages(keyword = "") {
                 ? '<span class="text-green-400 text-xs">Đã phản hồi</span>'
                 : '<span class="text-yellow-400 text-xs">Đang xử lý</span>';
         supportContainer.innerHTML += `
-        <div class=\"border border-white/10 rounded-lg p-3 bg-white/5\">
-            <div class=\"flex justify-between items-center\">
-                <div class=\"text-sm text-brand-400 font-semibold\">${msg.email || ''}</div>
+        <div class="border border-white/10 rounded-lg p-3 bg-white/5">
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-brand-400 font-semibold">${msg.email || ''}</div>
                 ${statusText}
             </div>
-            <div class=\"text-sm font-semibold mt-1\">${msg.title}</div>
-            <div class=\"text-sm text-white/80 mt-1\">${msg.message}</div>
-            <div class=\"text-xs text-white/40 mt-2\">${new Date(msg.createdAt).toLocaleString()}</div>
+            <div class="text-sm font-semibold mt-1">${msg.title}</div>
+            <div class="text-sm text-white/80 mt-1">${msg.message}</div>
+            <div class="text-xs text-white/40 mt-2">${new Date(msg.createdAt).toLocaleString()}</div>
             ${msg.status !== "resolved"
-                ? `<button onclick=\"markResolved('${msg._id}')\" class=\"mt-2 px-3 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20\">Đánh dấu hoàn thành</button>`
+                ? `<button onclick="markResolved('${msg._id}')" class="mt-2 px-3 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20">Đánh dấu hoàn thành</button>`
                 : ""
             }
         </div>`;
@@ -113,7 +112,6 @@ async function renderSupportMessages(keyword = "") {
 renderSupportMessages();
 
 function showTab(tabId) {
-
     document.getElementById("supportTab").classList.add("hidden");
     document.getElementById("accountTab").classList.add("hidden");
 
@@ -128,7 +126,6 @@ function showTab(tabId) {
         document.getElementById("accountBtn").classList.add("bg-brand-400/10");
     }
 }
-
 
 /* ===== ACCOUNT DATA ===== */
 
@@ -156,31 +153,34 @@ async function renderAccounts(keyword = "") {
     const accountTable = document.getElementById("accountTable");
     accountTable.innerHTML = "<tr><td colspan='12'>Đang tải...</td></tr>";
     let users = await fetchAccounts();
+
     if (keyword) {
         users = users.filter(u => (u.email || '').toLowerCase().includes(keyword));
     }
+
     if (!users.length) {
         accountTable.innerHTML = `<tr><td colspan='12' class='p-4 text-center text-white/50'>Chưa có tài khoản nào</td></tr>`;
         return;
     }
+
     users.forEach(user => {
         const isActive = user.status === "đang hoạt động";
         const statusText = isActive ? "Đang hoạt động" : "Tạm ngưng";
         const statusColor = isActive ? "text-green-400" : "text-red-400";
-        
+
         const licenseStatusMap = { 'active': 'Đang hoạt động', 'tạm ngưng': 'Tạm ngưng', 'expired': 'Hết hạn' };
         const licenseStatusText = licenseStatusMap[user.licenseStatus] || '-';
         const licenseStatusColor = user.licenseStatus === 'active' ? 'text-green-400' : (user.licenseStatus === 'tạm ngưng' ? 'text-yellow-400' : 'text-red-400');
-        
+
         const genderMap = { 'nam': 'Nam', 'nữ': 'Nữ', 'khác': 'Khác' };
         const genderText = user.gender ? genderMap[user.gender] : '-';
         const phoneText = user.phone || '-';
         const addressText = user.address || '-';
-        
+
         const createdDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString("vi-VN") : '-';
         const licenseCreatedDate = user.licenseCreatedAt ? new Date(user.licenseCreatedAt).toLocaleDateString("vi-VN") : '-';
         const licenseExpiresDate = user.licenseExpiresAt ? new Date(user.licenseExpiresAt).toLocaleDateString("vi-VN") : '-';
-        
+
         accountTable.innerHTML += `
             <tr class="border-t border-white/10 hover:bg-white/5">
                 <td class="p-2 truncate relative group">
@@ -212,8 +212,7 @@ async function renderAccounts(keyword = "") {
                 </td>
             </tr>`;
     });
-    
-    // Khởi tạo resize columns sau khi render
+
     initResizeColumns();
 }
 
@@ -226,11 +225,7 @@ async function deleteUser(userId) {
             credentials: 'include'
         });
 
-        if (!res.ok) {
-            alert('Không thể xóa tài khoản');
-            return;
-        }
-
+        if (!res.ok) { alert('Không thể xóa tài khoản'); return; }
         renderAccounts();
     } catch (err) {
         console.error("Error deleting user:", err);
@@ -246,11 +241,7 @@ async function togglePlan(userId) {
             headers: { 'Content-Type': 'application/json' }
         });
 
-        if (!res.ok) {
-            alert('Không thể đổi gói');
-            return;
-        }
-
+        if (!res.ok) { alert('Không thể đổi gói'); return; }
         renderAccounts();
     } catch (err) {
         console.error("Error toggling plan:", err);
@@ -266,11 +257,7 @@ async function extendUser(userId) {
             headers: { 'Content-Type': 'application/json' }
         });
 
-        if (!res.ok) {
-            alert('Không thể gia hạn tài khoản');
-            return;
-        }
-
+        if (!res.ok) { alert('Không thể gia hạn tài khoản'); return; }
         renderAccounts();
     } catch (err) {
         console.error("Error extending user:", err);
@@ -286,11 +273,7 @@ async function toggleStatus(userId) {
             headers: { 'Content-Type': 'application/json' }
         });
 
-        if (!res.ok) {
-            alert('Không thể đổi trạng thái');
-            return;
-        }
-
+        if (!res.ok) { alert('Không thể đổi trạng thái'); return; }
         renderAccounts();
     } catch (err) {
         console.error("Error toggling status:", err);
@@ -299,11 +282,7 @@ async function toggleStatus(userId) {
 }
 
 function handleAccountSearch() {
-    const keyword = document
-        .getElementById("accountSearch")
-        .value
-        .toLowerCase();
-
+    const keyword = document.getElementById("accountSearch").value.toLowerCase();
     renderAccounts(keyword);
 }
 
@@ -316,61 +295,70 @@ async function markResolved(messageId) {
             body: JSON.stringify({ status: 'resolved' })
         });
 
-        if (!res.ok) {
-            alert('Không thể cập nhật trạng thái');
-            return;
-        }
-
+        if (!res.ok) { alert('Không thể cập nhật trạng thái'); return; }
         renderSupportMessages();
     } catch (err) {
         console.error("Error marking resolved:", err);
         alert('Lỗi khi cập nhật trạng thái');
     }
 }
-function handleSupportSearch() {
-    const keyword = document
-        .getElementById("supportSearch")
-        .value
-        .toLowerCase();
 
+function handleSupportSearch() {
+    const keyword = document.getElementById("supportSearch").value.toLowerCase();
     renderSupportMessages(keyword);
 }
 
 /* ===== DROPDOWN MENU ===== */
 function toggleDropdown(btn) {
-  event.stopPropagation();
-  const content = btn.nextElementSibling;
-  const isShowing = content.classList.contains('show');
+    event.stopPropagation();
+    const content = btn.nextElementSibling;
+    const isShowing = content.classList.contains('show');
 
-  // Đóng tất cả dropdown khác
-  document.querySelectorAll('.dropdown-content.show').forEach(el => {
-    el.classList.remove('show');
-    el.style.top = '';
-    el.style.left = '';
-  });
-
-  if (!isShowing) {
-    content.classList.add('show');
-
-    // Tính vị trí của button để đặt dropdown đúng chỗ (dùng fixed positioning)
-    const rect = btn.getBoundingClientRect();
-    content.style.top = (rect.bottom + 4) + 'px';
-    content.style.left = rect.left + 'px';
-
-    // Nếu dropdown bị lệch ra ngoài màn hình bên phải → căn phải
-    requestAnimationFrame(() => {
-      const menuRect = content.getBoundingClientRect();
-      if (menuRect.right > window.innerWidth - 8) {
-        content.style.left = (rect.right - menuRect.width) + 'px';
-      }
+    // Đóng tất cả dropdown đang mở
+    document.querySelectorAll('.dropdown-content.show').forEach(el => {
+        el.classList.remove('show');
+        el.style.top = '';
+        el.style.left = '';
+        el.style.visibility = '';
     });
-  }
+
+    if (!isShowing) {
+        // Hiện tạm ẩn để đo kích thước chính xác
+        content.style.visibility = 'hidden';
+        content.classList.add('show');
+
+        const rect = btn.getBoundingClientRect();
+        const menuWidth = content.offsetWidth;
+        const menuHeight = content.offsetHeight;
+
+        let top = rect.bottom + 4;   // dùng viewport coords vì position: fixed
+        let left = rect.left;
+
+        // Nếu lệch ra ngoài bên phải → căn theo cạnh phải của button
+        if (left + menuWidth > window.innerWidth - 8) {
+            left = rect.right - menuWidth;
+        }
+
+        // Nếu bị cắt phía dưới → hiện lên trên button
+        if (rect.bottom + menuHeight > window.innerHeight) {
+            top = rect.top - menuHeight - 4;
+        }
+
+        content.style.top = top + 'px';
+        content.style.left = left + 'px';
+        content.style.visibility = 'visible';
+    }
 }
-// Close dropdown khi click ngoài
-document.addEventListener('click', function(event) {
-    // Không đóng nếu click trên button hoặc dropdown content
+
+// Đóng dropdown khi click ra ngoài
+document.addEventListener('click', function (event) {
     if (!event.target.closest('.dropdown-menu')) {
-        document.querySelectorAll('.dropdown-content.show').forEach(el => el.classList.remove('show'));
+        document.querySelectorAll('.dropdown-content.show').forEach(el => {
+            el.classList.remove('show');
+            el.style.top = '';
+            el.style.left = '';
+            el.style.visibility = '';
+        });
     }
 });
 
@@ -378,12 +366,12 @@ document.addEventListener('click', function(event) {
 function copyToClipboard(text, btn) {
     event.stopPropagation();
     if (!text) return;
-    
+
     navigator.clipboard.writeText(text).then(() => {
         const originalText = btn.textContent;
         btn.textContent = '✓ Copied';
         btn.classList.add('bg-green-400/20');
-        
+
         setTimeout(() => {
             btn.textContent = originalText;
             btn.classList.remove('bg-green-400/20');
@@ -400,17 +388,17 @@ let startWidth = 0;
 
 function initResizeColumns() {
     const handles = document.querySelectorAll('.resize-handle');
-    
+
     handles.forEach(handle => {
         handle.addEventListener('mousedown', (e) => {
             resizingCol = e.target.parentElement;
             startX = e.clientX;
             startWidth = resizingCol.offsetWidth;
-            
+
             handle.classList.add('active');
             document.body.style.userSelect = 'none';
             document.body.style.cursor = 'col-resize';
-            
+
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
         });
@@ -419,9 +407,8 @@ function initResizeColumns() {
 
 function onMouseMove(e) {
     if (!resizingCol) return;
-    
     const diff = e.clientX - startX;
-    const newWidth = Math.max(60, startWidth + diff);
+    const newWidth = Math.max(80, startWidth + diff);
     resizingCol.style.width = newWidth + 'px';
 }
 
