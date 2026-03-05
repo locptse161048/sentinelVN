@@ -168,9 +168,9 @@ async function renderAccounts(keyword = "") {
         const statusText = isActive ? "Đang hoạt động" : "Tạm ngưng";
         const statusColor = isActive ? "text-green-400" : "text-red-400";
 
-        const licenseStatusMap = { 'active': 'Đang hoạt động', 'tạm ngưng': 'Tạm ngưng', 'expired': 'Hết hạn' };
+        const licenseStatusMap = { 'active': 'Đang hoạt động', 'suspend': 'Tạm ngưng', 'expired': 'Hết hạn' };
         const licenseStatusText = licenseStatusMap[user.licenseStatus] || '-';
-        const licenseStatusColor = user.licenseStatus === 'active' ? 'text-green-400' : (user.licenseStatus === 'tạm ngưng' ? 'text-yellow-400' : 'text-red-400');
+        const licenseStatusColor = user.licenseStatus === 'active' ? 'text-green-400' : 'text-red-400';
 
         const genderMap = { 'nam': 'Nam', 'nữ': 'Nữ', 'khác': 'Khác' };
         const genderText = user.gender ? genderMap[user.gender] : '-';
