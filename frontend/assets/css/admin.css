@@ -1350,21 +1350,48 @@ body {
 #accountTableMain {
   table-layout: fixed;
   border-collapse: collapse;
-  min-width: 1200px; /* ← Thêm dòng này, bảng không bị co */
+  min-width: 1200px;
 }
 
 #accountTableMain th {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  position: relative;
+  padding-right: 12px !important; /* space cho handle */
 }
 
 #accountTableMain td {
   white-space: nowrap;
-  overflow: hidden;        /* ← Đổi visible → hidden */
+  overflow: hidden;
   text-overflow: ellipsis;
   position: relative;
-  max-width: 0;            /* ← Thêm dòng này để ellipsis hoạt động đúng */
+  max-width: 0; /* bắt buộc để ellipsis hoạt động */
+}
+
+/* Đường phân cách resize — hiển thị rõ ràng */
+.resize-col {
+  position: relative;
+}
+
+.resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: rgba(31, 227, 255, 0.25); /* đường cyan mờ mặc định */
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+  transition: background 0.15s;
+  z-index: 10;
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+  background: rgba(31, 227, 255, 0.85); /* sáng lên khi hover/kéo */
+  box-shadow: 0 0 6px rgba(31, 227, 255, 0.5);
 }
 
 /* ===== DROPDOWN MENU ===== */
