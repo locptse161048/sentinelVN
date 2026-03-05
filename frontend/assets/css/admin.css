@@ -328,7 +328,6 @@ textarea {
   padding: 0;
   /* 3 */
 }
-
 /*
 Remove the inheritance of text transform in Edge and Firefox.
 */
@@ -1345,11 +1344,13 @@ body {
   position: relative;
   user-select: none;
   overflow: auto;
+  max-height: 70vh;
 }
 
 #accountTableMain {
   table-layout: fixed;
   border-collapse: collapse;
+  min-width: 1200px; /* ← Thêm dòng này, bảng không bị co */
 }
 
 #accountTableMain th {
@@ -1360,35 +1361,10 @@ body {
 
 #accountTableMain td {
   white-space: nowrap;
-  overflow: visible;
+  overflow: hidden;        /* ← Đổi visible → hidden */
   text-overflow: ellipsis;
   position: relative;
-}
-
-.resize-col {
-  position: relative;
-  padding-right: 8px !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.resize-handle {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background-color: transparent;
-  cursor: col-resize;
-  user-select: none;
-  touch-action: none;
-}
-
-.resize-handle:hover {
-  background-color: rgba(6, 182, 212, 0.5);
-}
-
-.resize-handle.active {
-  background-color: rgba(6, 182, 212, 0.8);
+  max-width: 0;            /* ← Thêm dòng này để ellipsis hoạt động đúng */
 }
 
 /* ===== DROPDOWN MENU ===== */
