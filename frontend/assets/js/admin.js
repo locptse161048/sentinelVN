@@ -183,24 +183,30 @@ async function renderAccounts(keyword = "") {
         
         accountTable.innerHTML += `
             <tr class="border-t border-white/10 hover:bg-white/5">
-                <td class="p-2 truncate">${user.licenseKey || '-'}<\/td>
-                <td class="p-2 truncate">${user.email}<\/td>
-                <td class="p-2 truncate">${genderText}<\/td>
-                <td class="p-2 truncate">${phoneText}<\/td>
-                <td class="p-2 truncate">${addressText}<\/td>
-                <td class="p-2 truncate ${statusColor}">${statusText}<\/td>
-                <td class="p-2 truncate">${createdDate}<\/td>
-                <td class="p-2 truncate">${user.plan || '-'}<\/td>
-                <td class="p-2 truncate ${licenseStatusColor}">${licenseStatusText}<\/td>
-                <td class="p-2 truncate">${licenseCreatedDate}<\/td>
-                <td class="p-2 truncate">${licenseExpiresDate}<\/td>
-                <td class="p-2">
+                <td class="p-2 truncate flex items-center gap-2 group">
+                    <span>${user.licenseKey || '-'}</span>
+                    <button class="opacity-0 group-hover:opacity-100 text-xs px-2 py-1 border border-cyan-400 rounded hover:bg-cyan-400/20 transition" onclick="copyToClipboard('${user.licenseKey || ''}', this)">📋</button>
+                </td>
+                <td class="p-2 truncate flex items-center gap-2 group">
+                    <span>${user.email}</span>
+                    <button class="opacity-0 group-hover:opacity-100 text-xs px-2 py-1 border border-cyan-400 rounded hover:bg-cyan-400/20 transition" onclick="copyToClipboard('${user.email}', this)">📋</button>
+                </td>
+                <td class="p-2 truncate">${genderText}</td>
+                <td class="p-2 truncate">${phoneText}</td>
+                <td class="p-2 truncate">${addressText}</td>
+                <td class="p-2 truncate ${statusColor}">${statusText}</td>
+                <td class="p-2 truncate">${createdDate}</td>
+                <td class="p-2 truncate">${user.plan || '-'}</td>
+                <td class="p-2 truncate ${licenseStatusColor}">${licenseStatusText}</td>
+                <td class="p-2 truncate">${licenseCreatedDate}</td>
+                <td class="p-2 truncate">${licenseExpiresDate}</td>
+                <td class="p-2 relative">
                     <div class="dropdown-menu">
-                        <button class="dropdown-toggle" onclick="toggleDropdown(this)">⋮ Menu</button>
+                        <button class="dropdown-toggle" onclick="event.stopPropagation(); toggleDropdown(this)">⋮ Menu</button>
                         <div class="dropdown-content">
-                            <button onclick="togglePlan('${user._id}')" class="text-brand-400">Đổi gói</button>
-                            <button onclick="extendUser('${user._id}')" class="text-green-400">Gia hạn 30 ngày</button>
-                            <button onclick="toggleStatus('${user._id}')" class="text-yellow-400">Đổi trạng thái</button>
+                            <button onclick="event.stopPropagation(); togglePlan('${user._id}')" class="text-brand-400">Đổi gói</button>
+                            <button onclick="event.stopPropagation(); extendUser('${user._id}')" class="text-green-400">Gia hạn 30 ngày</button>
+                            <button onclick="event.stopPropagation(); toggleStatus('${user._id}')" class="text-yellow-400">Đổi trạng thái</button>
                         </div>
                     </div>
                 </td>
@@ -333,6 +339,7 @@ function handleSupportSearch() {
 
 /* ===== DROPDOWN MENU ===== */
 function toggleDropdown(btn) {
+    event.stopPropagation();
     const content = btn.nextElementSibling;
     
     // Close all other dropdowns
@@ -343,9 +350,32 @@ function toggleDropdown(btn) {
     content.classList.toggle('show');
 }
 
-document.addEventListener('click', () => {
-    document.querySelectorAll('.dropdown-content').forEach(el => el.classList.remove('show'));
+// Close dropdown khi click ngoài
+document.addEventListener('click', function(event) {
+    // Không đóng nếu click trên button hoặc dropdown content
+    if (!event.target.closest('.dropdown-menu')) {
+        document.querySelectorAll('.dropdown-content.show').forEach(el => el.classList.remove('show'));
+    }
 });
+
+/* ===== COPY TO CLIPBOARD ===== */
+function copyToClipboard(text, btn) {
+    event.stopPropagation();
+    if (!text) return;
+    
+    navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.textContent;
+        btn.textContent = '✓ Copied';
+        btn.classList.add('bg-green-400/20');
+        
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.classList.remove('bg-green-400/20');
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+    });
+}
 
 /* ===== RESIZABLE TABLE COLUMNS ===== */
 let resizingCol = null;

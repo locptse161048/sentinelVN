@@ -1360,8 +1360,23 @@ body {
 
 #accountTableMain td {
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
   text-overflow: ellipsis;
+}
+
+/* Copy button styling */
+.group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.group-hover\:opacity-100:hover {
+  opacity: 1 !important;
+}
+
+.opacity-0 {
+  opacity: 0;
 }
 
 .resize-col {
