@@ -476,7 +476,7 @@ body {
   position: relative;
   user-select: none;
   overflow: auto;
-  max-height: 100vh;
+   height: 600px;
 }
 
 #accountTableMain {
