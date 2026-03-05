@@ -314,42 +314,14 @@ function toggleDropdown(btn) {
     const content = btn.nextElementSibling;
     const isShowing = content.classList.contains('show');
 
-    // Đóng tất cả dropdown đang mở
     document.querySelectorAll('.dropdown-content.show').forEach(el => {
         el.classList.remove('show');
-        el.style.top = '';
-        el.style.left = '';
-        el.style.visibility = '';
     });
 
     if (!isShowing) {
-        // Hiện tạm ẩn để đo kích thước chính xác
-        content.style.visibility = 'hidden';
         content.classList.add('show');
-
-        const rect = btn.getBoundingClientRect();
-        const menuWidth = content.offsetWidth;
-        const menuHeight = content.offsetHeight;
-
-        let top = rect.bottom + 4;   // dùng viewport coords vì position: fixed
-        let left = rect.left;
-
-        // Nếu lệch ra ngoài bên phải → căn theo cạnh phải của button
-        if (left + menuWidth > window.innerWidth - 8) {
-            left = rect.right - menuWidth;
-        }
-
-        // Nếu bị cắt phía dưới → hiện lên trên button
-        if (rect.bottom + menuHeight > window.innerHeight) {
-            top = rect.top - menuHeight - 4;
-        }
-
-        content.style.top = top + 'px';
-        content.style.left = left + 'px';
-        content.style.visibility = 'visible';
     }
 }
-
 // Đóng dropdown khi click ra ngoài
 document.addEventListener('click', function (event) {
     if (!event.target.closest('.dropdown-menu')) {
