@@ -238,7 +238,9 @@
           <option value="nữ">Nữ</option>
           <option value="khác">Khác</option>
         </select>
-        <input type="tel" name="phone" class="input hidden" placeholder="Số điện thoại" />
+        <input type="tel" name="phone" class="input hidden" placeholder="Số điện thoại" maxlength="10"
+          oninput="validatePhone(this)" />
+        <div id="phoneError" class="hidden text-xs" style="color: #f87171;">Số điện thoại không hợp lệ</div>
         <input type="text" name="address" class="input hidden" placeholder="Địa chỉ" />
         <input class="input" type="email" name="email" placeholder="Email" required /> <input class="input"
           type="password" name="password" placeholder="Mật khẩu" required /> <button type="submit" class="btn w-fit"
