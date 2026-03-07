@@ -335,6 +335,7 @@
 
         if (mode === 'signup') {
             if (!email || !password) { msg.textContent = '⚠️ Vui lòng nhập đầy đủ thông tin.'; return; }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = '⚠️ Email không hợp lệ.'; return; }
             if (password.length < 6) { msg.textContent = '⚠️ Mật khẩu phải tối thiểu 6 ký tự.'; return; }
 
             const gender = form.gender ? form.gender.value : '';
