@@ -209,14 +209,19 @@
   <section id="contact" class="py-20">
     <div class="mx-auto max-w-3xl px-6 text-center">
       <h2 class="font-orbitron text-3xl">Liên hệ dùng thử</h2>
-      <form action="#" method="POST" class="mt-8 grid gap-4 text-left"> <input name="name" required
-          placeholder="Họ và tên" class="input" /> <input name="email" type="email" required placeholder="Email"
-          class="input" /> <textarea name="message" rows="4" required placeholder="Nhu cầu của bạn"
-          class="input"></textarea> <button
+      <form id="trialContactForm" class="mt-8 grid gap-4 text-left">
+        <input name="name" required placeholder="Họ và tên" class="input" />
+        <input name="email" type="email" required placeholder="Email" class="input" />
+        <textarea name="message" rows="4" required placeholder="Nhu cầu của bạn" class="input"></textarea>
+        <button type="submit"
           class="px-5 py-3 rounded-xl bg-brand-400/25 border border-brand-400/60 hover:bg-brand-400/35 w-fit mx-auto text-white">
-          Gửi yêu cầu </button> </form>
+          Gửi yêu cầu
+        </button>
+        <p id="trialContactMsg" class="text-sm text-center"></p>
+      </form>
     </div>
-  </section> <!-- FOOTER -->
+  </section>
+  <!-- FOOTER -->
   <footer class="border-t border-white/10">
     <div class="mx-auto max-w-7xl px-6 py-8 text-sm text-white/60 text-center"> © <span id="year"></span> Sentinel VN —
       Security-as-a-Plugin • Website: https://sentinelvn.io.vn • Email: contact@sentinelvn.io.vn </div>

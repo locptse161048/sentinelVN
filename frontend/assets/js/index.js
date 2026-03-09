@@ -436,3 +436,50 @@ function validatePhone(input) {
         err.classList.add('hidden');
     }
 }
+// ========= Trial Contact Form =========
+const trialContactForm = document.getElementById('trialContactForm');
+if (trialContactForm) {
+    trialContactForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const msgEl = document.getElementById('trialContactMsg');
+        msgEl.textContent = '';
+
+        const name    = trialContactForm.querySelector('[name="name"]').value.trim();
+        const email   = trialContactForm.querySelector('[name="email"]').value.trim();
+        const message = trialContactForm.querySelector('[name="message"]').value.trim();
+
+        if (!name || !email || !message) {
+            msgEl.style.color = '#f87171';
+            msgEl.textContent = '⚠️ Vui lòng điền đầy đủ thông tin.';
+            return;
+        }
+
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            msgEl.style.color = '#f87171';
+            msgEl.textContent = '⚠️ Email không hợp lệ.';
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/api/trial-contact`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, message })
+            });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                msgEl.style.color = '#f87171';
+                msgEl.textContent = data.message || '❌ Gửi thất bại.';
+                return;
+            }
+
+            msgEl.style.color = '#4ade80';
+            msgEl.textContent = '✅ Yêu cầu đã được gửi thành công!';
+            trialContactForm.reset();
+        } catch (err) {
+            msgEl.style.color = '#f87171';
+            msgEl.textContent = '❌ Có lỗi xảy ra. Vui lòng thử lại.';
+        }
+    });
+}

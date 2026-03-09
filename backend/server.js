@@ -116,3 +116,4 @@ app.get("/create-user", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+app.use('/api', require('./routes/trialContact.routes'));
