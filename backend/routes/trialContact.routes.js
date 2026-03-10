@@ -1,4 +1,7 @@
+const express = require('express');
+const router = express.Router();
 const TrialContact = require('../models/trialContact');
+
 
 // Guest gửi yêu cầu dùng thử
 router.post('/trial-contact', async (req, res) => {
