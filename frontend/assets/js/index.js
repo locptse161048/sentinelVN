@@ -438,15 +438,30 @@ form.onsubmit = async e => {
 
         // ⚠️ SECURITY: Delay to ensure session is saved to MongoDB before redirect
         console.log('[LOGIN] Redirecting to', data.user.role === 'admin' ? 'admin.html' : 'client.html');
-        setTimeout(() => {
-            // ✅ Redirect based on role (không lưu localStorage)
+        // Verify session trước khi redirect
+        let verified = false;
+        for (let i = 0; i < 5; i++) {
+            await new Promise(r => setTimeout(r, 400));
+            try {
+                const check = await fetch(`${API_BASE}/api/auth/session`, {
+                    credentials: 'include'
+                });
+                if (check.ok) {
+                    verified = true;
+                    break;
+                }
+            } catch (e) { }
+        }
+        if (verified) {
             if (data.user.role === 'admin') {
                 window.location.href = 'admin.html';
             } else {
                 window.location.href = 'client.html';
             }
-            pendingRedirectPlan = null;
-        }, 800);
+        } else {
+            msg.textContent = '❌ Không thể xác nhận session. Vui lòng thử lại.';
+        }
+        pendingRedirectPlan = null;
     } catch (err) {
         console.error('[LOGIN] Fetch error:', err);
         msg.textContent = '❌ Lỗi kết nối. Vui lòng kiểm tra internet hoặc thử lại sau.';
