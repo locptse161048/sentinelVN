@@ -1144,6 +1144,7 @@ body {
   padding: .5rem 1rem;
   border-radius: .75rem;
   border: 1px solid rgba(31, 227, 255, .6);
+  position: relative;
 }
 
 .btn:hover {
