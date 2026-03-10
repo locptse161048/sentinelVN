@@ -447,7 +447,7 @@ function resetIdleTimer() {
       method: 'POST',
       credentials: 'include'
     });
-    window.location.reload();
+     window.location.href = 'index.html';
   }, IDLE_TIMEOUT);
 }
 
