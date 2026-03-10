@@ -84,6 +84,8 @@ console.log("[STARTUP] ✅ /api/support mounted (with authMiddleware)");
 
 app.use('/api/webhook', require('./routes/webhook.routes'));
 console.log("[STARTUP] ✅ /api/webhook mounted");
+app.use('/api', require('./routes/trialContact.routes'));
+console.log("[STARTUP] ✅ /api/trial-contact mounted");
 app.get('/', (req, res) => {
   res.send('Sentinel VN Backend API');
 });
@@ -116,4 +118,3 @@ app.get("/create-user", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-app.use('/api', require('./routes/trialContact.routes'));
