@@ -384,13 +384,16 @@ form.onsubmit = async e => {
     authModal.classList.add('hidden');
     authModal.classList.remove('flex');
 
-    // ✅ Redirect based on role (không lưu localStorage)
-    if (data.user.role === 'admin') {
-        window.location.href = 'admin.html';
-    } else {
-        window.location.href = 'client.html';
-    }
-    pendingRedirectPlan = null;
+    // ⚠️ SECURITY: Delay to ensure session is saved to MongoDB before redirect
+    setTimeout(() => {
+        // ✅ Redirect based on role (không lưu localStorage)
+        if (data.user.role === 'admin') {
+            window.location.href = 'admin.html';
+        } else {
+            window.location.href = 'client.html';
+        }
+        pendingRedirectPlan = null;
+    }, 200);
 };
 
 // ========= Header logout / account buttons =========
@@ -444,8 +447,8 @@ if (trialContactForm) {
         const msgEl = document.getElementById('trialContactMsg');
         msgEl.textContent = '';
 
-        const name    = trialContactForm.querySelector('[name="name"]').value.trim();
-        const email   = trialContactForm.querySelector('[name="email"]').value.trim();
+        const name = trialContactForm.querySelector('[name="name"]').value.trim();
+        const email = trialContactForm.querySelector('[name="email"]').value.trim();
         const message = trialContactForm.querySelector('[name="message"]').value.trim();
 
         if (!name || !email || !message) {
@@ -483,3 +486,26 @@ if (trialContactForm) {
         }
     });
 }
+// ========= Idle Timeout 15 phút =========
+let idleTimer = null;
+const IDLE_TIMEOUT = 15 * 60 * 1000; // 15 phút
+
+function resetIdleTimer() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(async () => {
+        // Tự động logout khi idle 15 phút
+        await fetch(`${API_BASE}/api/auth/logout`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        window.location.reload();
+    }, IDLE_TIMEOUT);
+}
+
+// Các sự kiện được coi là "có hoạt động"
+['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(event => {
+    document.addEventListener(event, resetIdleTimer, { passive: true });
+});
+
+// Bắt đầu đếm ngay khi load trang
+resetIdleTimer();
