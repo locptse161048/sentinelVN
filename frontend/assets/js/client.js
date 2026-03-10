@@ -1,6 +1,14 @@
 /* ===== CONFIG ===== */
 const API_BASE = "https://sentinelvn.onrender.com";
 
+// ⚠️ SECURITY: Helper function để escape HTML entities (prevent XSS)
+function escapeHtml(text) {
+	if (!text) return '';
+	const div = document.createElement('div');
+	div.textContent = text;
+	return div.innerHTML;
+}
+
 // Tự động mở tab nếu có query ?tab=N
 const tabFromQuery = new URLSearchParams(window.location.search).get('tab');
 if (tabFromQuery) showTab(Number(tabFromQuery));
@@ -144,14 +152,26 @@ async function renderPaymentHistory() {
       const amountText = `${item.amount?.toLocaleString('vi-VN') || 'N/A'}đ`;
       const createdDate = new Date(item.createdAt).toLocaleString('vi-VN');
 
-      tr.innerHTML = `
-        <td class="py-2 px-2">${amountText}</td>
-        <td class="py-2 px-2">${item.plan || 'N/A'}</td>
-        <td class="py-2 px-2">${item.method || 'N/A'}</td>
-        <td class="py-2 px-2 font-mono text-xs">${item.orderCode || 'N/A'}</td>
-        <td class="py-2 px-2 font-mono text-xs max-w-xs truncate" title="${item.transactionId || 'N/A'}">${item.transactionId || 'N/A'}</td>
-        <td class="py-2 px-2 text-white/70">${createdDate}</td>
-      `;
+      // ⚠️ SECURITY: Create TD elements safely with textContent
+      const createTd = (content, extraClass = '') => {
+        const td = document.createElement('td');
+        td.className = `py-2 px-2 ${extraClass}`;
+        td.textContent = content;
+        return td;
+      };
+
+      tr.appendChild(createTd(amountText));
+      tr.appendChild(createTd(item.plan || 'N/A'));
+      tr.appendChild(createTd(item.method || 'N/A'));
+      tr.appendChild(createTd(item.orderCode || 'N/A', 'font-mono text-xs'));
+      
+      const tdTransaction = document.createElement('td');
+      tdTransaction.className = 'py-2 px-2 font-mono text-xs max-w-xs truncate';
+      tdTransaction.title = item.transactionId || 'N/A';
+      tdTransaction.textContent = item.transactionId || 'N/A';
+      tr.appendChild(tdTransaction);
+      
+      tr.appendChild(createTd(createdDate));
 
       paymentTableBody.appendChild(tr);
     });
@@ -204,14 +224,31 @@ async function renderSentMessages() {
           ? '<span class="text-green-400">Đã phản hồi</span>'
           : '<span class="text-yellow-400">Đang xử lý</span>';
 
-      li.innerHTML = `
-        <div class="flex justify-between items-center">
-          <div class="text-brand-400 font-semibold">${msg.title}</div>
-          <div class="text-xs">${statusText}</div>
-        </div>
-        <div class="text-white/60 text-xs mb-1">${new Date(msg.createdAt).toLocaleString()}</div>
-        <div>${msg.message}</div>
-      `;
+      // ⚠️ SECURITY: Create elements safely with textContent
+      const headerDiv = document.createElement('div');
+      headerDiv.className = 'flex justify-between items-center';
+      
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'text-brand-400 font-semibold';
+      titleDiv.textContent = msg.title;
+      
+      const statusDiv = document.createElement('div');
+      statusDiv.className = 'text-xs';
+      statusDiv.innerHTML = statusText; // Safe: statusText is hardcoded literal
+      
+      headerDiv.appendChild(titleDiv);
+      headerDiv.appendChild(statusDiv);
+      
+      const dateDiv = document.createElement('div');
+      dateDiv.className = 'text-white/60 text-xs mb-1';
+      dateDiv.textContent = new Date(msg.createdAt).toLocaleString();
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.textContent = msg.message; // Safe: use textContent for user data
+      
+      li.appendChild(headerDiv);
+      li.appendChild(dateDiv);
+      li.appendChild(messageDiv);
 
       sentMessagesList.appendChild(li);
     });

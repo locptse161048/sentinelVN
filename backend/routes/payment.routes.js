@@ -267,6 +267,11 @@ router.post('/return', async (req, res) => {
 			return res.status(404).json({ success: false, message: 'Thanh toán không tìm thấy' });
 		}
 
+		// ⚠️ SECURITY: Verify payment ownership (prevent IDOR)
+		if (payment.clientId.toString() !== clientId.toString()) {
+			return res.status(403).json({ success: false, message: 'Bạn không có quyền truy cập thanh toán này' });
+		}
+
 		// Webhook đã xử lý xong → trả license luôn, không cần làm gì thêm
 		if (payment.status === 'success') {
 			const license = await License.findOne({
