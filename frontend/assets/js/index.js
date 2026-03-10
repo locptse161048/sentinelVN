@@ -122,7 +122,7 @@ async function setLoggedInUI(user) {
         }
     } catch (err) {
         console.warn('Không thể kiểm tra license:', err.message);
-    }
+    } startIdleTimeout();
 }
 
 function setLoggedOutUI() {
@@ -559,10 +559,10 @@ function resetIdleTimer() {
     }, IDLE_TIMEOUT);
 }
 
-// Các sự kiện được coi là "có hoạt động"
-['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(event => {
-    document.addEventListener(event, resetIdleTimer, { passive: true });
-});
-
-// Bắt đầu đếm ngay khi load trang
-resetIdleTimer();
+// Chỉ bắt đầu idle timeout khi đã đăng nhập
+function startIdleTimeout() {
+    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(event => {
+        document.addEventListener(event, resetIdleTimer, { passive: true });
+    });
+    resetIdleTimer();
+}
