@@ -7,6 +7,8 @@ const dotenv = require('dotenv');
 dotenv.config();
 const session = require("express-session");
 const MongoStore = require('connect-mongo').default;
+// ⚠️ SECURITY: Rate limiting to prevent brute force
+const rateLimit = require('express-rate-limit');
 const app = express();
 // CORS configuration - allow more origins in development
 const allowedOrigins = [
@@ -51,10 +53,27 @@ app.use(session({
     proxy: true,
     httpOnly: true,
     secure: true,
-    sameSite: "none",
+    sameSite: "lax",
     maxAge: 60 * 60 * 1000
   }
 }));
+
+// ⚠️ SECURITY: Rate limiting on auth endpoints (prevent brute force)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 requests per windowMs
+  message: 'Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau 15 phút.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // limit each IP to 3 registrations per hour
+  message: 'Quá nhiều lần đăng ký. Vui lòng thử lại sau 1 giờ.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 app.use(bodyParser.json());
 
@@ -66,9 +85,13 @@ db.connect();
 const authMiddleware = require('./middleware/authMiddleware');
 const adminMiddleware = require('./middleware/adminMiddleware');
 
-// Routes
-app.use('/api/auth', require('./routes/auth.routes'));
-console.log("[STARTUP] ✅ /api/auth mounted");
+// Routes - Export limiters for auth routes
+app.locals.loginLimiter = loginLimiter;
+app.locals.registerLimiter = registerLimiter;
+
+const authRoutes = require('./routes/auth.routes');
+app.use('/api/auth', authRoutes);
+console.log("[STARTUP] ✅ /api/auth mounted with rate limiting");
 
 app.use('/api/admin', adminMiddleware, require('./routes/admin.routes'));
 console.log("[STARTUP] ✅ /api/admin mounted");

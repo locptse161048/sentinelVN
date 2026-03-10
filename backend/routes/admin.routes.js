@@ -3,6 +3,11 @@ const router = express.Router();
 const Client = require('../models/client');
 const SupportMsg = require('../models/supportMsg');
 
+// ⚠️ SECURITY: Escape special regex characters to prevent NoSQL injection
+function escapeRegex(str) {
+	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // Lấy danh sách tất cả clients
 router.get('/clients', async (req, res) => {
 	try {
@@ -25,19 +30,25 @@ router.get('/clients', async (req, res) => {
 		
 		res.json(clientsWithLicense);
 	} catch (err) {
-		console.error("Error fetching clients:", err);
+		// ⚠️ SECURITY: Don't expose sensitive error details
+		console.error("[ADMIN] Error fetching clients");
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
 
-// Tìm kiếm tài khoản theo email
+// Tìm kiếm tài khoản theo email - ⚠️ SECURITY: Escape regex input
 router.get('/search-client', async (req, res) => {
 	const { email } = req.query;
 	try {
-		const clients = await Client.find(email ? { email: { $regex: email, $options: 'i' } } : {});
+		// Escape email input to prevent regex injection
+		const escapedEmail = email ? escapeRegex(email) : '';
+		const clients = await Client.find(
+			email ? { email: { $regex: escapedEmail, $options: 'i' } } : {}
+		).select('-passwordHash');
+		
 		res.json(clients);
 	} catch (err) {
-		console.error("Error searching clients:", err);
+		console.error("[ADMIN] Error searching clients");
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
@@ -48,19 +59,23 @@ router.get('/support', async (req, res) => {
 		const msgs = await SupportMsg.find().sort({ createdAt: -1 });
 		res.json(msgs);
 	} catch (err) {
-		console.error("Error fetching support messages:", err);
+		console.error("[ADMIN] Error fetching support messages");
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
 
-// Tìm kiếm tin nhắn hỗ trợ theo email
+// Tìm kiếm tin nhắn hỗ trợ theo email - ⚠️ SECURITY: Escape regex input
 router.get('/search-support', async (req, res) => {
 	const { email } = req.query;
 	try {
-		const msgs = await SupportMsg.find(email ? { email: { $regex: email, $options: 'i' } } : {});
+		// Escape email input to prevent regex injection
+		const escapedEmail = email ? escapeRegex(email) : '';
+		const msgs = await SupportMsg.find(
+			email ? { email: { $regex: escapedEmail, $options: 'i' } } : {}
+		);
 		res.json(msgs);
 	} catch (err) {
-		console.error("Error searching support messages:", err);
+		console.error("[ADMIN] Error searching support messages");
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
@@ -72,7 +87,7 @@ router.patch('/support/:id', async (req, res) => {
 		const msg = await SupportMsg.findByIdAndUpdate(req.params.id, { status }, { new: true });
 		res.json(msg);
 	} catch (err) {
-		console.error("Error updating support message:", err);
+		console.error("[ADMIN] Error updating support message");
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
@@ -86,9 +101,9 @@ router.delete('/client/:clientId', async (req, res) => {
 		if (!client) {
 			return res.status(404).json({ message: 'Client không tồn tại' });
 		}
-		res.json({ message: 'Đã xóa client', client });
+		res.json({ message: 'Đã xóa client' });
 	} catch (err) {
-		console.error("Error deleting client:", err);
+		console.error("[ADMIN] Error deleting client");
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
@@ -107,9 +122,9 @@ router.patch('/client/:clientId/toggle-plan', async (req, res) => {
 		client.plan = plans[nextIndex];
 
 		await client.save();
-		res.json({ message: 'Đã đổi gói', client });
+		res.json({ message: 'Đã đổi gói' });
 	} catch (err) {
-		console.error("Error toggling plan:", err);
+		console.error("[ADMIN] Error toggling plan");
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
@@ -136,7 +151,7 @@ router.patch('/client/:clientId/extend', async (req, res) => {
 
 		res.json({ message: 'Đã gia hạn thêm 30 ngày', licenses: updatedLicenses });
 	} catch (err) {
-		console.error("Error extending license:", err);
+		console.error("[ADMIN] Error extending license");
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });

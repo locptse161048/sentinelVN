@@ -1,6 +1,7 @@
     const express = require('express');
     const router = express.Router();
     const TrialContact = require('../models/trialContact');
+    const adminMiddleware = require('../middleware/adminMiddleware');
 
 
     // Guest gửi yêu cầu dùng thử
@@ -17,7 +18,9 @@
             res.status(500).json({ message: 'Lỗi server.' });
         }
     });
-    router.patch('/trial-contact/:id', async (req, res) => {
+    
+    // ⚠️ SECURITY: Admin only - requires adminMiddleware
+    router.patch('/trial-contact/:id', adminMiddleware, async (req, res) => {
         try {
             const { status } = req.body;
             await TrialContact.findByIdAndUpdate(req.params.id, { status });
@@ -26,8 +29,9 @@
             res.status(500).json({ message: 'Lỗi server.' });
         }
     });
+    
     // Admin xem danh sách
-    router.get('/trial-contacts', async (req, res) => {
+    router.get('/trial-contacts', adminMiddleware, async (req, res) => {
         try {
             const contacts = await TrialContact.find().sort({ createdAt: -1 });
             res.json(contacts);
