@@ -3,10 +3,10 @@ const API_BASE = 'https://sentinelvn.onrender.com';
 
 // ⚠️ SECURITY: Helper function để escape HTML entities (prevent XSS)
 function escapeHtml(text) {
-	if (!text) return '';
-	const div = document.createElement('div');
-	div.textContent = text;
-	return div.innerHTML;
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function logout() {
@@ -18,13 +18,15 @@ function logout() {
     });
 }
 
+
 /* ===== CHECK ADMIN SESSION ===== */
 document.addEventListener("DOMContentLoaded", async () => {
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);
 
-        const res = await fetch(`${API_BASE}/api/auth/me`, {
+        // ✅ SECURITY: Use /api/auth/session (same endpoint as login) to avoid mismatch
+        const res = await fetch(`${API_BASE}/api/auth/session`, {
             credentials: "include",
             signal: controller.signal
         });
@@ -111,40 +113,40 @@ async function renderSupportMessages(keyword = "") {
             msg.status === "resolved"
                 ? '<span class="text-green-400 text-xs">Đã phản hồi</span>'
                 : '<span class="text-yellow-400 text-xs">Đang xử lý</span>';
-        
+
         // ⚠️ SECURITY: Use safe DOM creation instead of innerHTML
         const container = document.createElement('div');
         container.className = 'border border-white/10 rounded-lg p-3 bg-white/5';
-        
+
         // Header with email & status
         const header = document.createElement('div');
         header.className = 'flex justify-between items-center';
-        
+
         const emailEl = document.createElement('div');
         emailEl.className = 'text-sm text-brand-400 font-semibold';
         emailEl.textContent = msg.email || '';
-        
+
         header.appendChild(emailEl);
         header.innerHTML += statusText; // Safe: statusText is hardcoded literal
-        
+
         // Title & Message (use textContent to prevent XSS)
         const titleEl = document.createElement('div');
         titleEl.className = 'text-sm font-semibold mt-1';
         titleEl.textContent = msg.title;
-        
+
         const messageEl = document.createElement('div');
         messageEl.className = 'text-sm text-white/80 mt-1';
         messageEl.textContent = msg.message;
-        
+
         const dateEl = document.createElement('div');
         dateEl.className = 'text-xs text-white/40 mt-2';
         dateEl.textContent = new Date(msg.createdAt).toLocaleString();
-        
+
         container.appendChild(header);
         container.appendChild(titleEl);
         container.appendChild(messageEl);
         container.appendChild(dateEl);
-        
+
         // Add button with safe event listener (no inline onclick)
         if (msg.status !== "resolved") {
             const btn = document.createElement('button');
@@ -153,7 +155,7 @@ async function renderSupportMessages(keyword = "") {
             btn.addEventListener('click', () => markResolved(msg._id));
             container.appendChild(btn);
         }
-        
+
         supportContainer.appendChild(container);
     });
 }
@@ -211,7 +213,7 @@ async function renderAccounts(keyword = "") {
 
     // ⚠️ SECURITY: Clear innerHTML once, then append safe rows
     accountTable.innerHTML = "";
-    
+
     users.forEach(user => {
         const isActive = user.status === "đang hoạt động";
         const statusText = isActive ? "Đang hoạt động" : "Tạm ngưng";
@@ -289,7 +291,7 @@ async function renderAccounts(keyword = "") {
         tdAction.className = 'p-2 relative';
         const dropdownDiv = document.createElement('div');
         dropdownDiv.className = 'dropdown-menu';
-        
+
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'dropdown-toggle';
         toggleBtn.textContent = '⋮ Menu';
@@ -328,7 +330,7 @@ async function renderAccounts(keyword = "") {
         contentDiv.appendChild(planBtn);
         contentDiv.appendChild(extendBtn);
         contentDiv.appendChild(statusBtn);
-        
+
         dropdownDiv.appendChild(toggleBtn);
         dropdownDiv.appendChild(contentDiv);
         tdAction.appendChild(dropdownDiv);
@@ -581,36 +583,36 @@ async function renderTrialContacts(keyword = "") {
         // ⚠️ SECURITY: Use safe DOM creation instead of innerHTML
         const container = document.createElement('div');
         container.className = 'border border-white/10 rounded-lg p-3 bg-white/5';
-        
+
         // Header with email & status
         const header = document.createElement('div');
         header.className = 'flex justify-between items-center';
-        
+
         const emailEl = document.createElement('div');
         emailEl.className = 'text-sm text-brand-400 font-semibold';
         emailEl.textContent = c.email || '';
-        
+
         header.appendChild(emailEl);
         header.innerHTML += statusText; // Safe: statusText is hardcoded literal
-        
+
         // Name & Message (use textContent to prevent XSS)
         const nameEl = document.createElement('div');
         nameEl.className = 'text-sm font-semibold mt-1';
         nameEl.textContent = c.name || '';
-        
+
         const messageEl = document.createElement('div');
         messageEl.className = 'text-sm text-white/80 mt-1';
         messageEl.textContent = c.message;
-        
+
         const dateEl = document.createElement('div');
         dateEl.className = 'text-xs text-white/40 mt-2';
         dateEl.textContent = new Date(c.createdAt).toLocaleString();
-        
+
         container.appendChild(header);
         container.appendChild(nameEl);
         container.appendChild(messageEl);
         container.appendChild(dateEl);
-        
+
         // Add button with safe event listener (no inline onclick)
         if (c.status !== "resolved") {
             const btn = document.createElement('button');
@@ -619,7 +621,7 @@ async function renderTrialContacts(keyword = "") {
             btn.addEventListener('click', () => markTrialResolved(c._id));
             container.appendChild(btn);
         }
-        
+
         trialContainer.appendChild(container);
     });
 }
@@ -675,6 +677,29 @@ setInterval(async () => {
         }
     }
 }, 30000);
+// ========= Idle Timeout 15 phút =========
+let idleTimer = null;
+const IDLE_TIMEOUT = 15 * 60 * 1000; // 15 phút
+
+function resetIdleTimer() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(async () => {
+        // Tự động logout khi idle 15 phút
+        await fetch(`${API_BASE}/api/auth/logout`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        window.location.reload();
+    }, IDLE_TIMEOUT);
+}
+
+// Các sự kiện được coi là "có hoạt động"
+['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(event => {
+    document.addEventListener(event, resetIdleTimer, { passive: true });
+});
+
+// Bắt đầu đếm ngay khi load trang
+resetIdleTimer();
 renderSupportMessages();
 renderAccounts();
 renderTrialContacts();
