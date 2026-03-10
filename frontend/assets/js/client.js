@@ -9,10 +9,6 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Tự động mở tab nếu có query ?tab=N
-const tabFromQuery = new URLSearchParams(window.location.search).get('tab');
-if (tabFromQuery) showTab(Number(tabFromQuery));
-
 /* ===== CHECK SESSION FROM BACKEND ===== */
 async function checkSession() {
   let retries = 0;
