@@ -80,7 +80,18 @@ async function renderSupportMessages(keyword = "") {
     if (pendingCountEl) {
         pendingCountEl.textContent = pendingCount;
     }
-
+    // Cập nhật badge số lượng tin nhắn hỗ trợ đang chờ xử lý
+    const supportBadge = document.getElementById('supportBadge');
+    if (supportBadge) {
+        if (pendingCount > 0) {
+            supportBadge.textContent = pendingCount > 99 ? '99+' : pendingCount;
+            supportBadge.classList.remove('hidden');
+            supportBadge.style.display = 'flex';
+        } else {
+            supportBadge.classList.add('hidden');
+            supportBadge.style.display = 'none';
+        }
+    }
     if (messages.length === 0) {
         supportContainer.innerHTML = `<div class="text-white/50">Không tìm thấy email phù hợp.</div>`;
         return;
@@ -108,9 +119,6 @@ async function renderSupportMessages(keyword = "") {
         </div>`;
     });
 }
-
-renderSupportMessages();
-
 function showTab(tabId) {
     document.getElementById("supportTab").classList.add("hidden");
     document.getElementById("accountTab").classList.add("hidden");
@@ -431,6 +439,17 @@ async function renderTrialContacts(keyword = "") {
     const pendingCount = contacts.filter(c => c.status === 'pending').length;
     const pendingCountEl = document.getElementById('trialPendingCount');
     if (pendingCountEl) pendingCountEl.textContent = pendingCount;
+    const trialBadge = document.getElementById('trialBadge');
+    if (trialBadge) {
+        if (pendingCount > 0) {
+            trialBadge.textContent = pendingCount > 99 ? '99+' : pendingCount;
+            trialBadge.classList.remove('hidden');
+            trialBadge.style.display = 'flex';
+        } else {
+            trialBadge.classList.add('hidden');
+            trialBadge.style.display = 'none';
+        }
+    }
 
     if (contacts.length === 0) {
         trialContainer.innerHTML = `<div class="text-white/50">Không tìm thấy yêu cầu phù hợp.</div>`;
@@ -480,6 +499,37 @@ function handleTrialSearch() {
     const keyword = document.getElementById("trialSearch").value.toLowerCase();
     renderTrialContacts(keyword);
 }
+setInterval(async () => {
+    // Support badge
+    const messages = await fetchSupportMessages();
+    const supportPending = messages.filter(msg => msg.status === 'pending').length;
+    const supportBadge = document.getElementById('supportBadge');
+    if (supportBadge) {
+        if (supportPending > 0) {
+            supportBadge.textContent = supportPending > 99 ? '99+' : supportPending;
+            supportBadge.classList.remove('hidden');
+            supportBadge.style.display = 'flex';
+        } else {
+            supportBadge.classList.add('hidden');
+            supportBadge.style.display = 'none';
+        }
+    }
+
+    // Trial badge
+    const contacts = await fetchTrialContacts();
+    const trialPending = contacts.filter(c => c.status === 'pending').length;
+    const trialBadge = document.getElementById('trialBadge');
+    if (trialBadge) {
+        if (trialPending > 0) {
+            trialBadge.textContent = trialPending > 99 ? '99+' : trialPending;
+            trialBadge.classList.remove('hidden');
+            trialBadge.style.display = 'flex';
+        } else {
+            trialBadge.classList.add('hidden');
+            trialBadge.style.display = 'none';
+        }
+    }
+}, 30000);
 renderSupportMessages();
 renderAccounts();
 renderTrialContacts();
