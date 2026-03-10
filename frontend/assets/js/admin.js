@@ -114,17 +114,17 @@ renderSupportMessages();
 function showTab(tabId) {
     document.getElementById("supportTab").classList.add("hidden");
     document.getElementById("accountTab").classList.add("hidden");
+    document.getElementById("trialTab").classList.add("hidden");
 
     document.getElementById(tabId).classList.remove("hidden");
 
     document.getElementById("supportBtn").classList.remove("bg-brand-400/10");
     document.getElementById("accountBtn").classList.remove("bg-brand-400/10");
+    document.getElementById("trialBtn").classList.remove("bg-brand-400/10");
 
-    if (tabId === "supportTab") {
-        document.getElementById("supportBtn").classList.add("bg-brand-400/10");
-    } else {
-        document.getElementById("accountBtn").classList.add("bg-brand-400/10");
-    }
+    if (tabId === "supportTab") document.getElementById("supportBtn").classList.add("bg-brand-400/10");
+    else if (tabId === "accountTab") document.getElementById("accountBtn").classList.add("bg-brand-400/10");
+    else if (tabId === "trialTab") document.getElementById("trialBtn").classList.add("bg-brand-400/10");
 }
 
 /* ===== ACCOUNT DATA ===== */
@@ -394,6 +394,92 @@ function onMouseUp() {
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
 }
+/* ===== TRIAL CONTACT ===== */
+const trialContainer = document.getElementById("trialMessages");
 
+async function fetchTrialContacts() {
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(`${API_BASE}/api/trial-contacts`, {
+            credentials: "include",
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (err) {
+        console.error("Error fetching trial contacts:", err);
+        return [];
+    }
+}
+
+async function renderTrialContacts(keyword = "") {
+    trialContainer.innerHTML = "Đang tải...";
+    let contacts = await fetchTrialContacts();
+
+    if (keyword) {
+        contacts = contacts.filter(c => (c.email || '').toLowerCase().includes(keyword));
+    }
+
+    contacts.sort((a, b) => {
+        if (a.status === 'pending' && b.status !== 'pending') return -1;
+        if (a.status !== 'pending' && b.status === 'pending') return 1;
+        return new Date(a.createdAt) - new Date(b.createdAt);
+    });
+
+    const pendingCount = contacts.filter(c => c.status === 'pending').length;
+    const pendingCountEl = document.getElementById('trialPendingCount');
+    if (pendingCountEl) pendingCountEl.textContent = pendingCount;
+
+    if (contacts.length === 0) {
+        trialContainer.innerHTML = `<div class="text-white/50">Không tìm thấy yêu cầu phù hợp.</div>`;
+        return;
+    }
+
+    trialContainer.innerHTML = "";
+    contacts.forEach(c => {
+        const statusText = c.status === "resolved"
+            ? '<span class="text-green-400 text-xs">Đã xử lý</span>'
+            : '<span class="text-yellow-400 text-xs">Chờ xử lý</span>';
+
+        trialContainer.innerHTML += `
+        <div class="border border-white/10 rounded-lg p-3 bg-white/5">
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-brand-400 font-semibold">${c.email || ''}</div>
+                ${statusText}
+            </div>
+            <div class="text-sm font-semibold mt-1">${c.name || ''}</div>
+            <div class="text-sm text-white/80 mt-1">${c.message}</div>
+            <div class="text-xs text-white/40 mt-2">${new Date(c.createdAt).toLocaleString()}</div>
+            ${c.status !== "resolved"
+                ? `<button onclick="markTrialResolved('${c._id}')" class="mt-2 px-3 py-1 text-xs border border-green-400 rounded hover:bg-green-400/20">Đánh dấu hoàn thành</button>`
+                : ""
+            }
+        </div>`;
+    });
+}
+
+async function markTrialResolved(id) {
+    try {
+        const res = await fetch(`${API_BASE}/api/trial-contact/${id}`, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'resolved' })
+        });
+        if (!res.ok) { alert('Không thể cập nhật trạng thái'); return; }
+        renderTrialContacts();
+    } catch (err) {
+        console.error("Error marking trial resolved:", err);
+        alert('Lỗi khi cập nhật trạng thái');
+    }
+}
+
+function handleTrialSearch() {
+    const keyword = document.getElementById("trialSearch").value.toLowerCase();
+    renderTrialContacts(keyword);
+}
 renderSupportMessages();
 renderAccounts();
+renderTrialContacts();

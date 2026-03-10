@@ -36,6 +36,9 @@
       <button onclick="showTab('accountTab')" id="accountBtn" class="btn">
         Quản lý Tài khoản
       </button>
+      <button onclick="showTab('trialTab')" id="trialBtn" class="btn">
+        Liên hệ dùng thử
+      </button>
     </div>
 
     <!-- ================= SUPPORT TAB ================= -->
@@ -49,7 +52,8 @@
             onkeydown="if(event.key==='Enter') handleSupportSearch()">
           <button type="button" onclick="handleSupportSearch()"
             class="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white/50 hover:text-brand-400 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
             </svg>
@@ -77,7 +81,8 @@
         <div class="relative mb-4">
           <button onclick="handleAccountSearch()"
             class="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-brand-400 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
             </svg>
@@ -92,17 +97,26 @@
               <thead class="bg-white/5 sticky top-0">
                 <tr>
                   <!-- Tất cả cột đều ở width nhỏ nhất khi load, kéo handle để mở rộng -->
-                  <th class="p-2 text-left resize-col" style="width: 80px;">License Key<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 100px;">Email<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 60px;">Giới tính<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 80px;">License Key<span
+                      class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 100px;">Email<span class="resize-handle"></span>
+                  </th>
+                  <th class="p-2 text-left resize-col" style="width: 60px;">Giới tính<span class="resize-handle"></span>
+                  </th>
                   <th class="p-2 text-left resize-col" style="width: 80px;">SĐT<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 80px;">Địa chỉ<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 90px;">Trạng thái TK<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 80px;">Ngày tạo TK<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 80px;">Địa chỉ<span class="resize-handle"></span>
+                  </th>
+                  <th class="p-2 text-left resize-col" style="width: 90px;">Trạng thái TK<span
+                      class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 80px;">Ngày tạo TK<span
+                      class="resize-handle"></span></th>
                   <th class="p-2 text-left resize-col" style="width: 60px;">Gói<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 90px;">Trạng thái gói<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 80px;">Ngày mua<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 80px;">Hết hạn<span class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 90px;">Trạng thái gói<span
+                      class="resize-handle"></span></th>
+                  <th class="p-2 text-left resize-col" style="width: 80px;">Ngày mua<span class="resize-handle"></span>
+                  </th>
+                  <th class="p-2 text-left resize-col" style="width: 80px;">Hết hạn<span class="resize-handle"></span>
+                  </th>
                   <th class="p-2 text-left" style="width: 80px;">Hành động</th>
                 </tr>
               </thead>
@@ -114,7 +128,33 @@
       </div>
 
     </div>
+    <!-- ================= TRIAL CONTACT TAB ================= -->
+    <div id="trialTab" class="hidden">
+      <div class="card p-4">
+        <h2 class="text-lg font-semibold mb-3">
+          Liên hệ <span class="text-brand-400">Dùng thử</span>
+        </h2>
+        <div class="relative mb-4">
+          <input id="trialSearch" class="input w-full pl-12 pr-4" placeholder="Tìm theo Email..."
+            onkeydown="if(event.key==='Enter') handleTrialSearch()">
+          <button type="button" onclick="handleTrialSearch()"
+            class="absolute left-3 top-1/2 -translate-y-1/2 z-10 text-white/50 hover:text-brand-400 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+            </svg>
+          </button>
+        </div>
 
+        <div class="mb-4 p-3 bg-white/5 border border-white/10 rounded-lg">
+          <div class="text-sm text-white/70">Số yêu cầu chờ xử lý:
+            <span id="trialPendingCount" class="font-bold text-red-500">0</span>
+          </div>
+        </div>
+        <div id="trialMessages" class="space-y-3"></div>
+      </div>
+    </div>
   </div>
 
   <script src="assets/js/admin.js"></script>
