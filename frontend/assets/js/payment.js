@@ -261,3 +261,26 @@ function showResult(type, license, message) {
       </div>`;
   }
 }
+// ========= Idle Timeout 15 phút =========
+let idleTimer = null;
+const IDLE_TIMEOUT = 15 * 60 * 1000; // 15 phút
+
+function resetIdleTimer() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(async () => {
+    // Tự động logout khi idle 15 phút
+    await fetch(`${API_BASE}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    window.location.reload();
+  }, IDLE_TIMEOUT);
+}
+
+// Các sự kiện được coi là "có hoạt động"
+['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(event => {
+  document.addEventListener(event, resetIdleTimer, { passive: true });
+});
+
+// Bắt đầu đếm ngay khi load trang
+resetIdleTimer();

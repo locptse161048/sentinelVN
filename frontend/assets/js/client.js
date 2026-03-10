@@ -3,10 +3,10 @@ const API_BASE = "https://sentinelvn.onrender.com";
 
 // ⚠️ SECURITY: Helper function để escape HTML entities (prevent XSS)
 function escapeHtml(text) {
-	if (!text) return '';
-	const div = document.createElement('div');
-	div.textContent = text;
-	return div.innerHTML;
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // Tự động mở tab nếu có query ?tab=N
@@ -56,7 +56,7 @@ async function checkSession() {
 async function loadClientInfo() {
   let retries = 0;
   const maxRetries = 2;
-  
+
   while (retries < maxRetries) {
     try {
       const controller = new AbortController();
@@ -66,7 +66,7 @@ async function loadClientInfo() {
         signal: controller.signal
       });
       clearTimeout(timeout);
-      
+
       if (!res.ok) {
         retries++;
         if (retries >= maxRetries) {
@@ -76,21 +76,21 @@ async function loadClientInfo() {
         await new Promise(r => setTimeout(r, 300 * Math.pow(2, retries - 1)));
         continue;
       }
-      
+
       const user = await res.json();
-      
+
       if (user.status === "tạm ngưng") {
         alert("Tài khoản của bạn hiện đã bị tạm ngưng");
         await logout();
         return null;
       }
-      
+
       const accNameEl = document.getElementById("accName");
       const accEmailEl = document.getElementById("accEmail");
       const accGenderEl = document.getElementById("accGender");
       const accPhoneEl = document.getElementById("accPhone");
       const accAddressEl = document.getElementById("accAddress");
-      
+
       if (accNameEl && accEmailEl) {
         accNameEl.textContent = user.fullName || "Chưa cập nhật";
         accEmailEl.textContent = user.email;
@@ -98,7 +98,7 @@ async function loadClientInfo() {
         accPhoneEl.textContent = user.phone || "Chưa cập nhật";
         accAddressEl.textContent = user.address || "Chưa cập nhật";
       }
-      
+
       return user;
     } catch (err) {
       retries++;
@@ -164,13 +164,13 @@ async function renderPaymentHistory() {
       tr.appendChild(createTd(item.plan || 'N/A'));
       tr.appendChild(createTd(item.method || 'N/A'));
       tr.appendChild(createTd(item.orderCode || 'N/A', 'font-mono text-xs'));
-      
+
       const tdTransaction = document.createElement('td');
       tdTransaction.className = 'py-2 px-2 font-mono text-xs max-w-xs truncate';
       tdTransaction.title = item.transactionId || 'N/A';
       tdTransaction.textContent = item.transactionId || 'N/A';
       tr.appendChild(tdTransaction);
-      
+
       tr.appendChild(createTd(createdDate));
 
       paymentTableBody.appendChild(tr);
@@ -227,25 +227,25 @@ async function renderSentMessages() {
       // ⚠️ SECURITY: Create elements safely with textContent
       const headerDiv = document.createElement('div');
       headerDiv.className = 'flex justify-between items-center';
-      
+
       const titleDiv = document.createElement('div');
       titleDiv.className = 'text-brand-400 font-semibold';
       titleDiv.textContent = msg.title;
-      
+
       const statusDiv = document.createElement('div');
       statusDiv.className = 'text-xs';
       statusDiv.innerHTML = statusText; // Safe: statusText is hardcoded literal
-      
+
       headerDiv.appendChild(titleDiv);
       headerDiv.appendChild(statusDiv);
-      
+
       const dateDiv = document.createElement('div');
       dateDiv.className = 'text-white/60 text-xs mb-1';
       dateDiv.textContent = new Date(msg.createdAt).toLocaleString();
-      
+
       const messageDiv = document.createElement('div');
       messageDiv.textContent = msg.message; // Safe: use textContent for user data
-      
+
       li.appendChild(headerDiv);
       li.appendChild(dateDiv);
       li.appendChild(messageDiv);
@@ -358,8 +358,8 @@ async function renderLicenseTable() {
 
       const createdDate = new Date(lic.createdAt).toLocaleDateString('vi-VN');
       const expiresDate = new Date(lic.expiresAt).toLocaleDateString('vi-VN');
-      const statusText = lic.status === 'active' 
-        ? '<span style="color:#86efac">🟢 Hoạt động</span>' 
+      const statusText = lic.status === 'active'
+        ? '<span style="color:#86efac">🟢 Hoạt động</span>'
         : '<span style="color:#fca5a5">🔴 Hết hạn</span>';
       const amountText = `${lic.amount?.toLocaleString('vi-VN') || 'N/A'}đ`;
 
@@ -409,17 +409,17 @@ async function logout() {
     if (!session) {
       return;
     }
-    
+
     if (session.role === "admin") {
       window.location.href = "admin.html";
       return;
     }
-    
+
     await loadClientInfo();
     await renderPaymentHistory();
     await renderLicenseTable();
     await renderSentMessages();
-    
+
     const params = new URLSearchParams(window.location.search);
     const tabFromQuery = params.get('tab');
     if (tabFromQuery) {
@@ -435,3 +435,26 @@ async function logout() {
     // Silent error handling
   }
 })();
+// ========= Idle Timeout 15 phút =========
+let idleTimer = null;
+const IDLE_TIMEOUT = 15 * 60 * 1000; // 15 phút
+
+function resetIdleTimer() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(async () => {
+    // Tự động logout khi idle 15 phút
+    await fetch(`${API_BASE}/api/auth/logout`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    window.location.reload();
+  }, IDLE_TIMEOUT);
+}
+
+// Các sự kiện được coi là "có hoạt động"
+['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(event => {
+  document.addEventListener(event, resetIdleTimer, { passive: true });
+});
+
+// Bắt đầu đếm ngay khi load trang
+resetIdleTimer();

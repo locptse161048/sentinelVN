@@ -334,9 +334,14 @@ form.onsubmit = async e => {
     const nameInput = form.name ? form.name.value.trim() : "";
 
     if (mode === 'signup') {
-        if (!email || !password) { msg.textContent = '⚠️ Vui lòng nhập đầy đủ thông tin.'; return; }
+        if (!email || !password || !nameInput) { msg.textContent = '⚠️ Vui lòng nhập đầy đủ thông tin.'; return; }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = '⚠️ Email không hợp lệ.'; return; }
-        if (password.length < 6) { msg.textContent = '⚠️ Mật khẩu phải tối thiểu 6 ký tự.'; return; }
+        // ⚠️ SECURITY: Password validation must match backend
+        if (password.length < 8) { msg.textContent = '⚠️ Mật khẩu phải tối thiểu 8 ký tự.'; return; }
+        if (!/[A-Z]/.test(password)) { msg.textContent = '⚠️ Mật khẩu phải chứa ít nhất 1 chữ cái viết hoa.'; return; }
+        if (!/[a-z]/.test(password)) { msg.textContent = '⚠️ Mật khẩu phải chứa ít nhất 1 chữ cái viết thường.'; return; }
+        if (!/[0-9]/.test(password)) { msg.textContent = '⚠️ Mật khẩu phải chứa ít nhất 1 chữ số.'; return; }
+        if (nameInput.length > 100) { msg.textContent = '⚠️ Họ và tên quá dài (max 100 ký tự).'; return; }
 
         const gender = form.gender ? form.gender.value : '';
         const phone = form.phone ? form.phone.value.trim() : '';
@@ -346,54 +351,106 @@ form.onsubmit = async e => {
         }
         const address = form.address ? form.address.value.trim() : '';
 
-        const res = await fetch(`${API_BASE}/api/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, fullName: nameInput, gender, phone, address })
-        });
-        if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
-            msg.textContent = data.message || 'Đăng ký thất bại.';
+        try {
+            msg.textContent = '⏳ Đang đăng ký...';
+            console.log('[REGISTER] Signing up with email:', email);
+
+            const res = await fetch(`${API_BASE}/api/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: "include",
+                body: JSON.stringify({ email, password, fullName: nameInput, gender, phone, address })
+            });
+
+            console.log('[REGISTER] Response status:', res.status);
+
+            const data = await res.json().catch((err) => {
+                console.error('[REGISTER] JSON parse error:', err);
+                return {};
+            });
+
+            if (!res.ok) {
+                console.error('[REGISTER] Signup failed:', data);
+                msg.textContent = data.message || 'Đăng ký thất bại.';
+                return;
+            }
+
+            console.log('[REGISTER] Signup successful');
+            msg.textContent = '✅ Đăng ký thành công. Hãy đăng nhập.';
+            switchMode('login');
+            return;
+        } catch (err) {
+            console.error('[REGISTER] Fetch error:', err);
+            msg.textContent = '❌ Lỗi kết nối. Vui lòng kiểm tra internet hoặc thử lại sau.';
+        }
+        return;
+    }
+
+    // ✅ Validate login credentials
+    if (mode === 'login') {
+        if (!email || !password) {
+            msg.textContent = '⚠️ Vui lòng nhập email và mật khẩu.';
             return;
         }
-        msg.textContent = '✅ Đăng ký thành công. Hãy đăng nhập.';
-        switchMode('login');
-        return;
-    }
-
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: "include",
-        body: JSON.stringify({ email, password })
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) { msg.textContent = data.message || 'Đăng nhập thất bại.'; return; }
-
-    if (data.user && data.user.status === 'tạm ngưng') {
-        msg.textContent = '❌ Tài khoản của bạn hiện đã bị tạm ngưng';
-        return;
-    }
-
-    await setLoggedInUI(data.user);  // ← await
-    setupAccountButtons(data.user);
-
-    const authModal = document.getElementById('authModal');
-    authModal.classList.add('hidden');
-    authModal.classList.remove('flex');
-
-    // ⚠️ SECURITY: Delay to ensure session is saved to MongoDB before redirect
-    setTimeout(() => {
-        // ✅ Redirect based on role (không lưu localStorage)
-        if (data.user.role === 'admin') {
-            window.location.href = 'admin.html';
-        } else {
-            window.location.href = 'client.html';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            msg.textContent = '⚠️ Email không hợp lệ.';
+            return;
         }
-        pendingRedirectPlan = null;
-    }, 200);
+    }
+
+    try {
+        msg.textContent = '⏳ Đang đăng nhập...';
+        console.log('[LOGIN] Fetching /api/auth/login with email:', email);
+
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: "include",
+            body: JSON.stringify({ email, password })
+        });
+
+        console.log('[LOGIN] Response status:', res.status);
+
+        const data = await res.json().catch((err) => {
+            console.error('[LOGIN] JSON parse error:', err);
+            return {};
+        });
+
+        if (!res.ok) {
+            console.error('[LOGIN] Login failed:', data);
+            msg.textContent = data.message || 'Đăng nhập thất bại. Vui lòng kiểm tra email và mật khẩu.';
+            return;
+        }
+
+        console.log('[LOGIN] Login successful, user:', data.user);
+
+        if (data.user && data.user.status === 'tạm ngưng') {
+            msg.textContent = '❌ Tài khoản của bạn hiện đã bị tạm ngưng';
+            return;
+        }
+
+        await setLoggedInUI(data.user);  // ← await
+        setupAccountButtons(data.user);
+
+        const authModal = document.getElementById('authModal');
+        authModal.classList.add('hidden');
+        authModal.classList.remove('flex');
+
+        // ⚠️ SECURITY: Delay to ensure session is saved to MongoDB before redirect
+        console.log('[LOGIN] Redirecting to', data.user.role === 'admin' ? 'admin.html' : 'client.html');
+        setTimeout(() => {
+            // ✅ Redirect based on role (không lưu localStorage)
+            if (data.user.role === 'admin') {
+                window.location.href = 'admin.html';
+            } else {
+                window.location.href = 'client.html';
+            }
+            pendingRedirectPlan = null;
+        }, 200);
+    } catch (err) {
+        console.error('[LOGIN] Fetch error:', err);
+        msg.textContent = '❌ Lỗi kết nối. Vui lòng kiểm tra internet hoặc thử lại sau.';
+    }
 };
 
 // ========= Header logout / account buttons =========
