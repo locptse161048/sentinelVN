@@ -446,7 +446,7 @@ form.onsubmit = async e => {
                 window.location.href = 'client.html';
             }
             pendingRedirectPlan = null;
-        }, 200);
+        }, 800);
     } catch (err) {
         console.error('[LOGIN] Fetch error:', err);
         msg.textContent = '❌ Lỗi kết nối. Vui lòng kiểm tra internet hoặc thử lại sau.';
