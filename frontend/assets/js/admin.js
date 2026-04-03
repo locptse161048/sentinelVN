@@ -163,16 +163,22 @@ function showTab(tabId) {
     document.getElementById("supportTab").classList.add("hidden");
     document.getElementById("accountTab").classList.add("hidden");
     document.getElementById("trialTab").classList.add("hidden");
+    document.getElementById("statsTab").classList.add("hidden");
 
     document.getElementById(tabId).classList.remove("hidden");
 
     document.getElementById("supportBtn").classList.remove("bg-brand-400/10");
     document.getElementById("accountBtn").classList.remove("bg-brand-400/10");
     document.getElementById("trialBtn").classList.remove("bg-brand-400/10");
+    document.getElementById("statsBtn").classList.remove("bg-brand-400/10");
 
     if (tabId === "supportTab") document.getElementById("supportBtn").classList.add("bg-brand-400/10");
     else if (tabId === "accountTab") document.getElementById("accountBtn").classList.add("bg-brand-400/10");
     else if (tabId === "trialTab") document.getElementById("trialBtn").classList.add("bg-brand-400/10");
+    else if (tabId === "statsTab") {
+        document.getElementById("statsBtn").classList.add("bg-brand-400/10");
+        renderStats();
+    }
 }
 
 /* ===== ACCOUNT DATA ===== */
@@ -703,3 +709,158 @@ resetIdleTimer();
 renderSupportMessages();
 renderAccounts();
 renderTrialContacts();
+
+/* ===== STATISTICS ===== */
+
+let statsCache = null; // Cache để không fetch lại khi re-render
+
+function formatVND(num) {
+    if (!num) return '0 đ';
+    return num.toLocaleString('vi-VN') + ' đ';
+}
+
+async function fetchStats() {
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(`${API_BASE}/api/admin/stats`, {
+            credentials: 'include',
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (err) {
+        console.error('Error fetching stats:', err);
+        return null;
+    }
+}
+
+function buildStatsRow(cells) {
+    const tr = document.createElement('tr');
+    tr.className = 'border-t border-white/10 hover:bg-white/5';
+    cells.forEach((cell, i) => {
+        const td = document.createElement('td');
+        td.className = i === 0 ? 'p-2 font-semibold' : 'p-2 text-right';
+        td.textContent = cell;
+        tr.appendChild(td);
+    });
+    return tr;
+}
+
+async function renderStats(forceRefresh = false) {
+    if (!statsCache || forceRefresh) {
+        statsCache = await fetchStats();
+    }
+    if (!statsCache) {
+        ['statsMonthlyBody', 'statsQuarterlyBody', 'statsYearlyBody', 'statsOverallBody'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-400">Lỗi tải dữ liệu</td></tr>';
+        });
+        return;
+    }
+
+    const { monthly, quarterly, yearly, overall } = statsCache;
+
+    // Bảng 1: Theo tháng
+    const monthlyBody = document.getElementById('statsMonthlyBody');
+    monthlyBody.innerHTML = '';
+    monthly.forEach(r => {
+        monthlyBody.appendChild(buildStatsRow([
+            r.label,
+            formatVND(r.revenue),
+            r.newUsers,
+            r.newPremium,
+            r.newPro
+        ]));
+    });
+
+    // Bảng 2: Theo quý
+    const quarterlyBody = document.getElementById('statsQuarterlyBody');
+    quarterlyBody.innerHTML = '';
+    quarterly.forEach(r => {
+        quarterlyBody.appendChild(buildStatsRow([
+            r.label,
+            formatVND(r.revenue),
+            r.newUsers,
+            r.newPremium,
+            r.newPro
+        ]));
+    });
+
+    // Bảng 3: Theo năm
+    const yearlyBody = document.getElementById('statsYearlyBody');
+    yearlyBody.innerHTML = '';
+    yearly.forEach(r => {
+        yearlyBody.appendChild(buildStatsRow([
+            r.label,
+            formatVND(r.revenue),
+            r.newUsers,
+            r.newPremium,
+            r.newPro
+        ]));
+    });
+
+    // Bảng 4: Tổng quan
+    const overallBody = document.getElementById('statsOverallBody');
+    overallBody.innerHTML = '';
+    const overallTr = document.createElement('tr');
+    overallTr.className = 'border-t border-white/10';
+    [
+        formatVND(overall.totalRevenue),
+        overall.totalUsers,
+        overall.totalPremiumActive,
+        overall.totalProActive
+    ].forEach(val => {
+        const td = document.createElement('td');
+        td.className = 'p-2 text-right font-bold text-brand-400';
+        td.textContent = val;
+        overallTr.appendChild(td);
+    });
+    overallBody.appendChild(overallTr);
+}
+
+async function exportStatsToExcel() {
+    if (!statsCache) {
+        statsCache = await fetchStats();
+    }
+    if (!statsCache) {
+        alert('Không thể tải dữ liệu thống kê. Vui lòng thử lại.');
+        return;
+    }
+
+    const { monthly, quarterly, yearly, overall } = statsCache;
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Theo tháng
+    const monthlyData = [
+        ['Tháng', 'Doanh thu (VNĐ)', 'Users mới', 'License PREMIUM mới', 'License PRO mới'],
+        ...monthly.map(r => [r.label, r.revenue, r.newUsers, r.newPremium, r.newPro])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(monthlyData), 'Theo Tháng');
+
+    // Sheet 2: Theo quý
+    const quarterlyData = [
+        ['Quý', 'Doanh thu (VNĐ)', 'Users mới', 'License PREMIUM mới', 'License PRO mới'],
+        ...quarterly.map(r => [r.label, r.revenue, r.newUsers, r.newPremium, r.newPro])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(quarterlyData), 'Theo Quý');
+
+    // Sheet 3: Theo năm
+    const yearlyData = [
+        ['Năm', 'Doanh thu (VNĐ)', 'Users mới', 'License PREMIUM mới', 'License PRO mới'],
+        ...yearly.map(r => [r.label, r.revenue, r.newUsers, r.newPremium, r.newPro])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(yearlyData), 'Theo Năm');
+
+    // Sheet 4: Tổng quan
+    const overallData = [
+        ['Tổng doanh thu (VNĐ)', 'Tổng Users', 'PREMIUM còn hạn', 'PRO còn hạn'],
+        [overall.totalRevenue, overall.totalUsers, overall.totalPremiumActive, overall.totalProActive]
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(overallData), 'Tổng Quan');
+
+    // Xuất file
+    const today = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `thong-ke-sentinelvn-${today}.xlsx`);
+}

@@ -181,4 +181,132 @@ router.patch('/client/:clientId/toggle-status', async (req, res) => {
 	}
 });
 
+// ========= STATISTICS =========
+
+// GET /api/admin/stats — Tổng hợp thống kê cho admin dashboard
+router.get('/stats', async (req, res) => {
+	try {
+		const Payment = require('../models/payment');
+		const License = require('../models/license');
+		const now = new Date();
+		const currentYear = now.getFullYear();
+
+		// ── MONTHLY: 12 tháng gần nhất ──────────────────────────────────────
+		const monthlyRevenue = await Payment.aggregate([
+			{ $match: { status: 'success' } },
+			{
+				$group: {
+					_id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
+					revenue: { $sum: '$amount' }
+				}
+			}
+		]);
+
+		const monthlyNewUsers = await Client.aggregate([
+			{ $match: { role: 'client' } },
+			{
+				$group: {
+					_id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
+					count: { $sum: 1 }
+				}
+			}
+		]);
+
+		const monthlyNewLicenses = await License.aggregate([
+			{
+				$group: {
+					_id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' }, plan: '$plan' },
+					count: { $sum: 1 }
+				}
+			}
+		]);
+
+		// Tạo map tra cứu nhanh
+		const revenueMap = {};
+		monthlyRevenue.forEach(r => { revenueMap[`${r._id.year}-${r._id.month}`] = r.revenue; });
+
+		const userMap = {};
+		monthlyNewUsers.forEach(u => { userMap[`${u._id.year}-${u._id.month}`] = u.count; });
+
+		const licenseMap = {};
+		monthlyNewLicenses.forEach(l => {
+			const key = `${l._id.year}-${l._id.month}`;
+			if (!licenseMap[key]) licenseMap[key] = { PREMIUM: 0, PRO: 0 };
+			licenseMap[key][l._id.plan] = l.count;
+		});
+
+		// Sinh 12 tháng gần nhất
+		const monthly = [];
+		for (let i = 11; i >= 0; i--) {
+			const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+			const y = d.getFullYear();
+			const m = d.getMonth() + 1;
+			const key = `${y}-${m}`;
+			monthly.push({
+				label: `${String(m).padStart(2, '0')}/${y}`,
+				year: y,
+				month: m,
+				revenue: revenueMap[key] || 0,
+				newUsers: userMap[key] || 0,
+				newPremium: licenseMap[key]?.PREMIUM || 0,
+				newPro: licenseMap[key]?.PRO || 0,
+			});
+		}
+
+		// ── QUARTERLY: 4 quý của năm hiện tại ──────────────────────────────
+		const quarterly = [1, 2, 3, 4].map(q => {
+			const months = [q * 3 - 2, q * 3 - 1, q * 3]; // Q1=[1,2,3], Q2=[4,5,6],...
+			return {
+				label: `Q${q}/${currentYear}`,
+				quarter: q,
+				year: currentYear,
+				revenue: months.reduce((s, m) => s + (revenueMap[`${currentYear}-${m}`] || 0), 0),
+				newUsers: months.reduce((s, m) => s + (userMap[`${currentYear}-${m}`] || 0), 0),
+				newPremium: months.reduce((s, m) => s + (licenseMap[`${currentYear}-${m}`]?.PREMIUM || 0), 0),
+				newPro: months.reduce((s, m) => s + (licenseMap[`${currentYear}-${m}`]?.PRO || 0), 0),
+			};
+		});
+
+		// ── YEARLY: 5 năm gần nhất ──────────────────────────────────────────
+		const yearly = [];
+		for (let y = currentYear - 4; y <= currentYear; y++) {
+			const months = Array.from({ length: 12 }, (_, i) => i + 1);
+			yearly.push({
+				label: `${y}`,
+				year: y,
+				revenue: months.reduce((s, m) => s + (revenueMap[`${y}-${m}`] || 0), 0),
+				newUsers: months.reduce((s, m) => s + (userMap[`${y}-${m}`] || 0), 0),
+				newPremium: months.reduce((s, m) => s + (licenseMap[`${y}-${m}`]?.PREMIUM || 0), 0),
+				newPro: months.reduce((s, m) => s + (licenseMap[`${y}-${m}`]?.PRO || 0), 0),
+			});
+		}
+
+		// ── OVERALL: Tổng quan toàn thời gian ───────────────────────────────
+		const totalRevenue = await Payment.aggregate([
+			{ $match: { status: 'success' } },
+			{ $group: { _id: null, total: { $sum: '$amount' } } }
+		]);
+		const totalUsers = await Client.countDocuments({ role: 'client' });
+		const totalPremiumActive = await License.countDocuments({
+			plan: 'PREMIUM', status: 'active', expiresAt: { $gt: now }
+		});
+		const totalProActive = await License.countDocuments({
+			plan: 'PRO', status: 'active', expiresAt: { $gt: now }
+		});
+
+		const overall = {
+			totalRevenue: totalRevenue[0]?.total || 0,
+			totalUsers,
+			totalPremiumActive,
+			totalProActive,
+		};
+
+		res.json({ monthly, quarterly, yearly, overall });
+	} catch (err) {
+		console.error('[ADMIN] Error fetching stats:', err.message);
+		res.status(500).json({ message: 'Lỗi server' });
+	}
+});
+
 module.exports = router;
+
