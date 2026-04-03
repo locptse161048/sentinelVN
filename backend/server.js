@@ -93,6 +93,10 @@ const authRoutes = require('./routes/auth.routes');
 app.use('/api/auth', authRoutes);
 console.log("[STARTUP] ✅ /api/auth mounted with rate limiting");
 
+// Extension routes (JWT-based, no cookie needed)
+app.use('/api/ext', require('./routes/ext.routes'));
+console.log("[STARTUP] ✅ /api/ext mounted (JWT auth for VS Code extension)");
+
 app.use('/api/admin', adminMiddleware, require('./routes/admin.routes'));
 console.log("[STARTUP] ✅ /api/admin mounted");
 

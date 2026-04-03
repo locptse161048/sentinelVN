@@ -9,6 +9,8 @@ const ClientSchema = new mongoose.Schema({
 	address: { type: String, default: null },
 	role: { type: String, enum: ['client', 'admin'], default: 'client' },
 	status: { type: String, enum: ['đang hoạt động', 'tạm ngưng'], default: 'đang hoạt động' },
+	scanCount: { type: Number, default: 0 },
+	scanResetDate: { type: Date, default: null },
 	createdAt: { type: Date, default: Date.now },
 });
 
