@@ -8,11 +8,11 @@ const SupportMsg = require('../models/supportMsg');
 // Lấy thông tin tài khoản hiện tại
 router.get('/me', async (req, res) => {
 	try {
-		console.log("[BACKEND] GET /api/client/me - Session userId:", req.session.userId);
+			console.log("[BACKEND] GET /api/client/me - User ID:", req.user._id);
 
-		const user = await Client.findById(req.session.userId);
+			const user = await Client.findById(req.user._id);
 		if (!user) {
-			console.error("[BACKEND] User not found with ID:", req.session.userId);
+				console.error("[BACKEND] User not found with ID:", req.user._id);
 			return res.status(404).json({ message: "User không tồn tại" });
 		}
 
@@ -36,7 +36,7 @@ router.get('/me', async (req, res) => {
 // Lấy thông tin tài khoản (cũ - giữ cho tương thích)
 router.get('/account', async (req, res) => {
 	try {
-		const user = await Client.findById(req.session.userId);
+		const user = await Client.findById(req.user._id);
 		if (!user) {
 			return res.status(404).json({ message: "User không tồn tại" });
 		}
@@ -58,7 +58,7 @@ router.get('/account', async (req, res) => {
 // Lấy gói đã đăng ký
 router.get('/license', async (req, res) => {
 	try {
-		const license = await License.findOne({ clientId: req.session.userId, status: 'active' });
+		const license = await License.findOne({ clientId: req.user._id, status: 'active' });
 		res.json(license || { message: 'Chưa đăng ký gói nào.' });
 	} catch (err) {
 		console.error("Error fetching license:", err);
@@ -69,7 +69,7 @@ router.get('/license', async (req, res) => {
 // Lấy lịch sử chi tiêu
 router.get('/payments', async (req, res) => {
 	try {
-		const payments = await Payment.find({ clientId: req.session.userId }).sort({ createdAt: -1 });
+		const payments = await Payment.find({ clientId: req.user._id }).sort({ createdAt: -1 });
 		res.json(payments);
 	} catch (err) {
 		console.error("Error fetching payments:", err);
@@ -81,9 +81,9 @@ router.get('/payments', async (req, res) => {
 router.post('/support', async (req, res) => {
 	const { title, message } = req.body;
 	try {
-		const user = await Client.findById(req.session.userId);
-		const supportMsg = await SupportMsg.create({
-			client: req.session.userId,
+			const user = await Client.findById(req.user._id);
+			const supportMsg = await SupportMsg.create({
+				client: req.user._id,
 			email: user.email,
 			title,
 			message
@@ -98,7 +98,7 @@ router.post('/support', async (req, res) => {
 // Xem tin đã gửi
 router.get('/support', async (req, res) => {
 	try {
-		const msgs = await SupportMsg.find({ client: req.session.userId });
+		const msgs = await SupportMsg.find({ client: req.user._id });
 		res.json(msgs);
 	} catch (err) {
 		console.error("Error fetching support messages:", err);

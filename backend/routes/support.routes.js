@@ -7,12 +7,12 @@ const Client = require('../models/client');
 router.post('/', async (req, res) => {
 	const { subject, message } = req.body;
 	try {
-		const user = await Client.findById(req.session.userId);
+		const user = await Client.findById(req.user._id);
 		if (!user) {
 			return res.status(404).json({ message: 'User không tồn tại' });
 		}
 		const supportMsg = await SupportMsg.create({ 
-			client: req.session.userId, 
+			client: req.user._id, 
 			email: user.email, 
 			subject: subject || 'Không có tiêu đề',
 			message 
@@ -42,7 +42,7 @@ router.post('/', async (req, res) => {
 // Lấy tin nhắn hỗ trợ của user
 router.get('/', async (req, res) => {
 	try {
-		const msgs = await SupportMsg.find({ client: req.session.userId });
+		const msgs = await SupportMsg.find({ client: req.user._id });
 		res.json(msgs);
 	} catch (err) {
 		console.error("Error fetching support messages:", err);

@@ -109,7 +109,7 @@ function generateOrderCode() {
 router.post('/create', async (req, res) => {
 	try {
 		const { plan } = req.body;
-		const clientId = req.session.userId;
+		const clientId = req.user._id;
 
 		const planConfig = { PREMIUM: 75000};
 		const amount = planConfig[plan] || 75000;
@@ -260,7 +260,7 @@ router.post('/webhook', async (req, res) => {
 router.post('/return', async (req, res) => {
 	try {
 		const { paymentId } = req.body;
-		const clientId = req.session.userId;
+		const clientId = req.user._id;
 
 		const payment = await Payment.findById(paymentId);
 		if (!payment) {
@@ -356,7 +356,7 @@ router.post('/return', async (req, res) => {
 // ========= GET /licenses (Lấy tất cả license của client) =========
 router.get('/licenses', async (req, res) => {
 	try {
-		const clientId = req.session.userId;
+		const clientId = req.user._id;
 		const licenses = await License.find({ clientId }).sort({ createdAt: -1 });
 
 		if (!licenses.length) {
@@ -384,7 +384,7 @@ router.get('/licenses', async (req, res) => {
 
 router.get('/license/active', async (req, res) => {
 	try {
-		const clientId = req.session.userId;
+		const clientId = req.user._id;
 		const license = await License.findOne({
 			clientId,
 			plan: 'PREMIUM',
@@ -415,7 +415,7 @@ router.get('/license/active', async (req, res) => {
 
 router.get('/', async (req, res) => {
 	try {
-		const clientId = req.session.userId;
+		const clientId = req.user._id;
 		const payments = await Payment.find({ clientId }).sort({ createdAt: -1 });
 		res.json(payments);
 	} catch (err) {
