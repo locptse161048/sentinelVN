@@ -91,7 +91,7 @@ async function processLicense(clientId, plan, licenseId, paymentAmount, paymentC
             { new: true }
         );
 
-        console.log(`[PROCESS LICENSE] License updated successfully`);
+        //console.log(`[PROCESS LICENSE] License updated successfully`);
         return updatedLicense;
     }
 }
