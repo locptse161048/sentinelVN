@@ -46,7 +46,7 @@ module.exports = async (req, res, next) => {
 				
 				console.log('[AUTH MIDDLEWARE] ✅ User verified:', user.email);
 				req.user = user;
-				req.session = sessionData;
+				// ⚠️ DON'T overwrite req.session - express-session needs it for touch() and cleanup
 				next();
 			} catch (userErr) {
 				console.error('[AUTH MIDDLEWARE] ❌ User lookup error:', userErr.message);
