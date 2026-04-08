@@ -1,6 +1,27 @@
 /* ===== CONFIG ===== */
 const API_BASE = "https://sentinelvn.onrender.com";
 
+// ✅ Monkey-patch fetch to auto-add Authorization header (if not already present)
+const originalFetch = window.fetch;
+window.fetch = function(...args) {
+  const [resource, config = {}] = args;
+  const token = localStorage.getItem('auth_token');
+  
+  if (token && (!config.headers || !config.headers['Authorization'])) {
+    config.headers = {
+      ...config.headers,
+      'Authorization': `Bearer ${token}`
+    };
+  }
+  
+  // Remove credentials since we're using headers now
+  if (config.credentials) {
+    delete config.credentials;
+  }
+  
+  return originalFetch.apply(this, [resource, config]);
+};
+
 // ⚠️ SECURITY: Helper function để escape HTML entities (prevent XSS)
 function escapeHtml(text) {
   if (!text) return '';
@@ -16,11 +37,18 @@ async function checkSession() {
 
   while (retries < maxRetries) {
     try {
+      // 🔑 Get token from localStorage
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        console.log('[CLIENT] No token in localStorage');
+        return null;
+      }
+      
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
 
+      // ✅ Token will be auto-added by fetch monkey-patch
       const res = await fetch(`${API_BASE}/api/auth/session`, {
-        credentials: "include",
         signal: controller.signal
       });
 
@@ -28,6 +56,7 @@ async function checkSession() {
 
       if (res.ok) {
         const user = await res.json();
+        console.log('[CLIENT] Session verified:', user.email);
         return user;
       }
 
@@ -390,11 +419,12 @@ function showTab(n) {
 
 /* ===== LOGOUT ===== */
 async function logout() {
+  // Token will be auto-added by fetch monkey-patch
   await fetch(`${API_BASE}/api/auth/logout`, {
-    method: "POST",
-    credentials: "include"
+    method: "POST"
   });
 
+  localStorage.removeItem('auth_token');
   window.location.href = "index.html";
 }
 

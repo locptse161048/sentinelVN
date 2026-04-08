@@ -1,25 +1,63 @@
 document.getElementById('year').textContent = new Date().getFullYear();
 const API_BASE = 'https://sentinelvn.onrender.com';
 
+// ✅ Monkey-patch fetch to auto-add Authorization header (if not already present)
+const originalFetch = window.fetch;
+window.fetch = function(...args) {
+    const [resource, config = {}] = args;
+    const token = localStorage.getItem('auth_token');
+    
+    if (token && (!config.headers || !config.headers['Authorization'])) {
+        config.headers = {
+            ...config.headers,
+            'Authorization': `Bearer ${token}`
+        };
+    }
+    
+    // Remove credentials since we're using headers now
+    if (config.credentials) {
+        delete config.credentials;
+    }
+    
+    return originalFetch.apply(this, [resource, config]);
+};
+
 // ========= Auth session check on page load =========
 document.addEventListener("DOMContentLoaded", async () => {
     try {
+        // 🔑 Get token from localStorage
+        const token = localStorage.getItem('auth_token');
+        console.log('[SESSION CHECK] Token from localStorage:', token ? token.substring(0, 30) + '...' : 'missing');
+        
+        if (!token) {
+            console.log('[SESSION CHECK] No token, user not logged in');
+            setLoggedOutUI();
+            return;
+        }
+        
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);
 
+        // ✅ Send token via Authorization header
         const res = await fetch(`${API_BASE}/api/auth/session`, {
-            credentials: "include",
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
             signal: controller.signal
         });
 
         clearTimeout(timeout);
 
         if (!res.ok) {
+            console.warn('[SESSION CHECK] Session validation failed:', res.status);
+            localStorage.removeItem('auth_token');  // Clear invalid token
             setLoggedOutUI();
             return;
         }
+        
         const user = await res.json();
-        await setLoggedInUI(user);  // ← await vì hàm async
+        console.log('[SESSION CHECK] User verified:', user.email, 'Role:', user.role);
+        await setLoggedInUI(user);
         setupAccountButtons(user);
     } catch (err) {
         console.warn("Session check failed on page load:", err.message);
@@ -32,6 +70,21 @@ const $ = (q, root = document) => root.querySelector(q);
 const $$ = (q, root = document) => Array.from(root.querySelectorAll(q));
 const fmtDate = ts => new Date(ts).toLocaleDateString('vi-VN');
 const addDays = (ts, days) => new Date(ts + days * 24 * 3600 * 1000).getTime();
+
+// ✅ Helper function to add Authorization header automatically
+function getAuthHeaders(customHeaders = {}) {
+    const token = localStorage.getItem('auth_token');
+    const headers = {
+        'Content-Type': 'application/json',
+        ...customHeaders
+    };
+    
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
+}
 
 function genKey(plan = 'PREMIUM') {
     function randBlock(len) {
@@ -423,6 +476,13 @@ form.onsubmit = async e => {
         }
 
         console.log('[LOGIN] Login successful, user:', data.user);
+        console.log('[LOGIN] Token received:', data.token ? data.token.substring(0, 30) + '...' : 'missing');
+
+        // ✅ Save token to localStorage for cross-origin header-based auth
+        if (data.token) {
+            localStorage.setItem('auth_token', data.token);
+            console.log('[LOGIN] ✅ Token saved to localStorage');
+        }
 
         if (data.user && data.user.status === 'tạm ngưng') {
             msg.textContent = '❌ Tài khoản của bạn hiện đã bị tạm ngưng';
@@ -436,30 +496,12 @@ form.onsubmit = async e => {
         authModal.classList.add('hidden');
         authModal.classList.remove('flex');
 
-        // ⚠️ SECURITY: Delay to ensure session is saved to MongoDB before redirect
+        // ✅ Redirect immediately (token is in localStorage)
         console.log('[LOGIN] Redirecting to', data.user.role === 'admin' ? 'admin.html' : 'client.html');
-        // Verify session trước khi redirect
-        let verified = false;
-        for (let i = 0; i < 5; i++) {
-            await new Promise(r => setTimeout(r, 400));
-            try {
-                const check = await fetch(`${API_BASE}/api/auth/session`, {
-                    credentials: 'include'
-                });
-                if (check.ok) {
-                    verified = true;
-                    break;
-                }
-            } catch (e) { }
-        }
-        if (verified) {
-            if (data.user.role === 'admin') {
-                window.location.href = 'admin.html';
-            } else {
-                window.location.href = 'client.html';
-            }
+        if (data.user.role === 'admin') {
+            window.location.href = 'admin.html';
         } else {
-            msg.textContent = '❌ Không thể xác nhận session. Vui lòng thử lại.';
+            window.location.href = 'client.html';
         }
         pendingRedirectPlan = null;
     } catch (err) {
@@ -490,10 +532,11 @@ function setupAccountButtons(user) {
     openAuthBtn_m?.addEventListener("click", goAccount);
 
     const doLogout = async () => {
+        // Token will be auto-added via fetch monkey-patch
         await fetch(`${API_BASE}/api/auth/logout`, {
-            method: "POST",
-            credentials: "include"
+            method: "POST"
         });
+        localStorage.removeItem('auth_token');
         window.location.reload();
     };
 

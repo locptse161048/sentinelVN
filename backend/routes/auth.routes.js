@@ -141,27 +141,33 @@ router.post('/login', getMiddleware, async (req, res) => {
 		console.log("[AUTH LOGIN] ▶ Setting session for:", user.email);
 		console.log("[AUTH LOGIN] ▶ SessionID:", req.sessionID);
 		console.log("[AUTH LOGIN] ▶ User role:", user.role);
+		console.log("[AUTH LOGIN] ▶ Session before save:", {
+			userId: req.session.userId,
+			email: req.session.email,
+			role: req.session.role
+		});
 
-		// ✅ Improved: Wait for session save with proper error handling
+		// ✅ Save session to MongoDB
 		req.session.save((err) => {
 			if (err) {
 				console.error("[AUTH LOGIN] ❌ Session save error:", err.message);
 				return res.status(500).json({ message: "Lỗi lưu session" });
 			}
 			
-			console.log("[AUTH LOGIN] ✅ Session saved successfully for:", user.email);
-			console.log("[AUTH LOGIN] ✅ Session ID:", req.sessionID);
+			console.log("[AUTH LOGIN] ✅ Session saved to MongoDB for:", user.email);
+			console.log("[AUTH LOGIN] ✅ Token (sessionID):", req.sessionID);
 			
-			// ✅ Return comprehensive response
+			// ✅ Return token for header-based auth (not cookie-based)
+			// Frontend will send: Authorization: Bearer <token>
 			res.json({
 				message: "Đăng nhập thành công",
+				token: req.sessionID,
 				user: {
 					_id: user._id,
 					email: user.email,
 					role: user.role,
 					fullName: user.fullName
-				},
-				sessionId: req.sessionID
+				}
 			});
 		});
 	} catch (err) {
@@ -179,35 +185,66 @@ router.post('/logout', (req, res) => {
 	});
 });
 
-// Kiểm tra session
+// Kiểm tra session via Authorization header
+// Frontend sends: Authorization: Bearer <token>
 router.get('/session', async (req, res) => {
-	console.log("[AUTH SESSION] ▶ Checking session...");
-	console.log("[AUTH SESSION] ▶ SessionID:", req.sessionID);
-	console.log("[AUTH SESSION] ▶ Session object:", JSON.stringify(req.session, null, 2));
-	
-	if (!req.session || !req.session.userId) {
-		console.warn("[AUTH SESSION] ❌ No userId in session");
-		return res.status(401).json({ message: "Chưa đăng nhập" });
-	}
-	
 	try {
-		const user = await Client.findById(req.session.userId);
+		// 🔑 Extract token from Authorization header
+		const authHeader = req.get('Authorization');
+		const token = authHeader && authHeader.startsWith('Bearer ') 
+			? authHeader.substring(7)
+			: null;
 		
-		if (!user) {
-			console.warn("[AUTH SESSION] ❌ User not found in DB");
-			return res.status(401).json({ message: "User không tồn tại" });
+		console.log("[AUTH SESSION] ▶ Checking session via Authorization header");
+		console.log("[AUTH SESSION] ▶ Token received:", token ? token.substring(0, 20) + '...' : 'missing');
+		
+		if (!token) {
+			console.warn("[AUTH SESSION] ❌ No token in Authorization header");
+			return res.status(401).json({ message: "Chưa đăng nhập" });
 		}
 		
-		console.log("[AUTH SESSION] ✅ User found:", user.email, "Role:", user.role);
+		// ✅ Get session store from app locals
+		const sessionStore = req.app.locals.sessionStore;
+		if (!sessionStore) {
+			console.error("[AUTH SESSION] ❌ Session store not available");
+			return res.status(500).json({ message: "Lỗi server" });
+		}
 		
-		res.json({
-			_id: user._id,
-			email: user.email,
-			role: user.role,
-			fullName: user.fullName,
-			gender: user.gender,
-			phone: user.phone,
-			address: user.address
+		// Query MongoDB session store
+		sessionStore.get(token, async (err, sessionData) => {
+			if (err) {
+				console.error("[AUTH SESSION] ❌ Session store query error:", err.message);
+				return res.status(401).json({ message: "Phiên không hợp lệ" });
+			}
+			
+			if (!sessionData || !sessionData.userId) {
+				console.warn("[AUTH SESSION] ❌ No session found for token");
+				return res.status(401).json({ message: "Chưa đăng nhập" });
+			}
+			
+			try {
+				const user = await Client.findById(sessionData.userId);
+				
+				if (!user) {
+					console.warn("[AUTH SESSION] ❌ User not found in DB");
+					return res.status(401).json({ message: "User không tồn tại" });
+				}
+				
+				console.log("[AUTH SESSION] ✅ Session verified for:", user.email, "Role:", user.role);
+				
+				res.json({
+					_id: user._id,
+					email: user.email,
+					role: user.role,
+					fullName: user.fullName,
+					gender: user.gender,
+					phone: user.phone,
+					address: user.address
+				});
+			} catch (userErr) {
+				console.error("[AUTH SESSION] ❌ User lookup error:", userErr.message);
+				res.status(500).json({ message: "Lỗi server" });
+			}
 		});
 	} catch (err) {
 		console.error("[AUTH SESSION] ❌ Error:", err.message);

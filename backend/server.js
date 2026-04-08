@@ -13,18 +13,27 @@ const MongoStore = require('connect-mongo').default;
 const rateLimit = require('express-rate-limit');
 const app = express();
 
+// 🔍 DEBUG: Check environment
+// In production, allow all origins temporarily for debugging cookie/session issues
+const isDevelopment = process.env.NODE_ENV !== 'production' || process.env.ALLOW_ALL_ORIGINS === 'true';
+console.log(`[STARTUP] NODE_ENV: "${process.env.NODE_ENV}"`);
+console.log(`[STARTUP] isDevelopment: ${isDevelopment} (will allow all origins)`);
+console.log(`[STARTUP] ALLOW_ALL_ORIGINS: ${process.env.ALLOW_ALL_ORIGINS || 'not set'}`);
+
 // Create HTTP server for socket.io
 const httpServer = http.createServer(app);
 // CORS configuration - allow more origins in development
 const allowedOrigins = [
-  "https://sentinelvn-one.vercel.app",
+  "https://sentinelvn-one.vercel.app",   // Main Vercel frontend
+  "https://sentinelvn.vercel.app",       // Alternative Vercel domain
+  "https://*.vercel.app",                // Any Vercel preview deployment
   "http://localhost:5500",
   "http://127.0.0.1:5500",
   "http://localhost:3000",
   "http://127.0.0.1:3000",
   "http://localhost:8000",
   "http://127.0.0.1:8000",
-  "http://localhost:5173", // Vite
+  "http://localhost:5173",
   "http://127.0.0.1:5173",
 ];
 
@@ -32,22 +41,49 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, file://, or curl)
     if (!origin) {
+      console.log('[CORS] ✅ No origin (mobile/curl)');
       return callback(null, true);
     }
-    // ✅ Allow localhost AND production Vercel domain
-    if (origin.includes('localhost') || 
-        origin.includes('127.0.0.1') || 
-        origin.includes('vercel.app') ||
-        allowedOrigins.includes(origin)) {
+    
+    // 🔍 DEBUG: Log all origins attempting to access
+    console.log(`[CORS] 🔍 Incoming origin: ${origin}`);
+    
+    // ✅ In development, allow ALL origins (temporary for debugging)
+    if (isDevelopment) {
+      console.log(`[CORS] 🟡 Development mode: allowing all origins`);
       return callback(null, true);
     }
-    // Log suspicious origins
-    console.warn('[CORS] Rejected origin:', origin);
+    
+    // ✅ Production: Strict origin checking
+    // Check against allowed list
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed.includes('*')) {
+        // Handle wildcard like https://*.vercel.app
+        const pattern = allowed.replace('*.', '.*\\.').replace(/\./g, '\\.');
+        return new RegExp(`^https://${pattern}$`).test(origin);
+      }
+      return allowed === origin;
+    });
+    
+    // Also allow Vercel and Render domains dynamically
+    const isVercelOrRender = origin.includes('vercel.app') || 
+                             origin.includes('render.com') ||
+                             origin.includes('github.dev');
+    
+    if (isAllowed || isVercelOrRender) {
+      console.log(`[CORS] ✅ Origin allowed: ${origin}`);
+      return callback(null, true);
+    }
+    
+    // ⚠️ Log rejected origins for debugging
+    console.warn('[CORS] ❌ Rejected origin:', origin);
+    console.warn('[CORS] ❌ Allowed list:', allowedOrigins);
     callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Set-Cookie']
 }));
 
 // ✅ Socket.io configuration with CORS support
@@ -55,9 +91,17 @@ const io = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
+      
+      // ✅ In development, allow ALL origins
+      if (isDevelopment) {
+        console.log(`[SOCKET.IO CORS] 🟡 Development mode: allowing origin: ${origin}`);
+        return callback(null, true);
+      }
+      
       if (origin.includes('localhost') || 
           origin.includes('127.0.0.1') || 
           origin.includes('vercel.app') ||
+          origin.includes('render.com') ||
           allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
@@ -124,6 +168,10 @@ app.use(session({
   cookie: cookieSettings
 }));
 
+// ✅ Export session store to app.locals so routes can access it
+app.locals.sessionStore = sessionStore;
+console.log('[STARTUP] ✅ Session store exported to app.locals');
+
 // ⚠️ SECURITY: Rate limiting on auth endpoints (prevent brute force)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -143,14 +191,44 @@ const registerLimiter = rateLimit({
 
 app.use(bodyParser.json());
 
+// ✅ Handle OPTIONS preflight requests explicitly
+app.options('*', cors({
+  origin: (origin, callback) => {
+    if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1') || 
+        origin.includes('vercel.app') || origin.includes('render.com') || 
+        isDevelopment) {
+      return callback(null, true);
+    }
+    callback(null, false);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Set-Cookie']
+}));
+
+// ✅ Ensure CORS credentials header is set on all responses
+app.use((req, res, next) => {
+  const origin = req.get('origin');
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie, Content-Type');
+  }
+  next();
+});
+
 // ✅ Debug middleware to log session info for every request
 app.use((req, res, next) => {
   if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/admin')) {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-    console.log(`  SessionID: ${req.sessionID}`);
-    console.log(`  Session.userId: ${req.session?.userId || 'undefined'}`);
-    console.log(`  Session.role: ${req.session?.role || 'undefined'}`);
-    console.log(`  Cookies:`, req.headers.cookie ? 'present' : 'missing');
+    console.log(`\n[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    console.log(`  🌐 Origin: ${req.get('origin')}`);
+    console.log(`  🔗 Host: ${req.get('host')}`);
+    console.log(`  📗 SessionID: ${req.sessionID}`);
+    console.log(`  💾 Session.userId: ${req.session?.userId || 'undefined'}`);
+    console.log(`  💾 Session.role: ${req.session?.role || 'undefined'}`);
+    console.log(`  🍪 Request Cookies:`, req.headers.cookie ? req.headers.cookie.substring(0, 50) + '...' : 'MISSING ⚠️');
+    console.log(`  📝 Request Headers keys:`, Object.keys(req.headers).join(', '));
   }
   next();
 });

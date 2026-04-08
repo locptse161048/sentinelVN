@@ -5,6 +5,27 @@ let currentPlan = null;
 let pollingInterval = null;
 let countdownInterval = null;
 
+// ✅ Monkey-patch fetch to auto-add Authorization header, if not already present
+const originalFetch = window.fetch;
+window.fetch = function(...args) {
+  const [resource, config = {}] = args;
+  const token = localStorage.getItem('auth_token');
+  
+  if (token && (!config.headers || !config.headers['Authorization'])) {
+    config.headers = {
+      ...config.headers,
+      'Authorization': `Bearer ${token}`
+    };
+  }
+  
+  // Remove credentials since we're using headers now
+  if (config.credentials) {
+    delete config.credentials;
+  }
+  
+  return originalFetch.apply(this, [resource, config]);
+};
+
 // ========= Kiểm tra nếu PayOS redirect về sau thanh toán =========
 window.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);

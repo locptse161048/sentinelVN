@@ -1,8 +1,44 @@
-// ✅ Không dùng localStorage - Kiểm tra session qua API
+// ✅ Sử dụng token-based auth via Authorization header
 const API_BASE = 'https://sentinelvn.onrender.com';
 
 // ✅ WebSocket initialization
 let socket = null;
+
+// ✅ Helper function to add Authorization header automatically
+function getAuthHeaders(customHeaders = {}) {
+    const token = localStorage.getItem('auth_token');
+    const headers = {
+        'Content-Type': 'application/json',
+        ...customHeaders
+    };
+    
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
+}
+
+// ✅ Monkey-patch fetch to auto-add Authorization header (if not already present)
+const originalFetch = window.fetch;
+window.fetch = function(...args) {
+    const [resource, config = {}] = args;
+    const token = localStorage.getItem('auth_token');
+    
+    if (token && (!config.headers || !config.headers['Authorization'])) {
+        config.headers = {
+            ...config.headers,
+            'Authorization': `Bearer ${token}`
+        };
+    }
+    
+    // Remove credentials since we're using headers now
+    if (config.credentials) {
+        delete config.credentials;
+    }
+    
+    return originalFetch(resource, config);
+};
 
 // ⚠️ SECURITY: Helper function để escape HTML entities (prevent XSS)
 function escapeHtml(text) {
@@ -13,10 +49,11 @@ function escapeHtml(text) {
 }
 
 function logout() {
+    // Note: fetch auto-injection will add token header
     fetch(`${API_BASE}/api/auth/logout`, {
-        method: "POST",
-        credentials: "include"
+        method: "POST"
     }).then(() => {
+        localStorage.removeItem('auth_token');
         if (socket) socket.disconnect();
         window.location.href = '/index.html';
     });
@@ -27,12 +64,22 @@ function logout() {
 document.addEventListener("DOMContentLoaded", async () => {
     console.log('[ADMIN] Page loaded, checking session...');
     try {
+        // 🔑 Get token from localStorage
+        const token = localStorage.getItem('auth_token');
+        console.log('[ADMIN] Token from localStorage:', token ? token.substring(0, 30) + '...' : 'missing');
+        
+        if (!token) {
+            console.log('[ADMIN] No token, redirecting to index...');
+            window.location.href = "index.html";
+            return;
+        }
+        
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000); // Increased from 5s to 10s
+        const timeout = setTimeout(() => controller.abort(), 10000);
 
-        // ✅ SECURITY: Use /api/auth/session (same endpoint as login) to avoid mismatch
+        // ✅ Send token via Authorization header
         const res = await fetch(`${API_BASE}/api/auth/session`, {
-            credentials: "include",
+            headers: getAuthHeaders(),
             signal: controller.signal,
             method: "GET"
         });
@@ -41,21 +88,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (!res.ok) {
             console.error('[AUTH] Session check failed:', res.status, res.statusText);
-            // Check if it's a 401 (unauthorized) or other error
-            if (res.status === 401) {
-                console.log('[AUTH] User not authorized, redirecting to index...');
-            } else {
-                console.log('[AUTH] Server error, but checking if session exists via cookie...');
-            }
+            localStorage.removeItem('auth_token');
             window.location.href = "index.html";
             return;
         }
 
         const user = await res.json();
-        console.log('[AUTH] Response received:', user);
+        console.log('[AUTH] User verified:', user.email, 'Role:', user.role);
 
         if (user.role !== 'admin') {
             console.error('[AUTH] User is not admin:', user.role);
+            localStorage.removeItem('auth_token');
             window.location.href = "index.html";
             return;
         }
