@@ -133,27 +133,39 @@ router.post('/login', getMiddleware, async (req, res) => {
 		const match = await bcrypt.compare(password, user.passwordHash);
 		if (!match) return res.status(400).json({ message: 'Sai email hoặc mật khẩu' });
 		
+		// ✅ Set session BEFORE saving
 		req.session.userId = user._id;
-		console.log("[AUTH LOGIN] Session userId set:", req.session.userId);
-		console.log("[AUTH LOGIN] User role:", user.role);
+		req.session.email = user.email;
+		req.session.role = user.role;
+		
+		console.log("[AUTH LOGIN] ▶ Setting session for:", user.email);
+		console.log("[AUTH LOGIN] ▶ SessionID:", req.sessionID);
+		console.log("[AUTH LOGIN] ▶ User role:", user.role);
 
-		req.session.save(err => {
+		// ✅ Improved: Wait for session save with proper error handling
+		req.session.save((err) => {
 			if (err) {
-				console.error("[AUTH LOGIN] Session save error:", err);
-				return res.status(500).json({ message: "Session error" });
+				console.error("[AUTH LOGIN] ❌ Session save error:", err.message);
+				return res.status(500).json({ message: "Lỗi lưu session" });
 			}
-			console.log("[AUTH LOGIN] Session saved successfully to MongoDB");
+			
+			console.log("[AUTH LOGIN] ✅ Session saved successfully for:", user.email);
+			console.log("[AUTH LOGIN] ✅ Session ID:", req.sessionID);
+			
+			// ✅ Return comprehensive response
 			res.json({
 				message: "Đăng nhập thành công",
 				user: {
+					_id: user._id,
 					email: user.email,
 					role: user.role,
 					fullName: user.fullName
-				}
+				},
+				sessionId: req.sessionID
 			});
 		});
 	} catch (err) {
-		console.error("[AUTH LOGIN] Server error:", err);
+		console.error("[AUTH LOGIN] ❌ Server error:", err.message);
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
@@ -169,30 +181,38 @@ router.post('/logout', (req, res) => {
 
 // Kiểm tra session
 router.get('/session', async (req, res) => {
-	console.log("[AUTH SESSION] Checking session...");
-	console.log("[AUTH SESSION] req.session:", req.session);
-	console.log("[AUTH SESSION] req.sessionID:", req.sessionID);
+	console.log("[AUTH SESSION] ▶ Checking session...");
+	console.log("[AUTH SESSION] ▶ SessionID:", req.sessionID);
+	console.log("[AUTH SESSION] ▶ Session object:", JSON.stringify(req.session, null, 2));
 	
-	if (!req.session.userId) {
-		console.log("[AUTH SESSION] No userId in session, returning 401");
+	if (!req.session || !req.session.userId) {
+		console.warn("[AUTH SESSION] ❌ No userId in session");
 		return res.status(401).json({ message: "Chưa đăng nhập" });
 	}
 	
-	const user = await Client.findById(req.session.userId);
-	if (!user) {
-		console.log("[AUTH SESSION] User not found in DB, returning 401");
-		return res.status(401).json({ message: "User không tồn tại" });
+	try {
+		const user = await Client.findById(req.session.userId);
+		
+		if (!user) {
+			console.warn("[AUTH SESSION] ❌ User not found in DB");
+			return res.status(401).json({ message: "User không tồn tại" });
+		}
+		
+		console.log("[AUTH SESSION] ✅ User found:", user.email, "Role:", user.role);
+		
+		res.json({
+			_id: user._id,
+			email: user.email,
+			role: user.role,
+			fullName: user.fullName,
+			gender: user.gender,
+			phone: user.phone,
+			address: user.address
+		});
+	} catch (err) {
+		console.error("[AUTH SESSION] ❌ Error:", err.message);
+		res.status(500).json({ message: "Lỗi server" });
 	}
-	
-	console.log("[AUTH SESSION] User found:", user.email, "Role:", user.role);
-	res.json({
-		email: user.email,
-		role: user.role,
-		fullName: user.fullName,
-		gender: user.gender,
-		phone: user.phone,
-		address: user.address
-	});
 });
 
 // Lấy thông tin người dùng

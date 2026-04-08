@@ -99,14 +99,28 @@ if (!isLocalhost) {
   console.log('[STARTUP] ✅ Development cookie config (non-secure + sameSite:lax)');
 }
 
+// ✅ Initialize MongoDB session store BEFORE app.use()
+let sessionStore;
+try {
+  sessionStore = MongoStore.create({
+    mongoUrl: process.env.MONGO_URI || 'mongodb://localhost:27017/sentinelVN',
+    touchAfter: 24 * 3600, // Lazy session update (every 24h)
+    stringify: false
+  });
+  sessionStore.on('error', (err) => {
+    console.error('[SESSION STORE] Error:', err);
+  });
+  console.log('[STARTUP] ✅ MongoDB session store initialized');
+} catch (err) {
+  console.error('[STARTUP] ❌ Failed to initialize session store:', err);
+}
+
 app.use(session({
   name: "sentinel_session",
   secret: process.env.SESSION_SECRET || "supersecret",
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI
-  }),
+  store: sessionStore,
   cookie: cookieSettings
 }));
 
@@ -128,6 +142,18 @@ const registerLimiter = rateLimit({
 });
 
 app.use(bodyParser.json());
+
+// ✅ Debug middleware to log session info for every request
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/admin')) {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    console.log(`  SessionID: ${req.sessionID}`);
+    console.log(`  Session.userId: ${req.session?.userId || 'undefined'}`);
+    console.log(`  Session.role: ${req.session?.role || 'undefined'}`);
+    console.log(`  Cookies:`, req.headers.cookie ? 'present' : 'missing');
+  }
+  next();
+});
 
 // Database
 const db = require('./config/db');
