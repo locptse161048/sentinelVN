@@ -1,6 +1,9 @@
 // ✅ Không dùng localStorage - Kiểm tra session qua API
 const API_BASE = 'https://sentinelvn.onrender.com';
 
+// ✅ WebSocket initialization
+let socket = null;
+
 // ⚠️ SECURITY: Helper function để escape HTML entities (prevent XSS)
 function escapeHtml(text) {
     if (!text) return '';
@@ -14,6 +17,7 @@ function logout() {
         method: "POST",
         credentials: "include"
     }).then(() => {
+        if (socket) socket.disconnect();
         window.location.href = '/index.html';
     });
 }
@@ -43,11 +47,129 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (user.role !== 'admin') {
             window.location.href = "index.html";
         }
+
+        // ✅ Initialize WebSocket connection after session verification
+        initializeWebSocket();
     } catch (err) {
         console.error("Admin session check failed:", err.message);
         window.location.href = "index.html";
     }
 });
+
+/* ===== WEBSOCKET CONNECTION ===== */
+function initializeWebSocket() {
+    console.log('[SOCKET] Initializing WebSocket connection...');
+    
+    // Dynamically add socket.io client script if not already loaded
+    if (!window.io) {
+        const script = document.createElement('script');
+        script.src = `${API_BASE}/socket.io/socket.io.js`;
+        script.onload = () => {
+            connectWebSocket();
+        };
+        script.onerror = () => {
+            console.warn('[SOCKET] Failed to load socket.io client, retrying with CDN...');
+            const cdnScript = document.createElement('script');
+            cdnScript.src = 'https://cdn.socket.io/4.5.4/socket.io.min.js';
+            cdnScript.onload = connectWebSocket;
+            document.head.appendChild(cdnScript);
+        };
+        document.head.appendChild(script);
+    } else {
+        connectWebSocket();
+    }
+}
+
+function connectWebSocket() {
+    if (socket && socket.connected) {
+        console.log('[SOCKET] Already connected');
+        return;
+    }
+
+    try {
+        socket = io(API_BASE, {
+            withCredentials: true,
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: 5
+        });
+
+        socket.on('connect', () => {
+            console.log('[SOCKET] Connected to server ✅');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('[SOCKET] Disconnected from server');
+        });
+
+        // ✅ Listen for new client registration
+        socket.on('new_client_registered', (newClient) => {
+            console.log('[SOCKET] Received new_client_registered event:', newClient);
+            
+            // Only update if we're on the account tab
+            const accountTab = document.getElementById('accountTab');
+            if (!accountTab.classList.contains('hidden')) {
+                // Refetch and re-render accounts to include the new client
+                refreshAccountsList();
+            }
+            
+            // Show a notification
+            showNotification(`🎉 Tài khoản mới: ${newClient.email}`);
+        });
+
+        // ✅ Listen for new support messages
+        socket.on('new_support_message', (newMessage) => {
+            console.log('[SOCKET] Received new_support_message event:', newMessage);
+            
+            // Only update if we're on the support tab
+            const supportTab = document.getElementById('supportTab');
+            if (!supportTab.classList.contains('hidden')) {
+                // Refetch and re-render support messages
+                refreshSupportMessages();
+            }
+            
+            // Show a notification
+            showNotification(`💬 Tin nhắn mới từ: ${newMessage.email}`);
+        });
+
+        socket.on('error', (error) => {
+            console.error('[SOCKET] Socket error:', error);
+        });
+
+    } catch (err) {
+        console.error('[SOCKET] Connection error:', err);
+    }
+}
+
+/* ===== NOTIFICATION HELPER ===== */
+function showNotification(message) {
+    // Create notification element
+    const notif = document.createElement('div');
+    notif.className = 'fixed top-4 right-4 bg-brand-400 text-white px-4 py-3 rounded-lg shadow-lg z-50 animate-slideIn';
+    notif.style.animation = 'slideIn 0.3s ease-out';
+    notif.textContent = message;
+    document.body.appendChild(notif);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notif.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => notif.remove(), 300);
+    }, 3000);
+}
+
+/* ===== REFRESH FUNCTIONS FOR WEBSOCKET UPDATES ===== */
+function refreshAccountsList() {
+    console.log('[ADMIN] Refreshing accounts list...');
+    const keyword = document.getElementById("accountSearch").value.toLowerCase();
+    renderAccounts(keyword);
+}
+
+function refreshSupportMessages() {
+    console.log('[ADMIN] Refreshing support messages...');
+    const keyword = document.getElementById("supportSearch").value.toLowerCase();
+    renderSupportMessages(keyword);
+}
 
 const supportContainer = document.getElementById("supportMessages");
 

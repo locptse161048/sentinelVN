@@ -17,6 +17,21 @@ router.post('/', async (req, res) => {
 			subject: subject || 'Không có tiêu đề',
 			message 
 		});
+		
+		// ✅ Emit socket event to notify admin of new support message
+		const io = req.app.locals.io;
+		if (io) {
+			io.emit('new_support_message', {
+				_id: supportMsg._id,
+				email: supportMsg.email,
+				title: supportMsg.subject,
+				message: supportMsg.message,
+				status: supportMsg.status || 'pending',
+				createdAt: supportMsg.createdAt
+			});
+			console.log('[SOCKET] Emitted new_support_message event');
+		}
+		
 		res.json({ message: 'Đã gửi hỗ trợ', supportMsg });
 	} catch (err) {
 		console.error("Error creating support message:", err);

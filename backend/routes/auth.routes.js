@@ -87,6 +87,25 @@ router.post('/register', getMiddleware, async (req, res) => {
 			status: 'đang hoạt động'
 		});
 		
+		// ✅ Emit socket event to notify admin of new client registration
+		const io = req.app.locals.io;
+		if (io) {
+			io.emit('new_client_registered', {
+				_id: user._id,
+				email: user.email,
+				fullName: user.fullName,
+				gender: user.gender || '-',
+				phone: user.phone || '-',
+				address: user.address || '-',
+				status: user.status,
+				createdAt: user.createdAt,
+				licenseStatus: 'pending',
+				licenseKey: '-',
+				plan: '-'
+			});
+			console.log('[SOCKET] Emitted new_client_registered event');
+		}
+		
 		res.json({ message: 'Đăng ký thành công', user: { email: user.email, fullName: user.fullName } });
 	} catch (err) {
 		// ⚠️ SECURITY: Don't log sensitive errors

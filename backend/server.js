@@ -4,12 +4,17 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
+const http = require('http');
+const { Server } = require('socket.io');
 dotenv.config();
 const session = require("express-session");
 const MongoStore = require('connect-mongo').default;
 // ⚠️ SECURITY: Rate limiting to prevent brute force
 const rateLimit = require('express-rate-limit');
 const app = express();
+
+// Create HTTP server for socket.io
+const httpServer = http.createServer(app);
 // CORS configuration - allow more origins in development
 const allowedOrigins = [
   "https://sentinelvn-one.vercel.app",
@@ -40,6 +45,25 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// ✅ Socket.io configuration with CORS support
+const io = new Server(httpServer, {
+  cors: {
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (origin.includes('localhost') || origin.includes('127.0.0.1') || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST']
+  }
+});
+
+// Export io for use in routes
+app.locals.io = io;
 app.set("trust proxy", 1);
 app.use(session({
   name: "sentinel_session",
@@ -118,8 +142,9 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`[STARTUP] ✅ WebSocket (socket.io) initialized`);
 });
 app.get("/test", (req, res) => {
   res.json({
