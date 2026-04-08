@@ -25,31 +25,60 @@ function logout() {
 
 /* ===== CHECK ADMIN SESSION ===== */
 document.addEventListener("DOMContentLoaded", async () => {
+    console.log('[ADMIN] Page loaded, checking session...');
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
+        const timeout = setTimeout(() => controller.abort(), 10000); // Increased from 5s to 10s
 
         // ✅ SECURITY: Use /api/auth/session (same endpoint as login) to avoid mismatch
         const res = await fetch(`${API_BASE}/api/auth/session`, {
             credentials: "include",
-            signal: controller.signal
+            signal: controller.signal,
+            method: "GET"
         });
 
         clearTimeout(timeout);
 
         if (!res.ok) {
+            console.error('[AUTH] Session check failed:', res.status, res.statusText);
+            // Check if it's a 401 (unauthorized) or other error
+            if (res.status === 401) {
+                console.log('[AUTH] User not authorized, redirecting to index...');
+            } else {
+                console.log('[AUTH] Server error, but checking if session exists via cookie...');
+            }
             window.location.href = "index.html";
             return;
         }
 
         const user = await res.json();
+        console.log('[AUTH] Response received:', user);
 
         if (user.role !== 'admin') {
+            console.error('[AUTH] User is not admin:', user.role);
             window.location.href = "index.html";
+            return;
         }
 
+        console.log('[AUTH] Admin verified:', user.email);
+
         // ✅ Initialize WebSocket connection after session verification
-        initializeWebSocket();
+        try {
+            initializeWebSocket();
+        } catch (wsErr) {
+            console.error('[SOCKET] WebSocket initialization failed:', wsErr);
+            // Don't block page load if WebSocket fails - it's not critical
+        }
+
+        // Load initial data - show support tab first
+        try {
+            console.log('[ADMIN] Loading initial data...');
+            showTab('supportTab');
+        } catch (dataErr) {
+            console.error('[ADMIN] Failed to load initial data:', dataErr);
+            // Show error but don't redirect
+            alert('Lỗi: Không thể tải dữ liệu. Vui lòng reload trang.');
+        }
     } catch (err) {
         console.error("Admin session check failed:", err.message);
         window.location.href = "index.html";
@@ -64,19 +93,30 @@ function initializeWebSocket() {
     if (!window.io) {
         const script = document.createElement('script');
         script.src = `${API_BASE}/socket.io/socket.io.js`;
+        script.async = true;
         script.onload = () => {
-            connectWebSocket();
+            console.log('[SOCKET] Socket.io client loaded from server');
+            // Small delay to ensure window.io is available
+            setTimeout(connectWebSocket, 100);
         };
         script.onerror = () => {
-            console.warn('[SOCKET] Failed to load socket.io client, retrying with CDN...');
+            console.warn('[SOCKET] Failed to load socket.io client from server, trying CDN...');
             const cdnScript = document.createElement('script');
             cdnScript.src = 'https://cdn.socket.io/4.5.4/socket.io.min.js';
-            cdnScript.onload = connectWebSocket;
+            cdnScript.async = true;
+            cdnScript.onload = () => {
+                console.log('[SOCKET] Socket.io client loaded from CDN');
+                setTimeout(connectWebSocket, 100);
+            };
+            cdnScript.onerror = () => {
+                console.error('[SOCKET] Failed to load socket.io from both server and CDN');
+            };
             document.head.appendChild(cdnScript);
         };
         document.head.appendChild(script);
     } else {
-        connectWebSocket();
+        console.log('[SOCKET] Socket.io already available');
+        setTimeout(connectWebSocket, 100);
     }
 }
 
@@ -86,8 +126,15 @@ function connectWebSocket() {
         return;
     }
 
+    // Check if io is available
+    if (!window.io) {
+        console.error('[SOCKET] window.io is not available');
+        setTimeout(connectWebSocket, 500); // Retry after 500ms
+        return;
+    }
+
     try {
-        socket = io(API_BASE, {
+        socket = window.io(API_BASE, {
             withCredentials: true,
             reconnection: true,
             reconnectionDelay: 1000,
@@ -97,6 +144,10 @@ function connectWebSocket() {
 
         socket.on('connect', () => {
             console.log('[SOCKET] Connected to server ✅');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('[SOCKET] Connection error:', error);
         });
 
         socket.on('disconnect', () => {
@@ -171,8 +222,6 @@ function refreshSupportMessages() {
     renderSupportMessages(keyword);
 }
 
-const supportContainer = document.getElementById("supportMessages");
-
 async function fetchSupportMessages() {
     try {
         const controller = new AbortController();
@@ -194,6 +243,12 @@ async function fetchSupportMessages() {
 }
 
 async function renderSupportMessages(keyword = "") {
+    const supportContainer = document.getElementById("supportMessages");
+    if (!supportContainer) {
+        console.error('[ADMIN] Support container not found in DOM');
+        return;
+    }
+
     supportContainer.innerHTML = "Đang tải...";
     let messages = await fetchSupportMessages();
 
@@ -294,10 +349,16 @@ function showTab(tabId) {
     document.getElementById("trialBtn").classList.remove("bg-brand-400/10");
     document.getElementById("statsBtn").classList.remove("bg-brand-400/10");
 
-    if (tabId === "supportTab") document.getElementById("supportBtn").classList.add("bg-brand-400/10");
-    else if (tabId === "accountTab") document.getElementById("accountBtn").classList.add("bg-brand-400/10");
-    else if (tabId === "trialTab") document.getElementById("trialBtn").classList.add("bg-brand-400/10");
-    else if (tabId === "statsTab") {
+    if (tabId === "supportTab") {
+        document.getElementById("supportBtn").classList.add("bg-brand-400/10");
+        renderSupportMessages();
+    } else if (tabId === "accountTab") {
+        document.getElementById("accountBtn").classList.add("bg-brand-400/10");
+        renderAccounts();
+    } else if (tabId === "trialTab") {
+        document.getElementById("trialBtn").classList.add("bg-brand-400/10");
+        renderTrialContacts();
+    } else if (tabId === "statsTab") {
         document.getElementById("statsBtn").classList.add("bg-brand-400/10");
         renderStats();
     }
@@ -649,7 +710,6 @@ function onMouseUp() {
     document.removeEventListener('mouseup', onMouseUp);
 }
 /* ===== TRIAL CONTACT ===== */
-const trialContainer = document.getElementById("trialMessages");
 
 async function fetchTrialContacts() {
     try {
@@ -669,6 +729,12 @@ async function fetchTrialContacts() {
 }
 
 async function renderTrialContacts(keyword = "") {
+    const trialContainer = document.getElementById("trialMessages");
+    if (!trialContainer) {
+        console.error('[ADMIN] Trial container not found in DOM');
+        return;
+    }
+
     trialContainer.innerHTML = "Đang tải...";
     let contacts = await fetchTrialContacts();
 

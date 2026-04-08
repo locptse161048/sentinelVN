@@ -34,12 +34,16 @@ app.use(cors({
     if (!origin) {
       return callback(null, true);
     }
-    // Allow development and localhost requests
-    if (origin.includes('localhost') || origin.includes('127.0.0.1') || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(null, true); // In development, allow all. In production, restrict as needed
+    // ✅ Allow localhost AND production Vercel domain
+    if (origin.includes('localhost') || 
+        origin.includes('127.0.0.1') || 
+        origin.includes('vercel.app') ||
+        allowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
+    // Log suspicious origins
+    console.warn('[CORS] Rejected origin:', origin);
+    callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -51,11 +55,14 @@ const io = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (origin.includes('localhost') || origin.includes('127.0.0.1') || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(null, true);
+      if (origin.includes('localhost') || 
+          origin.includes('127.0.0.1') || 
+          origin.includes('vercel.app') ||
+          allowedOrigins.includes(origin)) {
+        return callback(null, true);
       }
+      console.warn('[SOCKET.IO CORS] Rejected origin:', origin);
+      callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST']
@@ -65,6 +72,33 @@ const io = new Server(httpServer, {
 // Export io for use in routes
 app.locals.io = io;
 app.set("trust proxy", 1);
+
+// ✅ Force production cookie settings on Render/Vercel (HTTPS by default)
+// Always use secure cross-origin cookie settings in non-localhost environments
+const isLocalhost = process.env.NODE_ENV === 'development' || 
+                    process.env.HOST === 'localhost' ||
+                    !process.env.NODE_ENV;
+
+const cookieSettings = {
+  httpOnly: true,
+  maxAge: 60 * 60 * 1000, // 1 hour
+  proxy: true
+};
+
+// ✅ On production/hosting (Render, Vercel, etc), use strict cookie settings
+// On localhost, use relaxed settings
+if (!isLocalhost) {
+  // Production: require HTTPS for cross-origin cookies
+  cookieSettings.secure = true;
+  cookieSettings.sameSite = 'none';
+  console.log('[STARTUP] ✅ Production cookie config (secure + sameSite:none)');
+} else {
+  // Local development: HTTP is OK
+  cookieSettings.secure = false;
+  cookieSettings.sameSite = 'lax';
+  console.log('[STARTUP] ✅ Development cookie config (non-secure + sameSite:lax)');
+}
+
 app.use(session({
   name: "sentinel_session",
   secret: process.env.SESSION_SECRET || "supersecret",
@@ -73,13 +107,7 @@ app.use(session({
   store: MongoStore.create({
     mongoUrl: process.env.MONGO_URI
   }),
-  cookie: {
-    proxy: true,
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    maxAge: 60 * 60 * 1000
-  }
+  cookie: cookieSettings
 }));
 
 // ⚠️ SECURITY: Rate limiting on auth endpoints (prevent brute force)
