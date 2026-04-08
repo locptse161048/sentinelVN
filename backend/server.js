@@ -191,29 +191,13 @@ const registerLimiter = rateLimit({
 
 app.use(bodyParser.json());
 
-// ✅ Handle OPTIONS preflight requests explicitly
-app.options('*', cors({
-  origin: (origin, callback) => {
-    if (!origin || origin.includes('localhost') || origin.includes('127.0.0.1') || 
-        origin.includes('vercel.app') || origin.includes('render.com') || 
-        isDevelopment) {
-      return callback(null, true);
-    }
-    callback(null, false);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Set-Cookie']
-}));
-
 // ✅ Ensure CORS credentials header is set on all responses
 app.use((req, res, next) => {
   const origin = req.get('origin');
   if (origin) {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie, Content-Type');
+    res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie, Content-Type, Authorization');
   }
   next();
 });
