@@ -227,6 +227,21 @@ function connectWebSocket() {
             showNotification(`💬 Tin nhắn mới từ: ${newMessage.email}`);
         });
 
+        // ✅ Listen for new trial contacts
+        socket.on('new_trial_contact', (newTrialContact) => {
+            console.log('[SOCKET] Received new_trial_contact event:', newTrialContact);
+            
+            // Only update if we're on the trial tab
+            const trialTab = document.getElementById('trialTab');
+            if (!trialTab.classList.contains('hidden')) {
+                // Refetch and re-render trial contacts
+                refreshTrialContacts();
+            }
+            
+            // Show a notification
+            showNotification(`📝 Yêu cầu dùng thử mới từ: ${newTrialContact.email}`);
+        });
+
         socket.on('error', (error) => {
             console.error('[SOCKET] Socket error:', error);
         });
@@ -263,6 +278,13 @@ function refreshSupportMessages() {
     console.log('[ADMIN] Refreshing support messages...');
     const keyword = document.getElementById("supportSearch").value.toLowerCase();
     renderSupportMessages(keyword);
+}
+
+function refreshTrialContacts() {
+    console.log('[ADMIN] Refreshing trial contacts...');
+    const keyword = document.getElementById("trialSearch").value.toLowerCase();
+    renderTrialContacts(keyword);
+}
 }
 
 async function fetchSupportMessages() {
@@ -914,6 +936,16 @@ setInterval(async () => {
         }
     }
 }, 30000);
+
+// ✅ Poll stats every 5 minutes if on stats tab
+setInterval(async () => {
+    const statsTab = document.getElementById('statsTab');
+    if (statsTab && !statsTab.classList.contains('hidden')) {
+        console.log('[ADMIN] Auto-refreshing stats...');
+        renderStats(true); // Force refresh
+    }
+}, 5 * 60 * 1000); // 5 minutes
+
 // ========= Idle Timeout 15 phút =========
 let idleTimer = null;
 const IDLE_TIMEOUT = 15 * 60 * 1000; // 15 phút

@@ -11,7 +11,22 @@
             if (!name || !email || !message) {
                 return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin.' });
             }
-            await TrialContact.create({ name, email, message });
+            const trialContact = await TrialContact.create({ name, email, message });
+            
+            // ✅ Emit socket event to notify admin of new trial contact
+            const io = req.app.locals.io;
+            if (io) {
+                io.emit('new_trial_contact', {
+                    _id: trialContact._id,
+                    name: trialContact.name,
+                    email: trialContact.email,
+                    message: trialContact.message,
+                    status: trialContact.status || 'pending',
+                    createdAt: trialContact.createdAt
+                });
+                console.log('[SOCKET] Emitted new_trial_contact event');
+            }
+            
             res.json({ success: true });
         } catch (err) {
             console.error('Error saving trial contact:', err);
