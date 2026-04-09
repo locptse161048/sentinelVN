@@ -81,13 +81,28 @@ router.get('/payments', async (req, res) => {
 router.post('/support', async (req, res) => {
 	const { title, message } = req.body;
 	try {
-			const user = await Client.findById(req.user._id);
-			const supportMsg = await SupportMsg.create({
-				client: req.user._id,
+		const user = await Client.findById(req.user._id);
+		const supportMsg = await SupportMsg.create({
+			client: req.user._id,
 			email: user.email,
 			title,
 			message
 		});
+		
+		// ✅ Emit socket event to notify admin of new support message
+		const io = req.app.locals.io;
+		if (io) {
+			io.emit('new_support_message', {
+				_id: supportMsg._id,
+				email: supportMsg.email,
+				title: supportMsg.title,
+				message: supportMsg.message,
+				status: supportMsg.status || 'pending',
+				createdAt: supportMsg.createdAt
+			});
+			console.log('[SOCKET] Emitted new_support_message event from /api/client/support');
+		}
+		
 		res.json({ message: 'Đã gửi hỗ trợ', supportMsg });
 	} catch (err) {
 		console.error("Error sending support message:", err);
