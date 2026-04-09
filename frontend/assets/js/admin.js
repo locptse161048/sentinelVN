@@ -285,7 +285,6 @@ function refreshTrialContacts() {
     const keyword = document.getElementById("trialSearch").value.toLowerCase();
     renderTrialContacts(keyword);
 }
-}
 
 async function fetchSupportMessages() {
     try {
