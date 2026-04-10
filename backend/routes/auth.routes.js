@@ -114,7 +114,7 @@ router.post('/register', getMiddleware, async (req, res) => {
 	}
 });
 
-// Đăng nhập
+// ========= LOGIN BY EMAIL =========
 router.post('/login', getMiddleware, async (req, res) => {
 	const { email, password } = req.body;
 	
@@ -130,8 +130,32 @@ router.post('/login', getMiddleware, async (req, res) => {
 		const user = await Client.findOne({ email: email.toLowerCase() });
 		if (!user) return res.status(400).json({ message: 'Sai email hoặc mật khẩu' });
 
+		// ⚠️ Security check: Account suspended
+		if (user.status === 'tạm ngưng') {
+			return res.status(403).json({ message: 'Tài khoản của bạn đã bị tạm ngưng' });
+		}
+
 		const match = await bcrypt.compare(password, user.passwordHash);
-		if (!match) return res.status(400).json({ message: 'Sai email hoặc mật khẩu' });
+		if (!match) {
+			// Increment login attempts
+			user.loginAttempts = (user.loginAttempts || 0) + 1;
+			user.lastLoginAttempt = new Date();
+
+			// If 5+ failed attempts, suspend account
+			if (user.loginAttempts >= 6) {
+				user.status = 'tạm ngưng';
+				await user.save();
+				return res.status(403).json({ message: 'Tài khoản đã bị tạm ngưng do nhập sai mật khẩu nhiều lần' });
+			}
+
+			await user.save();
+			return res.status(400).json({ message: 'Sai email hoặc mật khẩu' });
+		}
+
+		// ✅ Login successful - reset attempts
+		user.loginAttempts = 0;
+		user.lastLoginAttempt = new Date();
+		await user.save();
 		
 		// ✅ Set session BEFORE saving
 		req.session.userId = user._id;
@@ -141,11 +165,6 @@ router.post('/login', getMiddleware, async (req, res) => {
 		console.log("[AUTH LOGIN] ▶ Setting session for:", user.email);
 		console.log("[AUTH LOGIN] ▶ SessionID:", req.sessionID);
 		console.log("[AUTH LOGIN] ▶ User role:", user.role);
-		console.log("[AUTH LOGIN] ▶ Session before save:", {
-			userId: req.session.userId,
-			email: req.session.email,
-			role: req.session.role
-		});
 
 		// ✅ Save session to MongoDB
 		req.session.save((err) => {
@@ -155,10 +174,7 @@ router.post('/login', getMiddleware, async (req, res) => {
 			}
 			
 			console.log("[AUTH LOGIN] ✅ Session saved to MongoDB for:", user.email);
-			console.log("[AUTH LOGIN] ✅ Token (sessionID):", req.sessionID);
 			
-			// ✅ Return token for header-based auth (not cookie-based)
-			// Frontend will send: Authorization: Bearer <token>
 			res.json({
 				message: "Đăng nhập thành công",
 				token: req.sessionID,
@@ -166,12 +182,91 @@ router.post('/login', getMiddleware, async (req, res) => {
 					_id: user._id,
 					email: user.email,
 					role: user.role,
-					fullName: user.fullName
+					fullName: user.fullName,
+					status: user.status
 				}
 			});
 		});
 	} catch (err) {
 		console.error("[AUTH LOGIN] ❌ Server error:", err.message);
+		res.status(500).json({ message: 'Lỗi server' });
+	}
+});
+
+// ========= LOGIN BY PHONE =========
+router.post('/login/phone', getMiddleware, async (req, res) => {
+	const { phone, password } = req.body;
+	
+	// ⚠️ SECURITY: Input validation
+	if (!phone || !/^\d{10}$/.test(phone.replace(/\D/g, ''))) {
+		return res.status(400).json({ message: 'Số điện thoại không hợp lệ' });
+	}
+	if (!password || password.length === 0) {
+		return res.status(400).json({ message: 'Sai số điện thoại hoặc mật khẩu' });
+	}
+	
+	try {
+		const user = await Client.findOne({ phone: phone.replace(/\D/g, '') });
+		if (!user) return res.status(400).json({ message: 'Sai số điện thoại hoặc mật khẩu' });
+
+		// ⚠️ Security check: Account suspended
+		if (user.status === 'tạm ngưng') {
+			return res.status(403).json({ message: 'Tài khoản của bạn đã bị tạm ngưng' });
+		}
+
+		const match = await bcrypt.compare(password, user.passwordHash);
+		if (!match) {
+			// Increment login attempts
+			user.loginAttempts = (user.loginAttempts || 0) + 1;
+			user.lastLoginAttempt = new Date();
+
+			// If 5+ failed attempts, suspend account
+			if (user.loginAttempts >= 6) {
+				user.status = 'tạm ngưng';
+				await user.save();
+				return res.status(403).json({ message: 'Tài khoản đã bị tạm ngưng do nhập sai mật khẩu nhiều lần' });
+			}
+
+			await user.save();
+			return res.status(400).json({ message: 'Sai số điện thoại hoặc mật khẩu' });
+		}
+
+		// ✅ Login successful - reset attempts
+		user.loginAttempts = 0;
+		user.lastLoginAttempt = new Date();
+		await user.save();
+		
+		// ✅ Set session BEFORE saving
+		req.session.userId = user._id;
+		req.session.email = user.email;
+		req.session.role = user.role;
+		
+		console.log("[AUTH LOGIN PHONE] ▶ Setting session for:", user.phone);
+
+		// ✅ Save session to MongoDB
+		req.session.save((err) => {
+			if (err) {
+				console.error("[AUTH LOGIN PHONE] ❌ Session save error:", err.message);
+				return res.status(500).json({ message: "Lỗi lưu session" });
+			}
+			
+			console.log("[AUTH LOGIN PHONE] ✅ Session saved to MongoDB for:", user.phone);
+			
+			res.json({
+				message: "Đăng nhập thành công",
+				token: req.sessionID,
+				user: {
+					_id: user._id,
+					email: user.email,
+					phone: user.phone,
+					role: user.role,
+					fullName: user.fullName,
+					status: user.status
+				}
+			});
+		});
+	} catch (err) {
+		console.error("[AUTH LOGIN PHONE] ❌ Server error:", err.message);
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });
@@ -279,5 +374,98 @@ router.get('/me', async (req, res) => {
 	}
 });
 
+
+// ========= VERIFY PHONE FROM REGISTRATION =========
+// Được gọi sau khi user xác thực phone qua Firebase SMS OTP trong register.html
+// Body: { phone, email, password, fullName, firstName, lastName, gender, city }
+router.post('/register/verify-phone', async (req, res) => {
+	const { phone, email, password, fullName, firstName, lastName, gender, city } = req.body;
+	
+	// ⚠️ SECURITY: Input validation
+	if (!phone || !/^\d{10}$/.test(phone.replace(/\D/g, ''))) {
+		return res.status(400).json({ message: "Số điện thoại không hợp lệ" });
+	}
+	
+	if (!email || !isValidEmail(email)) {
+		return res.status(400).json({ message: "Email không hợp lệ" });
+	}
+	
+	const passValidation = validatePassword(password);
+	if (!passValidation.valid) {
+		return res.status(400).json({ message: passValidation.message });
+	}
+	
+	if (!fullName || fullName.trim().length === 0) {
+		return res.status(400).json({ message: "Vui lòng nhập họ và tên" });
+	}
+	if (fullName.length > 100) {
+		return res.status(400).json({ message: "Họ và tên quá dài (max 100 ký tự)" });
+	}
+	
+	if (gender && !['nam', 'nữ', 'khác'].includes(gender)) {
+		return res.status(400).json({ message: "Giới tính không hợp lệ" });
+	}
+	
+	if (city && city.length > 100) {
+		return res.status(400).json({ message: "Thành phố quá dài" });
+	}
+	
+	try {
+		// Check if email or phone already exists
+		const existingEmail = await Client.findOne({ email: email.toLowerCase() });
+		if (existingEmail) return res.status(400).json({ message: 'Email đã tồn tại' });
+		
+		const existingPhone = await Client.findOne({ phone: phone.replace(/\D/g, '') });
+		if (existingPhone) return res.status(400).json({ message: 'Số điện thoại đã tồn tại' });
+		
+		// Create new user
+		const hash = await bcrypt.hash(password, 10);
+		const user = await Client.create({
+			email: email.toLowerCase(),
+			fullName: fullName.trim(),
+			firstName: firstName ? firstName.trim() : null,
+			lastName: lastName ? lastName.trim() : null,
+			gender: gender || null,
+			phone: phone.replace(/\D/g, ''),
+			city: city ? city.trim() : null,
+			phoneVerified: true,
+			passwordHash: hash,
+			role: 'client',
+			status: 'đang hoạt động',
+			loginAttempts: 0
+		});
+		
+		// ✅ Emit socket event to notify admin of new client registration
+		const io = req.app.locals.io;
+		if (io) {
+			io.emit('new_client_registered', {
+				_id: user._id,
+				email: user.email,
+				fullName: user.fullName,
+				phone: user.phone,
+				gender: user.gender || '-',
+				city: user.city || '-',
+				status: user.status,
+				createdAt: user.createdAt,
+				licenseStatus: 'pending',
+				licenseKey: '-',
+				plan: '-'
+			});
+			console.log('[SOCKET] Emitted new_client_registered event for phone:', user.phone);
+		}
+		
+		res.json({ 
+			message: 'Xác thực số điện thoại thành công. Vui lòng đăng nhập.', 
+			user: { 
+				email: user.email, 
+				phone: user.phone,
+				fullName: user.fullName 
+			} 
+		});
+	} catch (err) {
+		console.error('[AUTH REGISTER VERIFY PHONE] Error:', err.message);
+		res.status(500).json({ message: 'Lỗi server' });
+	}
+});
 
 module.exports = router;

@@ -339,174 +339,191 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// ========= Auth Form =========
-let mode = 'login';
+// ========= Auth Form - NEW: Phone & Email Login =========
+let loginMode = 'phone'; // 'phone' or 'email'
 
-const loginTab = document.getElementById('loginTab');
-const signupTab = document.getElementById('signupTab');
-const forgotLink = document.getElementById('forgotLink');
+const phoneLoginTab = document.getElementById('phoneLoginTab');
+const emailLoginTab = document.getElementById('emailLoginTab');
 const title = document.getElementById('formTitle');
 const submitBtn = document.getElementById('submitBtn');
 const msg = document.getElementById('msg');
 const form = document.getElementById('authForm');
-switchMode('login');
 
-loginTab.onclick = () => switchMode('login');
-signupTab.onclick = () => switchMode('signup');
-forgotLink.onclick = () => location.href = 'forgot.html';
+// Initialize
+switchLoginMode('phone');
 
-function switchMode(m) {
-    mode = m;
-    loginTab.classList.remove('active');
-    signupTab.classList.remove('active');
-    if (m === 'login') {
-        loginTab.classList.add('active');
+phoneLoginTab.onclick = () => switchLoginMode('phone');
+emailLoginTab.onclick = () => switchLoginMode('email');
+
+function switchLoginMode(mode) {
+    loginMode = mode;
+    phoneLoginTab.classList.remove('active');
+    emailLoginTab.classList.remove('active');
+    
+    const phoneFields = document.getElementById('phoneFields');
+    const emailFields = document.getElementById('emailFields');
+    
+    if (mode === 'phone') {
+        phoneLoginTab.classList.add('active');
+        phoneFields.style.display = 'block';
+        emailFields.style.display = 'none';
+        title.textContent = 'Đăng nhập qua số điện thoại';
     } else {
-        signupTab.classList.add('active');
+        emailLoginTab.classList.add('active');
+        phoneFields.style.display = 'none';
+        emailFields.style.display = 'block';
+        title.textContent = 'Đăng nhập qua email';
     }
-    title.textContent = m === 'login' ? 'Đăng nhập hệ thống' : 'Đăng ký tài khoản';
-    submitBtn.textContent = m === 'login' ? 'Đăng nhập' : 'Đăng ký';
     msg.textContent = '';
-    const nameField = form.querySelector('input[name="name"]');
-    const genderField = form.querySelector('select[name="gender"]');
-    const phoneField = form.querySelector('input[name="phone"]');
-    const addressField = form.querySelector('input[name="address"]');
-    if (nameField) nameField.style.display = m === 'signup' ? 'block' : 'none';
-    if (genderField) genderField.style.display = m === 'signup' ? 'block' : 'none';
-    if (phoneField) phoneField.style.display = m === 'signup' ? 'block' : 'none';
-    if (addressField) addressField.style.display = m === 'signup' ? 'block' : 'none';
-    const phoneErr = document.getElementById('phoneError');
-    if (phoneErr) phoneErr.classList.add('hidden');
 }
 
 form.onsubmit = async e => {
     e.preventDefault();
     msg.textContent = '';
-    const email = form.email.value.trim().toLowerCase();
-    const password = form.password.value;
-    const nameInput = form.name ? form.name.value.trim() : "";
 
-    if (mode === 'signup') {
-        if (!email || !password || !nameInput) { msg.textContent = '⚠️ Vui lòng nhập đầy đủ thông tin.'; return; }
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = '⚠️ Email không hợp lệ.'; return; }
-        // ⚠️ SECURITY: Password validation must match backend
-        if (password.length < 8) { msg.textContent = '⚠️ Mật khẩu phải tối thiểu 8 ký tự.'; return; }
-        if (!/[A-Z]/.test(password)) { msg.textContent = '⚠️ Mật khẩu phải chứa ít nhất 1 chữ cái viết hoa.'; return; }
-        if (!/[a-z]/.test(password)) { msg.textContent = '⚠️ Mật khẩu phải chứa ít nhất 1 chữ cái viết thường.'; return; }
-        if (!/[0-9]/.test(password)) { msg.textContent = '⚠️ Mật khẩu phải chứa ít nhất 1 chữ số.'; return; }
-        if (nameInput.length > 100) { msg.textContent = '⚠️ Họ và tên quá dài (max 100 ký tự).'; return; }
+    const password = form.querySelector('input[name="password"]').value;
 
-        const gender = form.gender ? form.gender.value : '';
-        const phone = form.phone ? form.phone.value.trim() : '';
-        if (phone && phone.length !== 10) {
-            document.getElementById('phoneError').classList.remove('hidden');
+    if (loginMode === 'phone') {
+        // ===== PHONE LOGIN =====
+        const phone = form.querySelector('input[name="phone"]').value.trim().replace(/\D/g, '');
+        const phoneError = document.getElementById('phoneError');
+
+        if (!/^\d{10}$/.test(phone)) {
+            phoneError.classList.remove('hidden');
             return;
         }
-        const address = form.address ? form.address.value.trim() : '';
+        phoneError.classList.add('hidden');
+
+        if (!password) {
+            msg.textContent = '⚠️ Vui lòng nhập mật khẩu.';
+            return;
+        }
 
         try {
-            msg.textContent = '⏳ Đang đăng ký...';
-            console.log('[REGISTER] Signing up with email:', email);
+            msg.textContent = '⏳ Đang đăng nhập...';
+            console.log('[LOGIN PHONE] Logging in with phone:', phone);
 
-            const res = await fetch(`${API_BASE}/api/auth/register`, {
+            const res = await fetch(`${API_BASE}/api/auth/login/phone`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: "include",
-                body: JSON.stringify({ email, password, fullName: nameInput, gender, phone, address })
+                body: JSON.stringify({ phone, password })
             });
 
-            console.log('[REGISTER] Response status:', res.status);
-
             const data = await res.json().catch((err) => {
-                console.error('[REGISTER] JSON parse error:', err);
+                console.error('[LOGIN PHONE] JSON parse error:', err);
                 return {};
             });
 
             if (!res.ok) {
-                console.error('[REGISTER] Signup failed:', data);
-                msg.textContent = data.message || 'Đăng ký thất bại.';
+                console.error('[LOGIN PHONE] Login failed:', data);
+                msg.textContent = data.message || 'Đăng nhập thất bại.';
+                msg.style.color = '#f87171';
                 return;
             }
 
-            console.log('[REGISTER] Signup successful');
-            msg.textContent = '✅ Đăng ký thành công. Hãy đăng nhập.';
-            switchMode('login');
-            return;
-        } catch (err) {
-            console.error('[REGISTER] Fetch error:', err);
-            msg.textContent = '❌ Lỗi kết nối. Vui lòng kiểm tra internet hoặc thử lại sau.';
-        }
-        return;
-    }
+            console.log('[LOGIN PHONE] Login successful');
 
-    // ✅ Validate login credentials
-    if (mode === 'login') {
+            // ✅ Save token
+            if (data.token) {
+                localStorage.setItem('auth_token', data.token);
+                console.log('[LOGIN PHONE] ✅ Token saved');
+            }
+
+            if (data.user && data.user.status === 'tạm ngưng') {
+                msg.textContent = '❌ Tài khoản của bạn đã bị tạm ngưng';
+                msg.style.color = '#f87171';
+                return;
+            }
+
+            await setLoggedInUI(data.user);
+            setupAccountButtons(data.user);
+
+            const authModal = document.getElementById('authModal');
+            authModal.classList.add('hidden');
+            authModal.classList.remove('flex');
+
+            // Redirect
+            if (data.user.role === 'admin') {
+                window.location.href = 'admin.html';
+            } else {
+                window.location.href = 'client.html';
+            }
+        } catch (err) {
+            console.error('[LOGIN PHONE] Fetch error:', err);
+            msg.textContent = '❌ Lỗi kết nối.';
+            msg.style.color = '#f87171';
+        }
+
+    } else {
+        // ===== EMAIL LOGIN =====
+        const email = form.querySelector('input[name="email"]').value.trim().toLowerCase();
+
         if (!email || !password) {
             msg.textContent = '⚠️ Vui lòng nhập email và mật khẩu.';
             return;
         }
+
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             msg.textContent = '⚠️ Email không hợp lệ.';
             return;
         }
-    }
 
-    try {
-        msg.textContent = '⏳ Đang đăng nhập...';
-        console.log('[LOGIN] Fetching /api/auth/login with email:', email);
+        try {
+            msg.textContent = '⏳ Đang đăng nhập...';
+            console.log('[LOGIN EMAIL] Logging in with email:', email);
 
-        const res = await fetch(`${API_BASE}/api/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: "include",
-            body: JSON.stringify({ email, password })
-        });
+            const res = await fetch(`${API_BASE}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: "include",
+                body: JSON.stringify({ email, password })
+            });
 
-        console.log('[LOGIN] Response status:', res.status);
+            const data = await res.json().catch((err) => {
+                console.error('[LOGIN EMAIL] JSON parse error:', err);
+                return {};
+            });
 
-        const data = await res.json().catch((err) => {
-            console.error('[LOGIN] JSON parse error:', err);
-            return {};
-        });
+            if (!res.ok) {
+                console.error('[LOGIN EMAIL] Login failed:', data);
+                msg.textContent = data.message || 'Đăng nhập thất bại.';
+                msg.style.color = '#f87171';
+                return;
+            }
 
-        if (!res.ok) {
-            console.error('[LOGIN] Login failed:', data);
-            msg.textContent = data.message || 'Đăng nhập thất bại. Vui lòng kiểm tra email và mật khẩu.';
-            return;
+            console.log('[LOGIN EMAIL] Login successful');
+
+            // ✅ Save token
+            if (data.token) {
+                localStorage.setItem('auth_token', data.token);
+                console.log('[LOGIN EMAIL] ✅ Token saved');
+            }
+
+            if (data.user && data.user.status === 'tạm ngưng') {
+                msg.textContent = '❌ Tài khoản của bạn đã bị tạm ngưng';
+                msg.style.color = '#f87171';
+                return;
+            }
+
+            await setLoggedInUI(data.user);
+            setupAccountButtons(data.user);
+
+            const authModal = document.getElementById('authModal');
+            authModal.classList.add('hidden');
+            authModal.classList.remove('flex');
+
+            // Redirect
+            if (data.user.role === 'admin') {
+                window.location.href = 'admin.html';
+            } else {
+                window.location.href = 'client.html';
+            }
+        } catch (err) {
+            console.error('[LOGIN EMAIL] Fetch error:', err);
+            msg.textContent = '❌ Lỗi kết nối.';
+            msg.style.color = '#f87171';
         }
-
-        console.log('[LOGIN] Login successful, user:', data.user);
-        console.log('[LOGIN] Token received:', data.token ? data.token.substring(0, 30) + '...' : 'missing');
-
-        // ✅ Save token to localStorage for cross-origin header-based auth
-        if (data.token) {
-            localStorage.setItem('auth_token', data.token);
-            console.log('[LOGIN] ✅ Token saved to localStorage');
-        }
-
-        if (data.user && data.user.status === 'tạm ngưng') {
-            msg.textContent = '❌ Tài khoản của bạn hiện đã bị tạm ngưng';
-            return;
-        }
-
-        await setLoggedInUI(data.user);  // ← await
-        setupAccountButtons(data.user);
-
-        const authModal = document.getElementById('authModal');
-        authModal.classList.add('hidden');
-        authModal.classList.remove('flex');
-
-        // ✅ Redirect immediately (token is in localStorage)
-        console.log('[LOGIN] Redirecting to', data.user.role === 'admin' ? 'admin.html' : 'client.html');
-        if (data.user.role === 'admin') {
-            window.location.href = 'admin.html';
-        } else {
-            window.location.href = 'client.html';
-        }
-        pendingRedirectPlan = null;
-    } catch (err) {
-        console.error('[LOGIN] Fetch error:', err);
-        msg.textContent = '❌ Lỗi kết nối. Vui lòng kiểm tra internet hoặc thử lại sau.';
     }
 };
 

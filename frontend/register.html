@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Đăng ký - SENTINEL VN</title>
+  <link rel="icon" type="image/x-icon" href="./assets/images/favicon.ico" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Orbitron:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebaseapp/9.23.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebaseapp/9.23.0/firebase-auth.js"></script>
+</head>
+
+<body class="text-white">
+  <!-- HEADER -->
+  <header class="fixed top-0 left-0 right-0 z-50 border-b border-white/10 blur-bg">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3 shrink-0">
+        <img src="assets/images/favicon.ico" class="h-9 w-9 rounded border border-cyan-400/40">
+        <span class="font-orbitron text-lg tracking-wider whitespace-nowrap">
+          SENTINEL <span class="text-brand-400">VN</span>
+        </span>
+      </a>
+      <div class="flex items-center gap-2">
+        <a href="index.html" class="px-3 py-1.5 rounded-lg border border-white/20 hover:border-brand-400/60 text-sm">
+          Quay lại
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="min-h-screen pt-24 pb-12 px-6">
+    <div class="mx-auto max-w-md card p-6">
+      <div class="text-center mb-6">
+        <h1 class="font-orbitron text-2xl tracking-widest">SENTINEL <span class="text-brand-400">VN</span></h1>
+        <p class="text-white/60 text-sm mt-1">Đăng ký tài khoản mới</p>
+      </div>
+
+      <!-- STEP INDICATOR -->
+      <div class="flex gap-2 mb-6">
+        <div class="flex-1 h-1 bg-brand-400 rounded"></div>
+        <div class="flex-1 h-1 bg-white/20 rounded"></div>
+      </div>
+
+      <!-- STEP 1: PERSONAL INFO -->
+      <form id="step1Form" class="grid gap-3">
+        <h3 class="font-semibold text-lg mb-2">Thông tin cá nhân</h3>
+
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="firstName" name="firstName" class="input" placeholder="Họ và tên đệm" required />
+          <input type="text" id="lastName" name="lastName" class="input" placeholder="Tên" required />
+        </div>
+
+        <select id="gender" name="gender" class="input" required>
+          <option value="">Chọn giới tính</option>
+          <option value="nam">Nam</option>
+          <option value="nữ">Nữ</option>
+          <option value="khác">Khác</option>
+        </select>
+
+        <input type="text" id="city" name="city" class="input" placeholder="Thành phố" required />
+
+        <input type="email" id="email" name="email" class="input" placeholder="Email" required />
+
+        <input type="password" id="password" name="password" class="input" placeholder="Mật khẩu" required />
+
+        <div class="relative">
+          <input type="password" id="passwordConfirm" name="passwordConfirm" class="input" placeholder="Nhập lại mật khẩu" required />
+          <div id="passwordMismatch" class="hidden text-xs mt-1" style="color: #f87171;">Mật khẩu không trùng khớp</div>
+        </div>
+
+        <button type="submit" class="btn w-full mt-2">Tiếp tục</button>
+        <div id="step1Msg" class="text-sm text-white/70 text-center"></div>
+      </form>
+
+      <!-- STEP 2: PHONE VERIFICATION (hidden by default) -->
+      <div id="step2Container" class="hidden">
+        <h3 class="font-semibold text-lg mb-4">Xác thực số điện thoại</h3>
+
+        <form id="step2Form" class="grid gap-3">
+          <p class="text-sm text-white/70 mb-2">Nhập số điện thoại để xác thực qua SMS OTP:</p>
+
+          <input type="tel" id="phone" name="phone" class="input" placeholder="Số điện thoại (10 số)" maxlength="10" required />
+          <div id="phoneError" class="hidden text-xs" style="color: #f87171;">Số điện thoại không hợp lệ</div>
+
+          <!-- reCAPTCHA container -->
+          <div id="recaptcha-container"></div>
+
+          <button type="button" id="sendOtpBtn" class="btn">Gửi mã OTP</button>
+
+          <!-- OTP Input (hidden until OTP is sent) -->
+          <div id="otpSection" class="hidden grid gap-3">
+            <input type="text" id="otpCode" placeholder="Nhập mã OTP (6 chữ số)" maxlength="6" class="input" />
+            <div id="otpError" class="text-xs" style="color: #f87171;"></div>
+            <button type="button" id="verifyOtpBtn" class="btn bg-green-500/20 border-green-400 text-green-300 hover:bg-green-400/30">Xác thực OTP</button>
+          </div>
+
+          <button type="button" id="backBtn" class="btn border-white/20">Quay lại</button>
+          <div id="step2Msg" class="text-sm text-white/70 text-center"></div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-white/10">
+    <div class="mx-auto max-w-7xl px-6 py-8 text-sm text-white/60 text-center">
+      © <span id="year"></span> Sentinel VN — Security-as-a-Plugin
+    </div>
+  </footer>
+
+  <script src="assets/js/register.js" defer></script>
+</body>
+
+</html>

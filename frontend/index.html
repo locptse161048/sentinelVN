@@ -227,32 +227,45 @@
       Security-as-a-Plugin • Website: https://sentinelvn.io.vn • Email: contact@sentinelvn.io.vn </div>
   </footer> <!-- AUTH MODAL -->
   <div id="authModal" class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/70 backdrop-blur-sm">
-    <div class="w-full max-w-md card p-6 relative"> <!-- Close --> <button id="closeAuth"
-        class="absolute top-3 right-3 text-white/60 hover:text-white">✕</button>
+    <div class="w-full max-w-md card p-6 relative">
+      <!-- Close -->
+      <button id="closeAuth" class="absolute top-3 right-3 text-white/60 hover:text-white">✕</button>
+      
       <div class="text-center mb-6">
-        <h1 class="font-orbitron text-2xl tracking-widest"> SENTINEL <span class="text-brand-400">VN</span> </h1>
-        <p class="text-white/60 text-sm mt-1" id="formTitle"> Đăng nhập hệ thống </p>
-      </div> <!-- TABS -->
-      <div class="grid grid-cols-2 gap-2 mb-4 text-sm"> <button id="loginTab" class="btn active">Đăng nhập</button>
-        <button id="signupTab" class="btn">Đăng ký</button>
-      </div> <!-- FORM -->
-      <form id="authForm" class="grid gap-3"><input type="text" name="name" class="input" placeholder="Họ và tên" />
-        <select name="gender" class="input hidden">
-          <option value="">-- Chọn giới tính --</option>
-          <option value="nam">Nam</option>
-          <option value="nữ">Nữ</option>
-          <option value="khác">Khác</option>
-        </select>
-        <input type="tel" name="phone" class="input hidden" placeholder="Số điện thoại" maxlength="10"
-          oninput="validatePhone(this)" />
-        <div id="phoneError" class="hidden text-xs" style="color: #f87171;">Số điện thoại không hợp lệ</div>
-        <input type="text" name="address" class="input hidden" placeholder="Địa chỉ" />
-        <input class="input" type="email" name="email" placeholder="Email" required /> <input class="input"
-          type="password" name="password" placeholder="Mật khẩu" required /> <button type="submit" class="btn w-fit"
-          id="submitBtn"> Đăng nhập </button> <button type="button" id="forgotLink"
-          class="text-sm text-brand-400 hover:underline w-fit mt-1"> Quên mật khẩu? </button>
+        <h1 class="font-orbitron text-2xl tracking-widest">SENTINEL <span class="text-brand-400">VN</span></h1>
+        <p class="text-white/60 text-sm mt-1" id="formTitle">Đăng nhập hệ thống</p>
+      </div>
+
+      <!-- TABS -->
+      <div class="grid grid-cols-2 gap-2 mb-4 text-sm">
+        <button id="phoneLoginTab" class="btn active">Đăng nhập qua SĐT</button>
+        <button id="emailLoginTab" class="btn">Đăng nhập qua Email</button>
+      </div>
+
+      <!-- FORM -->
+      <form id="authForm" class="grid gap-3">
+        <!-- PHONE LOGIN FIELDS -->
+        <div id="phoneFields">
+          <input type="tel" name="phone" class="input" placeholder="Số điện thoại (10 số)" maxlength="10" oninput="validatePhone(this)" />
+          <div id="phoneError" class="hidden text-xs" style="color: #f87171;">Số điện thoại không hợp lệ</div>
+        </div>
+
+        <!-- EMAIL LOGIN FIELDS -->
+        <div id="emailFields" class="hidden">
+          <input class="input" type="email" name="email" placeholder="Email" />
+        </div>
+
+        <!-- COMMON FIELDS -->
+        <input class="input" type="password" name="password" placeholder="Mật khẩu" required />
+        <button type="submit" class="btn w-fit" id="submitBtn">Đăng nhập</button>
+        
         <div id="msg" class="text-sm text-white/70"></div>
       </form>
+
+      <!-- SIGNUP LINK -->
+      <div class="text-sm text-center mt-4 text-white/70">
+        Bạn chưa có tài khoản? <a href="register.html" class="text-brand-400 hover:underline">Đăng ký</a>
+      </div>
     </div>
   </div> <!-- Scripts -->
   <script src="assets/js/index.js" defer></script>
