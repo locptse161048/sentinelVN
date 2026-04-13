@@ -8,9 +8,10 @@
   <link rel="icon" type="image/x-icon" href="./assets/images/favicon.ico" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Orbitron:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
-  <!-- Firebase SDK v9 Compat (Global) -->
-  <script src="https://www.gstatic.com/firebaseapp/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebaseapp/9.23.0/firebase-auth-compat.js"></script>
+
+  <!-- ✅ Firebase SDK v9 Compat - URL đúng: "firebasejs" không phải "firebaseapp" -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 
 <body class="text-white">
@@ -65,7 +66,7 @@
 
         <input type="text" id="city" name="city" class="input" placeholder="Thành phố" required />
 
-        <input type="email" id="email" name="email" class="input" placeholder="Email" required />
+        <input type="email" id="email" name="email" class="input" placeholder="Email" required autocomplete="email" />
 
         <button type="submit" class="btn w-full mt-2">Tiếp tục</button>
         <div id="step1Msg" class="text-sm text-white/70 text-center"></div>
@@ -78,7 +79,7 @@
         <form id="step2Form" class="grid gap-3">
           <p class="text-sm text-white/70 mb-2">Nhập số điện thoại để xác thực qua SMS OTP:</p>
 
-          <input type="tel" id="phone" name="phone" class="input" placeholder="Số điện thoại (10 số)" maxlength="10" required />
+          <input type="tel" id="phone" name="phone" class="input" placeholder="Số điện thoại (10 số)" maxlength="10" required autocomplete="tel" />
           <div id="phoneError" class="hidden text-xs" style="color: #f87171;">Số điện thoại không hợp lệ</div>
 
           <!-- reCAPTCHA container -->
@@ -88,7 +89,7 @@
 
           <!-- OTP Input (hidden until OTP is sent) -->
           <div id="otpSection" class="hidden grid gap-3">
-            <input type="text" id="otpCode" placeholder="Nhập mã OTP (6 chữ số)" maxlength="6" class="input" />
+            <input type="text" id="otpCode" placeholder="Nhập mã OTP (6 chữ số)" maxlength="6" class="input" autocomplete="one-time-code" />
             <div id="otpError" class="text-xs" style="color: #f87171;"></div>
             <button type="button" id="verifyOtpBtn" class="btn bg-green-500/20 border-green-400 text-green-300 hover:bg-green-400/30">Xác thực OTP</button>
           </div>
@@ -108,11 +109,11 @@
         <form id="step3Form" class="grid gap-3">
           <p class="text-sm text-white/70 mb-2">Nhập mật khẩu cho tài khoản của bạn:</p>
 
-          <input type="password" id="password" name="password" class="input" placeholder="Mật khẩu" required />
+          <input type="password" id="password" name="password" class="input" placeholder="Mật khẩu" required autocomplete="new-password" />
           <div id="passwordError" class="text-xs" style="color: #f87171;"></div>
 
           <div class="relative">
-            <input type="password" id="passwordConfirm" name="passwordConfirm" class="input" placeholder="Nhập lại mật khẩu" required />
+            <input type="password" id="passwordConfirm" name="passwordConfirm" class="input" placeholder="Nhập lại mật khẩu" required autocomplete="new-password" />
             <div id="passwordMismatch" class="hidden text-xs mt-1" style="color: #f87171;">Mật khẩu không trùng khớp</div>
           </div>
 
@@ -143,7 +144,8 @@
     </div>
   </footer>
 
-  <script src="assets/js/register.js" defer></script>
+  <!-- ✅ Bỏ "defer" để tránh race condition với Firebase SDK -->
+  <script src="assets/js/register.js"></script>
 </body>
 
 </html>

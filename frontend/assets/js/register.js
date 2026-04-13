@@ -13,60 +13,35 @@ const firebaseConfig = {
   appId: "1:426009488004:web:635069767c20ec76f430d1"
 };
 
-// Initialize Firebase when scripts are loaded
-let auth;
+// ========= Initialize Firebase (Compat API) =========
+let auth = null;
 let firebaseReady = false;
-let firebaseRetries = 0;
-const MAX_FIREBASE_RETRIES = 10;
 
-// Wait for Firebase to load (Compat API does not need explicit app variable)
-function initializeFirebase() {
-  console.log('[FIREBASE] Checking Firebase availability... (attempt', firebaseRetries + 1, ')');
-  
-  if (typeof firebase !== 'undefined' && firebase.apps && firebase.auth) {
-    try {
-      // Check if already initialized
-      if (firebase.apps.length === 0) {
-        console.log('[FIREBASE] Initializing app with config...');
-        firebase.initializeApp(firebaseConfig);
-      } else {
-        console.log('[FIREBASE] App already initialized');
-      }
-      
-      // Get auth instance (Compat API does not require app parameter)
-      auth = firebase.auth();
-      console.log('[FIREBASE] ✅ Auth initialized:', auth !== null);
-      firebaseReady = true;
-      console.log('[FIREBASE] ✅ Firebase ready for use');
-    } catch (err) {
-      console.error('[FIREBASE] Init error:', err.message, err.code);
-      firebaseReady = false;
-      auth = null;
+(function initializeFirebase() {
+  console.log('[FIREBASE] Initializing Firebase...');
+  try {
+    // ✅ Firebase SDK đã có sẵn vì không dùng "defer" và URL CDN đúng
+    if (typeof firebase === 'undefined') {
+      console.error('[FIREBASE] ❌ Firebase SDK not found. Kiểm tra lại URL CDN trong register.html');
+      return;
     }
-  } else {
-    // Retry loading Firebase, but with limit
-    firebaseRetries++;
-    console.log('[FIREBASE] Firebase SDK not yet available. Retrying...');
-    if (firebaseRetries <= MAX_FIREBASE_RETRIES) {
-      setTimeout(initializeFirebase, 300);
+
+    if (firebase.apps.length === 0) {
+      firebase.initializeApp(firebaseConfig);
+      console.log('[FIREBASE] App initialized.');
     } else {
-      console.error('[FIREBASE] ❌ Failed to load after', MAX_FIREBASE_RETRIES, 'retries.');
-      firebaseReady = false;
-      auth = null;
+      console.log('[FIREBASE] App already initialized.');
     }
-  }
-}
 
-// Initialize immediately and also when DOM is ready for better coverage
-initializeFirebase();
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    if (!firebaseReady) {
-      console.log('[FIREBASE] Retrying after DOMContentLoaded...');
-      initializeFirebase();
-    }
-  });
-}
+    auth = firebase.auth();
+    firebaseReady = true;
+    console.log('[FIREBASE] ✅ Firebase ready. Auth:', auth !== null);
+  } catch (err) {
+    console.error('[FIREBASE] ❌ Init error:', err.message);
+    firebaseReady = false;
+    auth = null;
+  }
+})();
 
 // ========= STATE =========
 let registrationData = {};
@@ -99,12 +74,8 @@ function showStep(step) {
     document.getElementById('step1Form').style.display = 'block';
   } else if (step === 2) {
     document.getElementById('step2Container').style.display = 'block';
-    // Add loading message if Firebase is still initializing
-    if (!auth) {
-      const step2Msg = document.getElementById('step2Msg');
-      step2Msg.textContent = '⏳ Đang khởi tạo xác minh SMS...';
-      step2Msg.style.color = '#fff';
-    }
+    // Initialize reCAPTCHA after container is visible
+    setTimeout(() => initRecaptcha(), 100);
   } else if (step === 3) {
     document.getElementById('step3Container').style.display = 'block';
   } else if (step === 4) {
@@ -113,21 +84,7 @@ function showStep(step) {
 
   currentStep = step;
   updateStepIndicator(step);
-
-  // Initialize recaptcha for step 2
-  if (step === 2) {
-    // Wait a bit for Firebase to ensure it's ready
-    if (!auth && firebaseRetries < MAX_FIREBASE_RETRIES) {
-      console.log('[STEP2] Firebase not ready yet, waiting...');
-      setTimeout(() => {
-        initRecaptcha();
-      }, 500);
-    } else {
-      initRecaptcha();
-    }
-  }
 }
-
 
 // ========= STEP 1: Validate personal info =========
 const step1Form = document.getElementById('step1Form');
@@ -144,7 +101,6 @@ if (step1Form) {
 
     step1Msg.textContent = '';
 
-    // ⚠️ Validate
     if (!firstName || !lastName || !gender || !city || !email) {
       step1Msg.textContent = '⚠️ Vui lòng điền đầy đủ thông tin.';
       step1Msg.style.color = '#f87171';
@@ -157,7 +113,6 @@ if (step1Form) {
       return;
     }
 
-    // ✅ All validations passed - Move to step 2 (OTP verification)
     registrationData = {
       firstName,
       lastName,
@@ -184,7 +139,6 @@ if (sendOtpBtn) {
     step2Msg.textContent = '';
     phoneError.classList.add('hidden');
 
-    // ⚠️ Validate phone
     if (!/^\d{10}$/.test(phone)) {
       phoneError.classList.remove('hidden');
       return;
@@ -192,36 +146,45 @@ if (sendOtpBtn) {
 
     if (!auth) {
       console.error('[OTP] Auth not initialized. firebaseReady:', firebaseReady);
-      step2Msg.textContent = '❌ Firebase chưa khởi tạo. Vui lòng chờ 2 giây rồi thử lại...';
+      step2Msg.textContent = '❌ Firebase chưa khởi tạo. Vui lòng tải lại trang.';
       step2Msg.style.color = '#f87171';
+      return;
+    }
+
+    if (!window.recaptchaVerifier) {
+      step2Msg.textContent = '❌ reCAPTCHA chưa sẵn sàng. Vui lòng chờ...';
+      step2Msg.style.color = '#f87171';
+      initRecaptcha();
       return;
     }
 
     try {
       step2Msg.textContent = '⏳ Đang gửi mã OTP...';
       step2Msg.style.color = '#fff';
+      sendOtpBtn.disabled = true;
 
-      const phoneNumber = '+84' + phone.substring(1); // Vietnam country code
-      console.log('[OTP] Sending OTP to:', phoneNumber, 'using auth:', auth);
+      // ✅ Chuyển số 0xxxxxxxxx → +84xxxxxxxxx
+      const phoneNumber = '+84' + phone.substring(1);
+      console.log('[OTP] Sending OTP to:', phoneNumber);
 
       confirmationResult = await auth.signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier);
 
       step2Msg.textContent = '✅ Mã OTP đã được gửi!';
       step2Msg.style.color = '#4ade80';
 
-      // Show OTP input
       document.getElementById('otpSection').classList.remove('hidden');
-      sendOtpBtn.disabled = true;
       sendOtpBtn.style.opacity = '0.5';
 
     } catch (err) {
-      console.error('[OTP] Error:', err.message);
+      console.error('[OTP] Error:', err.code, err.message);
       step2Msg.textContent = '❌ ' + (err.message || 'Không thể gửi OTP. Vui lòng thử lại.');
       step2Msg.style.color = '#f87171';
+      sendOtpBtn.disabled = false;
 
-      // Reinitialize recaptcha on error
+      // ✅ Reset reCAPTCHA khi gặp lỗi
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
       }
       initRecaptcha();
     }
@@ -253,25 +216,24 @@ if (verifyOtpBtn) {
     try {
       step2Msg.textContent = '⏳ Đang xác thực...';
       step2Msg.style.color = '#fff';
+      verifyOtpBtn.disabled = true;
 
       const result = await confirmationResult.confirm(otpCode);
       console.log('[OTP] Verified successfully for phone:', result.user.phoneNumber);
 
-      // ✅ Phone verified - Save to registration data
+      // ✅ Lưu số điện thoại đã xác thực vào registrationData
       registrationData.phone = result.user.phoneNumber.replace(/\D/g, '').slice(-10);
       registrationData.phoneVerified = true;
 
-      step2Msg.textContent = '✅ Xác thực thành công! Tiếp tục...';
+      step2Msg.textContent = '✅ Xác thực thành công! Đang chuyển bước...';
       step2Msg.style.color = '#4ade80';
 
-      // Move to step 3
-      setTimeout(() => {
-        showStep(3);
-      }, 1000);
+      setTimeout(() => showStep(3), 1000);
 
     } catch (err) {
-      console.error('[OTP VERIFY] Error:', err.message);
+      console.error('[OTP VERIFY] Error:', err.code, err.message);
       otpError.textContent = '❌ ' + (err.message || 'Mã OTP không hợp lệ');
+      verifyOtpBtn.disabled = false;
     }
   });
 }
@@ -282,23 +244,24 @@ if (backBtn2) {
   backBtn2.addEventListener('click', (e) => {
     e.preventDefault();
 
-    // Clear confirmation result
     confirmationResult = null;
 
-    // Reset step 2
+    // Reset step 2 UI
     document.getElementById('otpSection').classList.add('hidden');
     document.getElementById('phone').value = '';
     document.getElementById('otpCode').value = '';
-    const sendOtpBtn = document.getElementById('sendOtpBtn');
-    if (sendOtpBtn) {
-      sendOtpBtn.disabled = false;
-      sendOtpBtn.style.opacity = '1';
-    }
     document.getElementById('step2Msg').textContent = '';
 
-    // Clear recaptcha
+    const btn = document.getElementById('sendOtpBtn');
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    }
+
+    // ✅ Clear reCAPTCHA khi quay lại
     if (window.recaptchaVerifier) {
       window.recaptchaVerifier.clear();
+      window.recaptchaVerifier = null;
     }
 
     showStep(1);
@@ -319,7 +282,6 @@ if (step3Form) {
     step3Msg.textContent = '';
     passwordError.textContent = '';
 
-    // ⚠️ Validate password
     if (!password || password.length < 8) {
       passwordError.textContent = '⚠️ Mật khẩu phải tối thiểu 8 ký tự.';
       return;
@@ -346,13 +308,9 @@ if (step3Form) {
       return;
     }
 
-    // ✅ Password valid - Move to step 4 (Submit)
     registrationData.password = password;
-
-    // Show step 4
     showStep(4);
 
-    // Register account
     try {
       const registerRes = await fetch(`${API_BASE}/api/auth/register`, {
         method: 'POST',
@@ -366,7 +324,7 @@ if (step3Form) {
           gender: registrationData.gender,
           city: registrationData.city,
           phone: registrationData.phone || null,
-          phoneVerified: registrationData.phoneVerified === true // Only true if verified via OTP
+          phoneVerified: registrationData.phoneVerified === true
         })
       });
 
@@ -376,6 +334,7 @@ if (step3Form) {
         const step4Msg = document.getElementById('step4Msg');
         step4Msg.textContent = '❌ ' + (registerData.message || 'Đăng ký thất bại');
         step4Msg.style.color = '#f87171';
+        document.getElementById('loadingSpinner').style.display = 'none';
         console.error('[REGISTER] Error:', registerData.message);
         return;
       }
@@ -383,8 +342,9 @@ if (step3Form) {
       const step4Msg = document.getElementById('step4Msg');
       step4Msg.textContent = '✅ Đăng ký thành công! Đang chuyển hướng...';
       step4Msg.style.color = '#4ade80';
+      document.getElementById('loadingSpinner').textContent = '✅';
+      document.getElementById('loadingSpinner').style.animation = 'none';
 
-      // Redirect to client.html after 2 seconds
       setTimeout(() => {
         window.location.href = 'client.html';
       }, 2000);
@@ -394,6 +354,7 @@ if (step3Form) {
       const step4Msg = document.getElementById('step4Msg');
       step4Msg.textContent = '❌ Lỗi server: ' + err.message;
       step4Msg.style.color = '#f87171';
+      document.getElementById('loadingSpinner').style.display = 'none';
     }
   });
 }
@@ -404,14 +365,12 @@ if (backBtn3) {
   backBtn3.addEventListener('click', (e) => {
     e.preventDefault();
 
-    // Reset step 3
     document.getElementById('password').value = '';
     document.getElementById('passwordConfirm').value = '';
     document.getElementById('passwordError').textContent = '';
     document.getElementById('passwordMismatch').classList.add('hidden');
     document.getElementById('step3Msg').textContent = '';
 
-    // Go back to Step 2 (OTP verification is mandatory)
     showStep(2);
   });
 }
@@ -419,12 +378,11 @@ if (backBtn3) {
 // ========= PASSWORD CONFIRM VALIDATION =========
 const passwordConfirmInput = document.getElementById('passwordConfirm');
 if (passwordConfirmInput) {
-  passwordConfirmInput.addEventListener('change', () => {
+  passwordConfirmInput.addEventListener('input', () => {
     const password = document.getElementById('password').value;
-    const passwordConfirm = passwordConfirmInput.value;
     const mismatchEl = document.getElementById('passwordMismatch');
 
-    if (password !== passwordConfirm) {
+    if (password !== passwordConfirmInput.value) {
       mismatchEl.classList.remove('hidden');
       passwordConfirmInput.style.borderColor = '#f87171';
     } else {
@@ -438,50 +396,55 @@ if (passwordConfirmInput) {
 function initRecaptcha() {
   try {
     if (!auth) {
-      console.error('[RECAPTCHA] Auth not initialized yet. firebaseReady:', firebaseReady, 'auth:', auth);
+      console.error('[RECAPTCHA] Auth not initialized.');
       return;
     }
 
-    if (!firebase.auth.RecaptchaVerifier) {
-      console.error('[RECAPTCHA] RecaptchaVerifier not available');
-      return;
-    }
-
+    // ✅ Clear verifier cũ nếu tồn tại
     if (window.recaptchaVerifier) {
       window.recaptchaVerifier.clear();
+      window.recaptchaVerifier = null;
     }
 
-    console.log('[RECAPTCHA] Creating new RecaptchaVerifier...');
+    console.log('[RECAPTCHA] Creating RecaptchaVerifier...');
     window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-      'size': 'normal',
-      'callback': (token) => {
-        console.log('[RECAPTCHA] Token received');
+      size: 'normal',
+      callback: (token) => {
+        console.log('[RECAPTCHA] ✅ Token received');
       },
       'expired-callback': () => {
-        console.log('[RECAPTCHA] Expired');
+        console.warn('[RECAPTCHA] Expired. Re-initializing...');
+        if (window.recaptchaVerifier) {
+          window.recaptchaVerifier.clear();
+          window.recaptchaVerifier = null;
+        }
+        initRecaptcha();
       }
     });
-    console.log('[RECAPTCHA] ✅ Initialized successfully');
+
+    // ✅ Render reCAPTCHA widget vào container
+    window.recaptchaVerifier.render().then((widgetId) => {
+      window.recaptchaWidgetId = widgetId;
+      console.log('[RECAPTCHA] ✅ Rendered successfully. widgetId:', widgetId);
+    }).catch((err) => {
+      console.error('[RECAPTCHA] Render error:', err.message);
+    });
+
   } catch (err) {
-    console.error('[RECAPTCHA] Error:', err.message, err.code);
+    console.error('[RECAPTCHA] Init error:', err.message);
   }
 }
 
 // ========= PHONE VALIDATION =========
-function validatePhone(input) {
-  input.value = input.value.replace(/\D/g, '').slice(0, 10);
-  const err = document.getElementById('phoneError');
-  if (input.value.length > 0 && input.value.length < 10) {
-    err.classList.remove('hidden');
-  } else {
-    err.classList.add('hidden');
-  }
-}
-
-// Add event listener for real-time phone validation
 const phoneInput = document.getElementById('phone');
 if (phoneInput) {
-  phoneInput.addEventListener('input', function() {
-    validatePhone(this);
+  phoneInput.addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').slice(0, 10);
+    const err = document.getElementById('phoneError');
+    if (this.value.length > 0 && this.value.length < 10) {
+      err.classList.remove('hidden');
+    } else {
+      err.classList.add('hidden');
+    }
   });
 }
