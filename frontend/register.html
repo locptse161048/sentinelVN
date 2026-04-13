@@ -41,13 +41,15 @@
 
       <!-- STEP INDICATOR -->
       <div class="flex gap-2 mb-6">
-        <div class="flex-1 h-1 bg-brand-400 rounded"></div>
-        <div class="flex-1 h-1 bg-white/20 rounded"></div>
+        <div class="flex-1 h-1 bg-brand-400 rounded step-indicator" data-step="1"></div>
+        <div class="flex-1 h-1 bg-white/20 rounded step-indicator" data-step="2"></div>
+        <div class="flex-1 h-1 bg-white/20 rounded step-indicator" data-step="3"></div>
+        <div class="flex-1 h-1 bg-white/20 rounded step-indicator" data-step="4"></div>
       </div>
 
       <!-- STEP 1: PERSONAL INFO -->
-      <form id="step1Form" class="grid gap-3">
-        <h3 class="font-semibold text-lg mb-2">Thông tin cá nhân</h3>
+      <form id="step1Form" class="grid gap-3 step-form">
+        <h3 class="font-semibold text-lg mb-2">Bước 1: Thông tin cá nhân</h3>
 
         <div class="grid grid-cols-2 gap-2">
           <input type="text" id="firstName" name="firstName" class="input" placeholder="Họ và tên đệm" required />
@@ -65,20 +67,13 @@
 
         <input type="email" id="email" name="email" class="input" placeholder="Email" required />
 
-        <input type="password" id="password" name="password" class="input" placeholder="Mật khẩu" required />
-
-        <div class="relative">
-          <input type="password" id="passwordConfirm" name="passwordConfirm" class="input" placeholder="Nhập lại mật khẩu" required />
-          <div id="passwordMismatch" class="hidden text-xs mt-1" style="color: #f87171;">Mật khẩu không trùng khớp</div>
-        </div>
-
         <button type="submit" class="btn w-full mt-2">Tiếp tục</button>
         <div id="step1Msg" class="text-sm text-white/70 text-center"></div>
       </form>
 
       <!-- STEP 2: PHONE VERIFICATION (hidden by default) -->
-      <div id="step2Container" class="hidden">
-        <h3 class="font-semibold text-lg mb-4">Xác thực số điện thoại</h3>
+      <div id="step2Container" class="hidden step-form">
+        <h3 class="font-semibold text-lg mb-4">Bước 2: Xác thực số điện thoại</h3>
 
         <form id="step2Form" class="grid gap-3">
           <p class="text-sm text-white/70 mb-2">Nhập số điện thoại để xác thực qua SMS OTP:</p>
@@ -98,9 +93,45 @@
             <button type="button" id="verifyOtpBtn" class="btn bg-green-500/20 border-green-400 text-green-300 hover:bg-green-400/30">Xác thực OTP</button>
           </div>
 
-          <button type="button" id="backBtn" class="btn border-white/20">Quay lại</button>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="backBtn2" class="btn border-white/20">Quay lại</button>
+            <div style="display: none;"></div>
+          </div>
           <div id="step2Msg" class="text-sm text-white/70 text-center"></div>
         </form>
+      </div>
+
+      <!-- STEP 3: PASSWORD -->
+      <div id="step3Container" class="hidden step-form">
+        <h3 class="font-semibold text-lg mb-4">Bước 3: Tạo mật khẩu</h3>
+
+        <form id="step3Form" class="grid gap-3">
+          <p class="text-sm text-white/70 mb-2">Nhập mật khẩu cho tài khoản của bạn:</p>
+
+          <input type="password" id="password" name="password" class="input" placeholder="Mật khẩu" required />
+          <div id="passwordError" class="text-xs" style="color: #f87171;"></div>
+
+          <div class="relative">
+            <input type="password" id="passwordConfirm" name="passwordConfirm" class="input" placeholder="Nhập lại mật khẩu" required />
+            <div id="passwordMismatch" class="hidden text-xs mt-1" style="color: #f87171;">Mật khẩu không trùng khớp</div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="backBtn3" class="btn border-white/20">Quay lại</button>
+            <button type="submit" class="btn">Tạo tài khoản</button>
+          </div>
+          <div id="step3Msg" class="text-sm text-white/70 text-center"></div>
+        </form>
+      </div>
+
+      <!-- STEP 4: SUCCESS / LOADING -->
+      <div id="step4Container" class="hidden step-form">
+        <h3 class="font-semibold text-lg mb-4">Bước 4: Hoàn tất</h3>
+        <div class="grid gap-3 text-center">
+          <div id="loadingSpinner" style="font-size: 40px; animation: spin 1s linear infinite;">⏳</div>
+          <p class="text-sm text-white/70">Đang lưu thông tin tài khoản của bạn...</p>
+          <div id="step4Msg" class="text-sm text-white/70"></div>
+        </div>
       </div>
     </div>
   </main>

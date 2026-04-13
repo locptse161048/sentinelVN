@@ -40,18 +40,29 @@ const getMiddleware = (req, res, next) => {
 
 // Đăng ký
 router.post('/register', getMiddleware, async (req, res) => {
-	const { email, password, fullName, gender, phone, address } = req.body;
+	const { 
+		email, 
+		password, 
+		fullName, 
+		firstName, 
+		lastName, 
+		gender, 
+		city, 
+		phone, 
+		address,
+		phoneVerified 
+	} = req.body;
 	
 	// ⚠️ SECURITY: Input validation
+	if (!email || !isValidEmail(email)) {
+		return res.status(400).json({ message: "Email không hợp lệ" });
+	}
+	
 	if (!fullName || fullName.trim().length === 0) {
 		return res.status(400).json({ message: "Vui lòng nhập họ và tên" });
 	}
 	if (fullName.length > 100) {
 		return res.status(400).json({ message: "Họ và tên quá dài (max 100 ký tự)" });
-	}
-	
-	if (!email || !isValidEmail(email)) {
-		return res.status(400).json({ message: "Email không hợp lệ" });
 	}
 	
 	const passValidation = validatePassword(password);
@@ -61,6 +72,10 @@ router.post('/register', getMiddleware, async (req, res) => {
 	
 	if (phone && !/^\d{10}$/.test(phone.replace(/\D/g, ''))) {
 		return res.status(400).json({ message: "Số điện thoại không hợp lệ (10 chữ số)" });
+	}
+	
+	if (city && city.length > 100) {
+		return res.status(400).json({ message: "Thành phố quá dài (max 100 ký tự)" });
 	}
 	
 	if (address && address.length > 200) {
@@ -79,9 +94,13 @@ router.post('/register', getMiddleware, async (req, res) => {
 		const user = await Client.create({
 			email: email.toLowerCase(),
 			fullName: fullName.trim(),
+			firstName: firstName ? firstName.trim() : null,
+			lastName: lastName ? lastName.trim() : null,
 			gender: gender || null,
+			city: city ? city.trim() : null,
 			phone: phone ? phone.replace(/\D/g, '') : null,
 			address: address ? address.trim() : null,
+			phoneVerified: phoneVerified === true,
 			passwordHash: hash,
 			role: 'client',
 			status: 'đang hoạt động'
@@ -94,9 +113,13 @@ router.post('/register', getMiddleware, async (req, res) => {
 				_id: user._id,
 				email: user.email,
 				fullName: user.fullName,
+				firstName: user.firstName || '-',
+				lastName: user.lastName || '-',
 				gender: user.gender || '-',
+				city: user.city || '-',
 				phone: user.phone || '-',
 				address: user.address || '-',
+				phoneVerified: user.phoneVerified,
 				status: user.status,
 				createdAt: user.createdAt,
 				licenseStatus: 'pending',
@@ -106,7 +129,19 @@ router.post('/register', getMiddleware, async (req, res) => {
 			console.log('[SOCKET] Emitted new_client_registered event');
 		}
 		
-		res.json({ message: 'Đăng ký thành công', user: { email: user.email, fullName: user.fullName } });
+		console.log('[AUTH REGISTER] ✅ User registered:', user.email);
+		res.json({ 
+			message: 'Đăng ký thành công', 
+			user: { 
+				_id: user._id, 
+				email: user.email, 
+				fullName: user.fullName,
+				firstName: user.firstName,
+				lastName: user.lastName,
+				phone: user.phone,
+				city: user.city
+			} 
+		});
 	} catch (err) {
 		// ⚠️ SECURITY: Don't log sensitive errors
 		console.error('[AUTH REGISTER] Error:', err.message);

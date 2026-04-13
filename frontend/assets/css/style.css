@@ -1404,3 +1404,10 @@ header .header-actions > * {
 header .max-w-7xl {
   flex-wrap: nowrap !important;
 }
+
+/* Spinner animation for registration step 4 */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
