@@ -1,5 +1,6 @@
 const API_BASE = 'https://sentinelvn.onrender.com';
 
+console.log('[INIT] Register.js loaded. Checking Firebase...');
 document.getElementById('year').textContent = new Date().getFullYear();
 
 // ========= Firebase Configuration (Compat API) =========
@@ -13,46 +14,58 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase when scripts are loaded
-let app, auth;
+let auth;
 let firebaseReady = false;
 let firebaseRetries = 0;
-const MAX_FIREBASE_RETRIES = 5;
+const MAX_FIREBASE_RETRIES = 10;
 
-// Wait for Firebase to load
+// Wait for Firebase to load (Compat API does not need explicit app variable)
 function initializeFirebase() {
-  if (typeof firebase !== 'undefined' && firebase.initializeApp) {
+  console.log('[FIREBASE] Checking Firebase availability... (attempt', firebaseRetries + 1, ')');
+  
+  if (typeof firebase !== 'undefined' && firebase.apps && firebase.auth) {
     try {
-      // Get existing app or create new one
-      const existingApp = firebase.apps && firebase.apps.length > 0 ? firebase.app() : null;
-      if (existingApp) {
-        app = existingApp;
+      // Check if already initialized
+      if (firebase.apps.length === 0) {
+        console.log('[FIREBASE] Initializing app with config...');
+        firebase.initializeApp(firebaseConfig);
       } else {
-        app = firebase.initializeApp(firebaseConfig);
+        console.log('[FIREBASE] App already initialized');
       }
-      auth = firebase.auth(app);
+      
+      // Get auth instance (Compat API does not require app parameter)
+      auth = firebase.auth();
+      console.log('[FIREBASE] ✅ Auth initialized:', auth !== null);
       firebaseReady = true;
-      console.log('[FIREBASE] ✅ Initialized successfully');
+      console.log('[FIREBASE] ✅ Firebase ready for use');
     } catch (err) {
-      console.error('[FIREBASE] Init error:', err.message);
+      console.error('[FIREBASE] Init error:', err.message, err.code);
       firebaseReady = false;
+      auth = null;
     }
   } else {
     // Retry loading Firebase, but with limit
     firebaseRetries++;
+    console.log('[FIREBASE] Firebase SDK not yet available. Retrying...');
     if (firebaseRetries <= MAX_FIREBASE_RETRIES) {
-      setTimeout(initializeFirebase, 200);
+      setTimeout(initializeFirebase, 300);
     } else {
-      console.warn('[FIREBASE] ⚠️ Failed to load after 5 retries. User will encounter OTP errors.');
+      console.error('[FIREBASE] ❌ Failed to load after', MAX_FIREBASE_RETRIES, 'retries.');
       firebaseReady = false;
+      auth = null;
     }
   }
 }
 
-// Call when DOM is ready
+// Initialize immediately and also when DOM is ready for better coverage
+initializeFirebase();
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeFirebase);
-} else {
-  initializeFirebase();
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!firebaseReady) {
+      console.log('[FIREBASE] Retrying after DOMContentLoaded...');
+      initializeFirebase();
+    }
+  });
 }
 
 // ========= STATE =========
@@ -86,6 +99,12 @@ function showStep(step) {
     document.getElementById('step1Form').style.display = 'block';
   } else if (step === 2) {
     document.getElementById('step2Container').style.display = 'block';
+    // Add loading message if Firebase is still initializing
+    if (!auth) {
+      const step2Msg = document.getElementById('step2Msg');
+      step2Msg.textContent = '⏳ Đang khởi tạo xác minh SMS...';
+      step2Msg.style.color = '#fff';
+    }
   } else if (step === 3) {
     document.getElementById('step3Container').style.display = 'block';
   } else if (step === 4) {
@@ -97,7 +116,15 @@ function showStep(step) {
 
   // Initialize recaptcha for step 2
   if (step === 2) {
-    initRecaptcha();
+    // Wait a bit for Firebase to ensure it's ready
+    if (!auth && firebaseRetries < MAX_FIREBASE_RETRIES) {
+      console.log('[STEP2] Firebase not ready yet, waiting...');
+      setTimeout(() => {
+        initRecaptcha();
+      }, 500);
+    } else {
+      initRecaptcha();
+    }
   }
 }
 
@@ -164,7 +191,8 @@ if (sendOtpBtn) {
     }
 
     if (!auth) {
-      step2Msg.textContent = '❌ Firebase chưa khởi tạo. Vui lòng tải lại trang.';
+      console.error('[OTP] Auth not initialized. firebaseReady:', firebaseReady);
+      step2Msg.textContent = '❌ Firebase chưa khởi tạo. Vui lòng chờ 2 giây rồi thử lại...';
       step2Msg.style.color = '#f87171';
       return;
     }
@@ -174,9 +202,9 @@ if (sendOtpBtn) {
       step2Msg.style.color = '#fff';
 
       const phoneNumber = '+84' + phone.substring(1); // Vietnam country code
-      console.log('[OTP] Sending OTP to:', phoneNumber);
+      console.log('[OTP] Sending OTP to:', phoneNumber, 'using auth:', auth);
 
-      confirmationResult = await firebase.auth().signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier);
+      confirmationResult = await auth.signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier);
 
       step2Msg.textContent = '✅ Mã OTP đã được gửi!';
       step2Msg.style.color = '#4ade80';
@@ -410,7 +438,12 @@ if (passwordConfirmInput) {
 function initRecaptcha() {
   try {
     if (!auth) {
-      console.error('[RECAPTCHA] Auth not initialized');
+      console.error('[RECAPTCHA] Auth not initialized yet. firebaseReady:', firebaseReady, 'auth:', auth);
+      return;
+    }
+
+    if (!firebase.auth.RecaptchaVerifier) {
+      console.error('[RECAPTCHA] RecaptchaVerifier not available');
       return;
     }
 
@@ -418,6 +451,7 @@ function initRecaptcha() {
       window.recaptchaVerifier.clear();
     }
 
+    console.log('[RECAPTCHA] Creating new RecaptchaVerifier...');
     window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
       'size': 'normal',
       'callback': (token) => {
@@ -427,8 +461,9 @@ function initRecaptcha() {
         console.log('[RECAPTCHA] Expired');
       }
     });
+    console.log('[RECAPTCHA] ✅ Initialized successfully');
   } catch (err) {
-    console.error('[RECAPTCHA] Error:', err.message);
+    console.error('[RECAPTCHA] Error:', err.message, err.code);
   }
 }
 
