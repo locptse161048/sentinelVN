@@ -14,26 +14,37 @@ const firebaseConfig = {
 
 // Initialize Firebase when scripts are loaded
 let app, auth;
+let firebaseReady = false;
+let firebaseRetries = 0;
+const MAX_FIREBASE_RETRIES = 5;
 
 // Wait for Firebase to load
 function initializeFirebase() {
   if (typeof firebase !== 'undefined' && firebase.initializeApp) {
     try {
       // Get existing app or create new one
-      const existingApp = firebase.apps.length > 0 ? firebase.app() : null;
+      const existingApp = firebase.apps && firebase.apps.length > 0 ? firebase.app() : null;
       if (existingApp) {
         app = existingApp;
       } else {
         app = firebase.initializeApp(firebaseConfig);
       }
       auth = firebase.auth(app);
-      console.log('[FIREBASE] Initialized successfully');
+      firebaseReady = true;
+      console.log('[FIREBASE] ✅ Initialized successfully');
     } catch (err) {
       console.error('[FIREBASE] Init error:', err.message);
+      firebaseReady = false;
     }
   } else {
-    console.error('[FIREBASE] Firebase SDK not loaded');
-    setTimeout(initializeFirebase, 100); // Retry after 100ms
+    // Retry loading Firebase, but with limit
+    firebaseRetries++;
+    if (firebaseRetries <= MAX_FIREBASE_RETRIES) {
+      setTimeout(initializeFirebase, 200);
+    } else {
+      console.warn('[FIREBASE] ⚠️ Failed to load after 5 retries. OTP disabled. Using email registration instead.');
+      firebaseReady = false;
+    }
   }
 }
 
@@ -84,8 +95,8 @@ function showStep(step) {
   currentStep = step;
   updateStepIndicator(step);
 
-  // Initialize recaptcha for step 2
-  if (step === 2) {
+  // Initialize recaptcha for step 2 (only if Firebase is ready)
+  if (step === 2 && firebaseReady) {
     initRecaptcha();
   }
 }
@@ -119,7 +130,7 @@ if (step1Form) {
       return;
     }
 
-    // ✅ All validations passed - Move to step 2
+    // ✅ All validations passed - Move to step 2 or step 3
     registrationData = {
       firstName,
       lastName,
@@ -129,7 +140,14 @@ if (step1Form) {
       email
     };
 
-    showStep(2);
+    // Skip Step 2 if Firebase is not ready
+    if (!firebaseReady) {
+      console.warn('[REGISTRATION] Firebase not ready, skipping OTP. Going directly to Step 3');
+      registrationData.phoneVerified = false; // Mark as not verified via OTP
+      showStep(3); // Skip OTP step and go directly to password
+    } else {
+      showStep(2); // Normal flow: OTP verification
+    }
   });
 }
 
@@ -139,9 +157,17 @@ if (sendOtpBtn) {
   sendOtpBtn.addEventListener('click', async (e) => {
     e.preventDefault();
 
+    const step2Msg = document.getElementById('step2Msg');
+
+    // Check if Firebase is ready
+    if (!firebaseReady) {
+      step2Msg.textContent = '❌ Firebase SDK không khả dụng. Vui lòng quay lại và thử lại.';
+      step2Msg.style.color = '#f87171';
+      return;
+    }
+
     const phone = document.getElementById('phone').value.trim().replace(/\D/g, '');
     const phoneError = document.getElementById('phoneError');
-    const step2Msg = document.getElementById('step2Msg');
 
     step2Msg.textContent = '';
     phoneError.classList.add('hidden');
@@ -326,8 +352,8 @@ if (step3Form) {
           lastName: registrationData.lastName,
           gender: registrationData.gender,
           city: registrationData.city,
-          phone: registrationData.phone,
-          phoneVerified: true
+          phone: registrationData.phone || null,
+          phoneVerified: registrationData.phoneVerified !== false && firebaseReady // Only true if verified via OTP
         })
       });
 
@@ -372,7 +398,12 @@ if (backBtn3) {
     document.getElementById('passwordMismatch').classList.add('hidden');
     document.getElementById('step3Msg').textContent = '';
 
-    showStep(2);
+    // Go back to Step 2 if Firebase ready, else go to Step 1
+    if (firebaseReady) {
+      showStep(2);
+    } else {
+      showStep(1);
+    }
   });
 }
 
