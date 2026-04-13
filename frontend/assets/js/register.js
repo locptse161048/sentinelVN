@@ -221,8 +221,9 @@ if (verifyOtpBtn) {
       const result = await confirmationResult.confirm(otpCode);
       console.log('[OTP] Verified successfully for phone:', result.user.phoneNumber);
 
-      // ✅ Lưu số điện thoại đã xác thực vào registrationData
-      registrationData.phone = result.user.phoneNumber.replace(/\D/g, '').slice(-10);
+      // ✅ Lưu số điện thoại đã xác thực vào registrationData (convert +84... to 0...)
+      const originalPhone = result.user.phoneNumber.replace(/\D/g, '');
+      registrationData.phone = '0' + originalPhone.substring(2);
       registrationData.phoneVerified = true;
 
       step2Msg.textContent = '✅ Xác thực thành công! Đang chuyển bước...';

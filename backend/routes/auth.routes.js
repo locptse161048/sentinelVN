@@ -49,7 +49,6 @@ router.post('/register', getMiddleware, async (req, res) => {
 		gender, 
 		city, 
 		phone, 
-		address,
 		phoneVerified 
 	} = req.body;
 	
@@ -78,10 +77,6 @@ router.post('/register', getMiddleware, async (req, res) => {
 		return res.status(400).json({ message: "Thành phố quá dài (max 100 ký tự)" });
 	}
 	
-	if (address && address.length > 200) {
-		return res.status(400).json({ message: "Địa chỉ quá dài (max 200 ký tự)" });
-	}
-	
 	if (gender && !['nam', 'nữ', 'khác'].includes(gender)) {
 		return res.status(400).json({ message: "Giới tính không hợp lệ" });
 	}
@@ -99,7 +94,6 @@ router.post('/register', getMiddleware, async (req, res) => {
 			gender: gender || null,
 			city: city ? city.trim() : null,
 			phone: phone ? phone.replace(/\D/g, '') : null,
-			address: address ? address.trim() : null,
 			phoneVerified: phoneVerified === true,
 			passwordHash: hash,
 			role: 'client',
@@ -118,7 +112,6 @@ router.post('/register', getMiddleware, async (req, res) => {
 				gender: user.gender || '-',
 				city: user.city || '-',
 				phone: user.phone || '-',
-				address: user.address || '-',
 				phoneVerified: user.phoneVerified,
 				status: user.status,
 				createdAt: user.createdAt,

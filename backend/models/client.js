@@ -9,7 +9,6 @@ const ClientSchema = new mongoose.Schema({
 	gender: { type: String, enum: ['nam', 'nữ', 'khác'], default: null },
 	phone: { type: String, default: null },
 	city: { type: String, default: null },
-	address: { type: String, default: null },
 	phoneVerified: { type: Boolean, default: false },
 	role: { type: String, enum: ['client', 'admin'], default: 'client' },
 	status: { type: String, enum: ['đang hoạt động', 'tạm ngưng'], default: 'đang hoạt động' },
