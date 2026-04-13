@@ -42,7 +42,7 @@ function initializeFirebase() {
     if (firebaseRetries <= MAX_FIREBASE_RETRIES) {
       setTimeout(initializeFirebase, 200);
     } else {
-      console.warn('[FIREBASE] ⚠️ Failed to load after 5 retries. OTP disabled. Using email registration instead.');
+      console.warn('[FIREBASE] ⚠️ Failed to load after 5 retries. User will encounter OTP errors.');
       firebaseReady = false;
     }
   }
@@ -95,8 +95,8 @@ function showStep(step) {
   currentStep = step;
   updateStepIndicator(step);
 
-  // Initialize recaptcha for step 2 (only if Firebase is ready)
-  if (step === 2 && firebaseReady) {
+  // Initialize recaptcha for step 2
+  if (step === 2) {
     initRecaptcha();
   }
 }
@@ -130,7 +130,7 @@ if (step1Form) {
       return;
     }
 
-    // ✅ All validations passed - Move to step 2 or step 3
+    // ✅ All validations passed - Move to step 2 (OTP verification)
     registrationData = {
       firstName,
       lastName,
@@ -140,14 +140,7 @@ if (step1Form) {
       email
     };
 
-    // Skip Step 2 if Firebase is not ready
-    if (!firebaseReady) {
-      console.warn('[REGISTRATION] Firebase not ready, skipping OTP. Going directly to Step 3');
-      registrationData.phoneVerified = false; // Mark as not verified via OTP
-      showStep(3); // Skip OTP step and go directly to password
-    } else {
-      showStep(2); // Normal flow: OTP verification
-    }
+    showStep(2);
   });
 }
 
@@ -157,17 +150,9 @@ if (sendOtpBtn) {
   sendOtpBtn.addEventListener('click', async (e) => {
     e.preventDefault();
 
-    const step2Msg = document.getElementById('step2Msg');
-
-    // Check if Firebase is ready
-    if (!firebaseReady) {
-      step2Msg.textContent = '❌ Firebase SDK không khả dụng. Vui lòng quay lại và thử lại.';
-      step2Msg.style.color = '#f87171';
-      return;
-    }
-
     const phone = document.getElementById('phone').value.trim().replace(/\D/g, '');
     const phoneError = document.getElementById('phoneError');
+    const step2Msg = document.getElementById('step2Msg');
 
     step2Msg.textContent = '';
     phoneError.classList.add('hidden');
@@ -179,7 +164,7 @@ if (sendOtpBtn) {
     }
 
     if (!auth) {
-      step2Msg.textContent = '❌ Firebase chưa khởi tạo';
+      step2Msg.textContent = '❌ Firebase chưa khởi tạo. Vui lòng tải lại trang.';
       step2Msg.style.color = '#f87171';
       return;
     }
@@ -353,7 +338,7 @@ if (step3Form) {
           gender: registrationData.gender,
           city: registrationData.city,
           phone: registrationData.phone || null,
-          phoneVerified: registrationData.phoneVerified !== false && firebaseReady // Only true if verified via OTP
+          phoneVerified: registrationData.phoneVerified === true // Only true if verified via OTP
         })
       });
 
@@ -398,12 +383,8 @@ if (backBtn3) {
     document.getElementById('passwordMismatch').classList.add('hidden');
     document.getElementById('step3Msg').textContent = '';
 
-    // Go back to Step 2 if Firebase ready, else go to Step 1
-    if (firebaseReady) {
-      showStep(2);
-    } else {
-      showStep(1);
-    }
+    // Go back to Step 2 (OTP verification is mandatory)
+    showStep(2);
   });
 }
 
