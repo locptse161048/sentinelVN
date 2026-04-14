@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const Client = require('../models/client');
+const EmailVerification = require('../models/emailVerification');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { generateOTP, hashOTP, verifyOTP, sendOTPEmail } = require('../utils/emailVerification');
+const rateLimit = require('express-rate-limit');
 
 // ⚠️ SECURITY: Helper function to validate email format
 function isValidEmail(email) {
@@ -38,7 +41,7 @@ const getMiddleware = (req, res, next) => {
 	next();
 };
 
-// Đăng ký
+// Đăng ký (Email OTP Required)
 router.post('/register', getMiddleware, async (req, res) => {
 	const { 
 		email, 
@@ -47,9 +50,8 @@ router.post('/register', getMiddleware, async (req, res) => {
 		firstName, 
 		lastName, 
 		gender, 
-		city, 
-		phone, 
-		phoneVerified 
+		city,
+		emailVerified
 	} = req.body;
 	
 	// ⚠️ SECURITY: Input validation
@@ -69,16 +71,17 @@ router.post('/register', getMiddleware, async (req, res) => {
 		return res.status(400).json({ message: passValidation.message });
 	}
 	
-	if (phone && !/^\d{10}$/.test(phone.replace(/\D/g, ''))) {
-		return res.status(400).json({ message: "Số điện thoại không hợp lệ (10 chữ số)" });
-	}
-	
 	if (city && city.length > 100) {
 		return res.status(400).json({ message: "Thành phố quá dài (max 100 ký tự)" });
 	}
 	
 	if (gender && !['nam', 'nữ', 'khác'].includes(gender)) {
 		return res.status(400).json({ message: "Giới tính không hợp lệ" });
+	}
+
+	// ⚠️ SECURITY: Verify email was confirmed via OTP
+	if (!emailVerified) {
+		return res.status(400).json({ message: "Email chưa được xác thực. Vui lòng xác thực email trước." });
 	}
 	
 	try {
@@ -93,8 +96,6 @@ router.post('/register', getMiddleware, async (req, res) => {
 			lastName: lastName ? lastName.trim() : null,
 			gender: gender || null,
 			city: city ? city.trim() : null,
-			phone: phone ? phone.replace(/\D/g, '') : null,
-			phoneVerified: phoneVerified === true,
 			passwordHash: hash,
 			role: 'client',
 			status: 'đang hoạt động'
@@ -111,8 +112,6 @@ router.post('/register', getMiddleware, async (req, res) => {
 				lastName: user.lastName || '-',
 				gender: user.gender || '-',
 				city: user.city || '-',
-				phone: user.phone || '-',
-				phoneVerified: user.phoneVerified,
 				status: user.status,
 				createdAt: user.createdAt,
 				licenseStatus: 'pending',
@@ -122,7 +121,7 @@ router.post('/register', getMiddleware, async (req, res) => {
 			console.log('[SOCKET] Emitted new_client_registered event');
 		}
 		
-		console.log('[AUTH REGISTER] ✅ User registered:', user.email);
+		console.log('[AUTH REGISTER] ✅ User registered via email OTP:', user.email);
 		res.json({ 
 			message: 'Đăng ký thành công', 
 			user: { 
@@ -131,7 +130,6 @@ router.post('/register', getMiddleware, async (req, res) => {
 				fullName: user.fullName,
 				firstName: user.firstName,
 				lastName: user.lastName,
-				phone: user.phone,
 				city: user.city
 			} 
 		});
@@ -492,6 +490,247 @@ router.post('/register/verify-phone', async (req, res) => {
 		});
 	} catch (err) {
 		console.error('[AUTH REGISTER VERIFY PHONE] Error:', err.message);
+		res.status(500).json({ message: 'Lỗi server' });
+	}
+});
+
+// ========= OTP EMAIL VERIFICATION =========
+
+// ⚠️ SECURITY: Rate limit OTP sending (max 5 requests per 10 minutes per IP)
+const otpSendLimiter = rateLimit({
+	windowMs: 10 * 60 * 1000, // 10 minutes
+	max: 5, // Max 5 send requests
+	message: 'Quá nhiều lần yêu cầu gửi OTP. Vui lòng thử lại sau 10 phút.',
+	standardHeaders: true,
+	legacyHeaders: false,
+	skip: (req, res) => {
+		// Only apply limiter to /send-otp, not other routes
+		return !req.path.includes('/send-otp');
+	}
+});
+
+// ⚠️ SECURITY: Rate limit OTP verification (max 10 attempts per 15 minutes per IP)
+const otpVerifyLimiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 10, // Max 10 verify attempts
+	message: 'Quá nhiều lần xác thực OTP. Vui lòng thử lại sau 15 phút.',
+	standardHeaders: true,
+	legacyHeaders: false,
+	skip: (req, res) => {
+		// Only apply limiter to /verify-otp, not other routes
+		return !req.path.includes('/verify-otp');
+	}
+});
+
+/**
+ * POST /api/auth/send-otp
+ * Send OTP to email
+ * Body: { email }
+ */
+router.post('/send-otp', otpSendLimiter, async (req, res) => {
+	const { email } = req.body;
+
+	// ⚠️ SECURITY: Input validation
+	if (!email || !isValidEmail(email)) {
+		return res.status(400).json({ message: "Email không hợp lệ" });
+	}
+
+	const emailLower = email.toLowerCase();
+
+	try {
+		// ⚠️ SECURITY: Check if email already registered
+		const existing = await Client.findOne({ email: emailLower });
+		if (existing) {
+			return res.status(400).json({ message: 'Email đã được đăng ký' });
+		}
+
+		// ✅ Generate new OTP
+		const otp = generateOTP();
+		const otpHash = await hashOTP(otp);
+
+		// ✅ Set expiration time (2 minutes from now)
+		const expireAt = new Date();
+		expireAt.setMinutes(expireAt.getMinutes() + 2);
+
+		// ✅ Delete old OTP if exists
+		await EmailVerification.deleteOne({ email: emailLower });
+
+		// ✅ Save new OTP to database
+		const verification = await EmailVerification.create({
+			email: emailLower,
+			otpHash,
+			attempts: 0,
+			resendCount: 0,
+			expireAt
+		});
+
+		// ✅ Send OTP email
+		try {
+			await sendOTPEmail(emailLower, otp);
+		} catch (emailErr) {
+			console.error('[OTP SEND] Email sending failed:', emailErr.message);
+			// Delete the verification record if email sending fails
+			await EmailVerification.deleteOne({ _id: verification._id });
+			return res.status(500).json({ message: 'Không thể gửi email OTP. Vui lòng thử lại.' });
+		}
+
+		console.log('[OTP SEND] ✅ OTP sent to:', emailLower);
+
+		res.json({
+			message: 'Mã OTP đã được gửi đến email của bạn',
+			expireAt: expireAt.toISOString()
+		});
+
+	} catch (err) {
+		console.error('[OTP SEND] Error:', err.message);
+		res.status(500).json({ message: 'Lỗi server' });
+	}
+});
+
+/**
+ * POST /api/auth/verify-otp
+ * Verify OTP code
+ * Body: { email, otp }
+ */
+router.post('/verify-otp', otpVerifyLimiter, async (req, res) => {
+	const { email, otp } = req.body;
+
+	// ⚠️ SECURITY: Input validation
+	if (!email || !isValidEmail(email)) {
+		return res.status(400).json({ message: "Email không hợp lệ" });
+	}
+
+	if (!otp || !/^\d{6}$/.test(otp)) {
+		return res.status(400).json({ message: "Mã OTP phải là 6 chữ số" });
+	}
+
+	const emailLower = email.toLowerCase();
+
+	try {
+		// ✅ Find OTP verification record
+		let verification = await EmailVerification.findOne({ email: emailLower });
+
+		if (!verification) {
+			return res.status(400).json({ message: 'Mã OTP không hợp lệ hoặc đã hết hạn' });
+		}
+
+		// ✅ Check if OTP has expired
+		if (new Date() > verification.expireAt) {
+			await EmailVerification.deleteOne({ _id: verification._id });
+			return res.status(400).json({ message: 'Mã OTP không hợp lệ hoặc đã hết hạn' });
+		}
+
+		// ⚠️ SECURITY: Check if max attempts reached
+		if (verification.attempts >= 3) {
+			await EmailVerification.deleteOne({ _id: verification._id });
+			return res.status(400).json({ message: 'Vượt quá số lần thử. Vui lòng yêu cầu mã OTP mới.' });
+		}
+
+		// ✅ Verify OTP
+		const isValidOTP = await verifyOTP(otp, verification.otpHash);
+
+		if (!isValidOTP) {
+			// Increment attempts and save
+			verification.attempts = (verification.attempts || 0) + 1;
+			await verification.save();
+
+			const attemptsLeft = 3 - verification.attempts;
+			return res.status(400).json({
+				message: `Mã OTP không hợp lệ. Còn ${attemptsLeft} lần thử.`,
+				attemptsLeft
+			});
+		}
+
+		// ✅ OTP verified successfully - delete the record
+		await EmailVerification.deleteOne({ _id: verification._id });
+
+		console.log('[OTP VERIFY] ✅ OTP verified for:', emailLower);
+
+		res.json({
+			message: 'Xác thực email thành công',
+			email: emailLower,
+			verified: true
+		});
+
+	} catch (err) {
+		console.error('[OTP VERIFY] Error:', err.message);
+		res.status(500).json({ message: 'Lỗi server' });
+	}
+});
+
+/**
+ * POST /api/auth/resend-otp
+ * Resend OTP to email (max 3 times, only after 2 minutes)
+ * Body: { email }
+ */
+router.post('/resend-otp', otpSendLimiter, async (req, res) => {
+	const { email } = req.body;
+
+	// ⚠️ SECURITY: Input validation
+	if (!email || !isValidEmail(email)) {
+		return res.status(400).json({ message: "Email không hợp lệ" });
+	}
+
+	const emailLower = email.toLowerCase();
+
+	try {
+		// ✅ Find existing OTP verification record
+		let verification = await EmailVerification.findOne({ email: emailLower });
+
+		if (!verification) {
+			return res.status(400).json({ message: 'Không tìm thấy yêu cầu xác thực. Vui lòng gửi OTP trước.' });
+		}
+
+		// ⚠️ SECURITY: Check max resend attempts (max 3 times)
+		if (verification.resendCount >= 3) {
+			return res.status(400).json({ message: 'Vượt quá số lần gửi lại. Vui lòng yêu cầu mã OTP mới.' });
+		}
+
+		// ⚠️ SECURITY: Check minimum time between resends (2 minutes)
+		const now = new Date();
+		const timeSinceCreation = (now - verification.createdAt) / 1000 / 60; // minutes
+		if (timeSinceCreation < 2) {
+			const waitTime = Math.ceil(2 - timeSinceCreation);
+			return res.status(400).json({
+				message: `Vui lòng chờ ${waitTime} phút trước khi gửi lại`,
+				waitSeconds: waitTime * 60
+			});
+		}
+
+		// ✅ Generate new OTP
+		const otp = generateOTP();
+		const otpHash = await hashOTP(otp);
+
+		// ✅ Update expiration time (2 minutes from now)
+		const newExpireAt = new Date();
+		newExpireAt.setMinutes(newExpireAt.getMinutes() + 2);
+
+		// ✅ Update verification record
+		verification.otpHash = otpHash;
+		verification.attempts = 0; // Reset attempts
+		verification.resendCount = (verification.resendCount || 0) + 1;
+		verification.lastResendTime = now;
+		verification.expireAt = newExpireAt;
+		await verification.save();
+
+		// ✅ Send OTP email
+		try {
+			await sendOTPEmail(emailLower, otp);
+		} catch (emailErr) {
+			console.error('[OTP RESEND] Email sending failed:', emailErr.message);
+			return res.status(500).json({ message: 'Không thể gửi email OTP. Vui lòng thử lại.' });
+		}
+
+		console.log('[OTP RESEND] ✅ OTP resent to:', emailLower, '- Resend count:', verification.resendCount);
+
+		res.json({
+			message: 'Mã OTP mới đã được gửi đến email của bạn',
+			expireAt: newExpireAt.toISOString(),
+			resendCount: verification.resendCount
+		});
+
+	} catch (err) {
+		console.error('[OTP RESEND] Error:', err.message);
 		res.status(500).json({ message: 'Lỗi server' });
 	}
 });

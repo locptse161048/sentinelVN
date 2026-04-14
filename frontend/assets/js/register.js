@@ -1,52 +1,15 @@
 const API_BASE = 'https://sentinelvn.onrender.com';
 
-console.log('[INIT] Register.js loaded. Checking Firebase...');
+console.log('[INIT] Register.js loaded - Email OTP Version');
 document.getElementById('year').textContent = new Date().getFullYear();
-
-// ========= Firebase Configuration (Compat API) =========
-const firebaseConfig = {
-  apiKey: "AIzaSyCOcvfL4IVHpuEXMkQWNdnPBN5LH35SYSU",
-  authDomain: "sentinel-vn.firebaseapp.com",
-  projectId: "sentinel-vn",
-  storageBucket: "sentinel-vn.firebasestorage.app",
-  messagingSenderId: "426009488004",
-  appId: "1:426009488004:web:635069767c20ec76f430d1"
-};
-
-// ========= Initialize Firebase (Compat API) =========
-let auth = null;
-let firebaseReady = false;
-
-(function initializeFirebase() {
-  console.log('[FIREBASE] Initializing Firebase...');
-  try {
-    // ✅ Firebase SDK đã có sẵn vì không dùng "defer" và URL CDN đúng
-    if (typeof firebase === 'undefined') {
-      console.error('[FIREBASE] ❌ Firebase SDK not found. Kiểm tra lại URL CDN trong register.html');
-      return;
-    }
-
-    if (firebase.apps.length === 0) {
-      firebase.initializeApp(firebaseConfig);
-      console.log('[FIREBASE] App initialized.');
-    } else {
-      console.log('[FIREBASE] App already initialized.');
-    }
-
-    auth = firebase.auth();
-    firebaseReady = true;
-    console.log('[FIREBASE] ✅ Firebase ready. Auth:', auth !== null);
-  } catch (err) {
-    console.error('[FIREBASE] ❌ Init error:', err.message);
-    firebaseReady = false;
-    auth = null;
-  }
-})();
 
 // ========= STATE =========
 let registrationData = {};
-let confirmationResult = null;
 let currentStep = 1;
+let countdownInterval = null;
+let resendCountdownInterval = null;
+let otpExpireAt = null;
+let otpAttemptsLeft = 3;
 
 // ========= UTILITY FUNCTIONS =========
 function updateStepIndicator(step) {
@@ -74,8 +37,7 @@ function showStep(step) {
     document.getElementById('step1Form').style.display = 'block';
   } else if (step === 2) {
     document.getElementById('step2Container').style.display = 'block';
-    // Initialize reCAPTCHA after container is visible
-    setTimeout(() => initRecaptcha(), 100);
+    startCountdown(); // Start OTP countdown when showing step 2
   } else if (step === 3) {
     document.getElementById('step3Container').style.display = 'block';
   } else if (step === 4) {
@@ -84,6 +46,88 @@ function showStep(step) {
 
   currentStep = step;
   updateStepIndicator(step);
+}
+
+// ========= UTILITY FUNCTIONS FOR OTP =========
+
+/**
+ * Format time remaining in MM:SS format
+ */
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Start countdown timer synchronized with server expiration time
+ */
+function startCountdown() {
+  if (!otpExpireAt) return;
+
+  // Clear any existing interval
+  if (countdownInterval) clearInterval(countdownInterval);
+
+  const updateCountdown = () => {
+    const now = new Date();
+    const expireTime = new Date(otpExpireAt);
+    const secondsLeft = Math.max(0, Math.floor((expireTime - now) / 1000));
+
+    const countdownEl = document.getElementById('countdown');
+    if (countdownEl) {
+      countdownEl.textContent = formatTime(secondsLeft);
+    }
+
+    // If time is up
+    if (secondsLeft === 0) {
+      clearInterval(countdownInterval);
+      const countdownSection = document.getElementById('countdownSection');
+      if (countdownSection) {
+        countdownSection.innerHTML = '<span style="color: #f87171;">⚠️ Mã OTP đã hết hạn</span>';
+      }
+    }
+  };
+
+  updateCountdown(); // Update immediately
+  countdownInterval = setInterval(updateCountdown, 1000);
+}
+
+/**
+ * Start resend countdown timer (2 minutes)
+ */
+function startResendCountdown() {
+  if (resendCountdownInterval) clearInterval(resendCountdownInterval);
+
+  const resendBtn = document.getElementById('resendOtpBtn');
+  const resendCountdownEl = document.getElementById('resendCountdown');
+
+  let secondsLeft = 120; // 2 minutes
+
+  const updateResendCountdown = () => {
+    const mins = Math.floor(secondsLeft / 60);
+    const secs = secondsLeft % 60;
+    const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+    if (resendCountdownEl) {
+      resendCountdownEl.textContent = timeStr;
+    }
+
+    if (secondsLeft === 0) {
+      clearInterval(resendCountdownInterval);
+      if (resendBtn) {
+        resendBtn.disabled = false;
+        resendBtn.style.opacity = '1';
+      }
+      if (resendCountdownEl) {
+        resendCountdownEl.textContent = '✅ Sẵn sàng';
+      }
+    }
+
+    secondsLeft--;
+  };
+
+  updateResendCountdown();
+  resendCountdownInterval = setInterval(updateResendCountdown, 1000);
 }
 
 // ========= STEP 1: Validate personal info =========
@@ -122,8 +166,62 @@ if (step1Form) {
       email
     };
 
+    // Move to step 2 and send OTP automatically
     showStep(2);
+    sendOTP();
   });
+}
+
+// ========= STEP 2: EMAIL OTP VERIFICATION =========
+
+/**
+ * Send OTP to email
+ */
+async function sendOTP() {
+  const step2Msg = document.getElementById('step2Msg');
+  const resendBtn = document.getElementById('resendOtpBtn');
+
+  step2Msg.textContent = '⏳ Đang gửi mã OTP...';
+  step2Msg.style.color = '#fff';
+
+  try {
+    const response = await fetch(`${API_BASE}/api/auth/send-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: registrationData.email })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      step2Msg.textContent = '❌ ' + (data.message || 'Không thể gửi OTP');
+      step2Msg.style.color = '#f87171';
+      return;
+    }
+
+    // ✅ Get expiration time from server
+    otpExpireAt = data.expireAt;
+    otpAttemptsLeft = 3;
+
+    step2Msg.textContent = '✅ Mã OTP đã được gửi đến email của bạn';
+    step2Msg.style.color = '#4ade80';
+
+    // Start countdown timer
+    startCountdown();
+
+    // Start resend countdown
+    if (resendBtn) {
+      resendBtn.disabled = true;
+      resendBtn.style.opacity = '0.5';
+      startResendCountdown();
+    }
+
+    console.log('[OTP] ✅ OTP sent successfully');
+  } catch (err) {
+    console.error('[OTP SEND] Error:', err.message);
+    step2Msg.textContent = '❌ Lỗi: ' + err.message;
+    step2Msg.style.color = '#f87171';
+  }
 }
 
 // ========= STEP 2: PHONE VERIFICATION =========
@@ -192,6 +290,8 @@ if (sendOtpBtn) {
 }
 
 // ========= VERIFY OTP =========
+
+// Verify OTP button
 const verifyOtpBtn = document.getElementById('verifyOtpBtn');
 if (verifyOtpBtn) {
   verifyOtpBtn.addEventListener('click', async (e) => {
@@ -208,61 +308,118 @@ if (verifyOtpBtn) {
       return;
     }
 
-    if (!confirmationResult) {
-      otpError.textContent = 'Vui lòng gửi OTP trước';
-      return;
-    }
-
     try {
       step2Msg.textContent = '⏳ Đang xác thực...';
       step2Msg.style.color = '#fff';
       verifyOtpBtn.disabled = true;
 
-      const result = await confirmationResult.confirm(otpCode);
-      console.log('[OTP] Verified successfully for phone:', result.user.phoneNumber);
+      const response = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: registrationData.email,
+          otp: otpCode
+        })
+      });
 
-      // ✅ Lưu số điện thoại đã xác thực vào registrationData (convert +84... to 0...)
-      const originalPhone = result.user.phoneNumber.replace(/\D/g, '');
-      registrationData.phone = '0' + originalPhone.substring(2);
-      registrationData.phoneVerified = true;
+      const data = await response.json();
 
+      if (!response.ok) {
+        otpError.textContent = data.message || 'Xác thực thất bại';
+        if (data.attemptsLeft !== undefined) {
+          otpAttemptsLeft = data.attemptsLeft;
+        }
+        verifyOtpBtn.disabled = false;
+        return;
+      }
+
+      // ✅ OTP verified successfully
       step2Msg.textContent = '✅ Xác thực thành công! Đang chuyển bước...';
       step2Msg.style.color = '#4ade80';
+
+      // Clear countdown
+      if (countdownInterval) clearInterval(countdownInterval);
 
       setTimeout(() => showStep(3), 1000);
 
     } catch (err) {
-      console.error('[OTP VERIFY] Error:', err.code, err.message);
-      otpError.textContent = '❌ ' + (err.message || 'Mã OTP không hợp lệ');
+      console.error('[OTP VERIFY] Error:', err.message);
+      otpError.textContent = '❌ Lỗi: ' + err.message;
       verifyOtpBtn.disabled = false;
     }
   });
 }
 
-// ========= BACK BUTTON FROM STEP 2 =========
+// Resend OTP button
+const resendOtpBtn = document.getElementById('resendOtpBtn');
+if (resendOtpBtn) {
+  resendOtpBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+
+    const step2Msg = document.getElementById('step2Msg');
+
+    step2Msg.textContent = '⏳ Đang gửi lại mã OTP...';
+    step2Msg.style.color = '#fff';
+
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/resend-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: registrationData.email })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        step2Msg.textContent = '❌ ' + (data.message || 'Không thể gửi lại OTP');
+        step2Msg.style.color = '#f87171';
+        return;
+      }
+
+      // ✅ Get new expiration time
+      otpExpireAt = data.expireAt;
+      otpAttemptsLeft = 3; // Reset attempts
+      document.getElementById('otpCode').value = ''; // Clear input
+      document.getElementById('otpError').textContent = '';
+
+      step2Msg.textContent = '✅ Mã OTP mới đã được gửi đến email của bạn';
+      step2Msg.style.color = '#4ade80';
+
+      // Restart countdown
+      startCountdown();
+      startResendCountdown();
+
+      resendOtpBtn.disabled = true;
+      resendOtpBtn.style.opacity = '0.5';
+
+      console.log('[OTP RESEND] ✅ OTP resent successfully. Resend count:', data.resendCount);
+    } catch (err) {
+      console.error('[OTP RESEND] Error:', err.message);
+      step2Msg.textContent = '❌ Lỗi: ' + err.message;
+      step2Msg.style.color = '#f87171';
+    }
+  });
+}
+
+// Back button from step 2
 const backBtn2 = document.getElementById('backBtn2');
 if (backBtn2) {
   backBtn2.addEventListener('click', (e) => {
     e.preventDefault();
 
-    confirmationResult = null;
+    // Clear countdowns
+    if (countdownInterval) clearInterval(countdownInterval);
+    if (resendCountdownInterval) clearInterval(resendCountdownInterval);
 
     // Reset step 2 UI
-    document.getElementById('otpSection').classList.add('hidden');
-    document.getElementById('phone').value = '';
     document.getElementById('otpCode').value = '';
+    document.getElementById('otpError').textContent = '';
     document.getElementById('step2Msg').textContent = '';
 
-    const btn = document.getElementById('sendOtpBtn');
-    if (btn) {
-      btn.disabled = false;
-      btn.style.opacity = '1';
-    }
-
-    // ✅ Clear reCAPTCHA khi quay lại
-    if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
-      window.recaptchaVerifier = null;
+    const resendBtn = document.getElementById('resendOtpBtn');
+    if (resendBtn) {
+      resendBtn.disabled = true;
+      resendBtn.style.opacity = '0.5';
     }
 
     showStep(1);
@@ -324,8 +481,7 @@ if (step3Form) {
           lastName: registrationData.lastName,
           gender: registrationData.gender,
           city: registrationData.city,
-          phone: registrationData.phone || null,
-          phoneVerified: registrationData.phoneVerified === true
+          emailVerified: true
         })
       });
 
@@ -393,59 +549,13 @@ if (passwordConfirmInput) {
   });
 }
 
-// ========= RECAPTCHA INITIALIZATION =========
-function initRecaptcha() {
-  try {
-    if (!auth) {
-      console.error('[RECAPTCHA] Auth not initialized.');
-      return;
-    }
-
-    // ✅ Clear verifier cũ nếu tồn tại
-    if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
-      window.recaptchaVerifier = null;
-    }
-
-    console.log('[RECAPTCHA] Creating RecaptchaVerifier...');
-    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-      size: 'normal',
-      callback: (token) => {
-        console.log('[RECAPTCHA] ✅ Token received');
-      },
-      'expired-callback': () => {
-        console.warn('[RECAPTCHA] Expired. Re-initializing...');
-        if (window.recaptchaVerifier) {
-          window.recaptchaVerifier.clear();
-          window.recaptchaVerifier = null;
-        }
-        initRecaptcha();
-      }
-    });
-
-    // ✅ Render reCAPTCHA widget vào container
-    window.recaptchaVerifier.render().then((widgetId) => {
-      window.recaptchaWidgetId = widgetId;
-      console.log('[RECAPTCHA] ✅ Rendered successfully. widgetId:', widgetId);
-    }).catch((err) => {
-      console.error('[RECAPTCHA] Render error:', err.message);
-    });
-
-  } catch (err) {
-    console.error('[RECAPTCHA] Init error:', err.message);
-  }
-}
-
-// ========= PHONE VALIDATION =========
-const phoneInput = document.getElementById('phone');
-if (phoneInput) {
-  phoneInput.addEventListener('input', function () {
-    this.value = this.value.replace(/\D/g, '').slice(0, 10);
-    const err = document.getElementById('phoneError');
-    if (this.value.length > 0 && this.value.length < 10) {
-      err.classList.remove('hidden');
-    } else {
-      err.classList.add('hidden');
-    }
+// ========= OTP INPUT VALIDATION =========
+const otpInput = document.getElementById('otpCode');
+if (otpInput) {
+  otpInput.addEventListener('input', function () {
+    // Only allow numbers
+    this.value = this.value.replace(/\D/g, '').slice(0, 6);
   });
 }
+
+console.log('[INIT] ✅ Register.js initialized - Email OTP Flow Ready');
