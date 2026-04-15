@@ -1,10 +1,9 @@
+const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
-const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
 /**
  * Generate a 6-digit OTP
- * @returns {string} 6-digit OTP code
  */
 function generateOTP() {
 	return Math.floor(100000 + Math.random() * 900000).toString();
@@ -12,8 +11,6 @@ function generateOTP() {
 
 /**
  * Hash OTP using bcrypt for secure storage
- * @param {string} otp - Plain OTP code
- * @returns {Promise<string>} Hashed OTP
  */
 async function hashOTP(otp) {
 	const salt = await bcrypt.genSalt(10);
@@ -22,43 +19,50 @@ async function hashOTP(otp) {
 
 /**
  * Compare plain OTP with hashed OTP
- * @param {string} plainOTP - Plain OTP code from user
- * @param {string} hashedOTP - Hashed OTP from database
- * @returns {Promise<boolean>} True if OTP matches
  */
 async function verifyOTP(plainOTP, hashedOTP) {
 	return bcrypt.compare(plainOTP, hashedOTP);
 }
 
-/**
- * Create nodemailer transporter
- * @returns {Object} Nodemailer transporter
- */
-function createTransporter() {
-	return nodemailer.createTransport({
-		service: 'gmail', // or your email service
-		host: process.env.SMTP_HOST || 'smtp.gmail.com',
-		port: process.env.SMTP_PORT || 587,
-		secure: false, // true for 465, false for other ports
-		auth: {
-			user: process.env.OTPEMAIL || process.env.EMAIL_USER,
-			pass: process.env.OTPEMAIL_PASSWORD || process.env.EMAIL_PASSWORD
-		}
-	});
-}
+// ✅ Khởi tạo OAuth2 Client 1 lần duy nhất
+const oauth2Client = new google.auth.OAuth2(
+	process.env.GMAIL_CLIENT_ID,
+	process.env.GMAIL_CLIENT_SECRET,
+	'https://developers.google.com/oauthplayground'
+);
+
+oauth2Client.setCredentials({
+	refresh_token: process.env.GMAIL_REFRESH_TOKEN
+});
 
 /**
- * Send OTP email to user
- * @param {string} email - Recipient email
- * @param {string} otp - OTP code to send
- * @returns {Promise<boolean>} True if email sent successfully
+ * Send OTP email to user via Gmail API + OAuth2
  */
 async function sendOTPEmail(email, otp) {
 	try {
-		const transporter = createTransporter();
+		// ✅ Lấy Access Token mới từ Refresh Token
+		const { token: accessToken } = await oauth2Client.getAccessToken();
 
-		const mailOptions = {
-			from: process.env.OTPEMAIL || process.env.EMAIL_USER,
+		if (!accessToken) {
+			throw new Error('Không thể lấy access token từ Google');
+		}
+
+		// ✅ Tạo transporter với OAuth2
+		const transporter = nodemailer.createTransport({
+			service: 'gmail',
+			auth: {
+				type: 'OAuth2',
+				user: process.env.GMAIL_USER,
+				clientId: process.env.GMAIL_CLIENT_ID,
+				clientSecret: process.env.GMAIL_CLIENT_SECRET,
+				refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+				accessToken: accessToken
+			}
+		});
+
+		// ✅ Gửi email
+		const info = await transporter.sendMail({
+			from: `"SentinelVN" <${process.env.GMAIL_USER}>`,
 			to: email,
 			subject: '🔐 Mã xác thực Email - SENTINEL VN',
 			html: `
@@ -70,17 +74,17 @@ async function sendOTPEmail(email, otp) {
 
 					<div style="padding: 20px; background-color: #1e293b; border-radius: 8px; margin-bottom: 20px;">
 						<h3 style="margin-top: 0; color: #22d3ee;">Xác thực Email của Bạn</h3>
-						<p style="color: #cbd5e1; margin-bottom: 20px;">Đây là mã xác thực email của bạn. Mã này sẽ hết hạn trong 2 phút.</p>
+						<p style="color: #cbd5e1; margin-bottom: 20px;">Mã xác thực của bạn sẽ hết hạn trong <strong>2 phút</strong>.</p>
 
 						<div style="text-align: center; padding: 20px; background-color: #0f172a; border-radius: 6px; margin-bottom: 20px;">
-							<code style="font-size: 32px; font-weight: bold; color: #22d3ee; letter-spacing: 5px;">${otp}</code>
+							<code style="font-size: 36px; font-weight: bold; color: #22d3ee; letter-spacing: 8px;">${otp}</code>
 						</div>
 
 						<p style="color: #cbd5e1; font-size: 12px; margin: 10px 0;">
 							⏰ <strong>Hạn sử dụng:</strong> 2 phút từ khi nhận email này
 						</p>
 						<p style="color: #cbd5e1; font-size: 12px; margin: 10px 0;">
-							🔐 <strong>Lưu ý bảo mật:</strong> Không bao giờ chia sẻ mã này với bất kỳ ai
+							🔐 <strong>Lưu ý:</strong> Không chia sẻ mã này với bất kỳ ai
 						</p>
 					</div>
 
@@ -89,17 +93,17 @@ async function sendOTPEmail(email, otp) {
 							Nếu bạn không yêu cầu mã này, vui lòng bỏ qua email này.
 						</p>
 						<p style="color: #64748b; font-size: 11px; margin: 10px 0 0 0;">
-							©️ SENTINEL VN - Bảo vệ ứng dụng của bạn
+							© SENTINEL VN - Bảo vệ ứng dụng của bạn
 						</p>
 					</div>
 				</div>
 			`,
 			text: `Mã xác thực của bạn là: ${otp}\nMã này sẽ hết hạn trong 2 phút.`
-		};
+		});
 
-		const info = await transporter.sendMail(mailOptions);
 		console.log('[EMAIL] ✅ OTP sent to:', email, '- MessageID:', info.messageId);
 		return true;
+
 	} catch (err) {
 		console.error('[EMAIL] ❌ Error sending OTP email:', err.message);
 		throw err;
@@ -110,6 +114,5 @@ module.exports = {
 	generateOTP,
 	hashOTP,
 	verifyOTP,
-	sendOTPEmail,
-	createTransporter
+	sendOTPEmail
 };
