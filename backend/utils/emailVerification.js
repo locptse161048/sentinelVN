@@ -45,61 +45,76 @@ oauth2Client.setCredentials({
  * Send OTP email using Gmail API (NO SMTP)
  */
 async function sendOTPEmail(email, otp) {
+	console.log('[DEBUG] Sending OTP to:', email);
+
+	// ✅ Validate email
+	if (!email || typeof email !== 'string' || !email.trim()) {
+		throw new Error('Email không hợp lệ');
+	}
+
+	const cleanEmail = email.trim().toLowerCase();
+
 	try {
-		// Lấy access token mới
+		// ✅ Lấy access token
 		const accessTokenResponse = await oauth2Client.getAccessToken();
 		const accessToken = accessTokenResponse?.token;
+
+		console.log('[DEBUG] AccessToken:', accessToken ? 'OK' : 'NULL');
 
 		if (!accessToken) {
 			throw new Error('Không lấy được access token');
 		}
 
-		// Khởi tạo Gmail API
+		// ✅ Gmail API
 		const gmail = google.gmail({
 			version: 'v1',
 			auth: oauth2Client
 		});
 
-		// Nội dung email (RAW format)
-		const message = `
-From: "SentinelVN" <${process.env.GMAIL_USER}>
-To: ${email}
-Subject: =?UTF-8?B?${Buffer.from('🔐 Mã xác thực Email - SENTINEL VN').toString('base64')}?=
-MIME-Version: 1.0
-Content-Type: text/html; charset="UTF-8"
+		// ✅ FORMAT EMAIL CHUẨN (KHÔNG dùng template string)
+		const subject = '🔐 Mã xác thực Email - SENTINEL VN';
 
-<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #0f172a; color: #e0e7ff; border-radius: 8px;">
-	<h2 style="color: #22d3ee; text-align: center;">SENTINEL VN</h2>
-	<p style="text-align: center; color: #94a3b8;">Security-as-a-Plugin</p>
+		const messageParts = [
+			`From: "SentinelVN" <${process.env.GMAIL_USER}>`,
+			`To: ${cleanEmail}`,
+			`Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
+			'MIME-Version: 1.0',
+			'Content-Type: text/html; charset="UTF-8"',
+			'',
+			`<div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #0f172a; color: #e0e7ff; border-radius: 8px;">
+				<h2 style="color: #22d3ee; text-align: center;">SENTINEL VN</h2>
+				<p style="text-align: center; color: #94a3b8;">Security-as-a-Plugin</p>
 
-	<div style="background-color: #1e293b; padding: 20px; border-radius: 8px; margin-top: 20px;">
-		<h3 style="color: #22d3ee;">Xác thực Email của bạn</h3>
-		<p>Mã OTP của bạn sẽ hết hạn trong <b>2 phút</b>.</p>
+				<div style="background-color: #1e293b; padding: 20px; border-radius: 8px; margin-top: 20px;">
+					<h3 style="color: #22d3ee;">Xác thực Email của bạn</h3>
+					<p>Mã OTP của bạn sẽ hết hạn trong <b>2 phút</b>.</p>
 
-		<div style="text-align: center; margin: 20px 0;">
-			<span style="font-size: 36px; letter-spacing: 8px; font-weight: bold; color: #22d3ee;">
-				${otp}
-			</span>
-		</div>
+					<div style="text-align: center; margin: 20px 0;">
+						<span style="font-size: 36px; letter-spacing: 8px; font-weight: bold; color: #22d3ee;">
+							${otp}
+						</span>
+					</div>
 
-		<p style="font-size: 12px;">⏰ Hạn sử dụng: 2 phút</p>
-		<p style="font-size: 12px;">🔐 Không chia sẻ mã này với bất kỳ ai</p>
-	</div>
+					<p style="font-size: 12px;">⏰ Hạn sử dụng: 2 phút</p>
+					<p style="font-size: 12px;">🔐 Không chia sẻ mã này với bất kỳ ai</p>
+				</div>
 
-	<p style="text-align: center; font-size: 12px; color: #64748b; margin-top: 20px;">
-		Nếu bạn không yêu cầu, hãy bỏ qua email này.
-	</p>
-</div>
-`;
+				<p style="text-align: center; font-size: 12px; color: #64748b; margin-top: 20px;">
+					Nếu bạn không yêu cầu, hãy bỏ qua email này.
+				</p>
+			</div>`
+		];
 
-		// Encode base64 URL-safe
+		const message = messageParts.join('\n');
+
+		// ✅ Encode base64 URL-safe
 		const encodedMessage = Buffer.from(message)
 			.toString('base64')
 			.replace(/\+/g, '-')
 			.replace(/\//g, '_')
 			.replace(/=+$/, '');
 
-		// Gửi email
+		// ✅ Gửi email
 		await gmail.users.messages.send({
 			userId: 'me',
 			requestBody: {
@@ -107,13 +122,12 @@ Content-Type: text/html; charset="UTF-8"
 			}
 		});
 
-		console.log('[EMAIL] ✅ OTP sent to:', email);
+		console.log('[EMAIL] ✅ Sent to:', cleanEmail);
 		return true;
 
 	} catch (err) {
-		console.error('[EMAIL] ❌ Error sending OTP email:', err.message);
+		console.error('[EMAIL] ❌ Error:', err.message);
 
-		// Debug sâu hơn nếu cần
 		if (err.response?.data) {
 			console.error('[EMAIL] Google API Error:', err.response.data);
 		}
