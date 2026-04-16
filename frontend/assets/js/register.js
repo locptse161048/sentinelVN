@@ -19,6 +19,19 @@ let firebaseInitialized = false;
 // ========= FIREBASE INITIALIZATION =========
 async function initFirebase() {
 	try {
+		// Wait for Firebase to be available (up to 5 seconds)
+		let attempts = 0;
+		while (!window.firebase && attempts < 50) {
+			await new Promise(resolve => setTimeout(resolve, 100));
+			attempts++;
+		}
+
+		if (!window.firebase) {
+			console.error('[FIREBASE] ❌ Firebase SDK not loaded after timeout');
+			firebaseInitialized = false;
+			return;
+		}
+
 		const firebaseConfig = {
 			apiKey: "AIzaSyDvCn-tP5OJEZ9S_LIFcxSG6MoYvmM_1Gg",
 			authDomain: "sentinelvn-2fb6f.firebaseapp.com",
@@ -38,11 +51,17 @@ async function initFirebase() {
 		window.recaptchaVerifier = null;
 	} catch (err) {
 		console.error('[FIREBASE] ❌ Error initializing Firebase:', err);
+		firebaseInitialized = false;
 	}
 }
 
 function initRecaptcha() {
 	if (window.recaptchaVerifier) return;
+
+	if (!firebaseInitialized) {
+		console.warn('[RECAPTCHA] Firebase not initialized yet');
+		return;
+	}
 
 	try {
 		window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptchaContainer', {
@@ -285,6 +304,11 @@ if (backBtn2) {
 
 // Initialize phone tab as default when showing step 2
 function initStep2() {
+	if (!firebaseInitialized) {
+		console.warn('[STEP 2] Firebase not initialized yet, retrying...');
+		setTimeout(initStep2, 500);
+		return;
+	}
 	switchTab('phone');
 }
 

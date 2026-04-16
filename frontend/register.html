@@ -204,12 +204,11 @@
   </footer>
 
   <!-- Firebase SDK for Phone Authentication -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-analytics.js"></script>
+  <script async src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+  <script async src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
 
-  <!-- ✅ Load register.js after Firebase SDK -->
-  <script src="assets/js/register.js"></script>
+  <!-- ✅ Load register.js after Firebase SDK with defer to wait for DOM -->
+  <script defer src="assets/js/register.js"></script>
 </body>
 
 </html>
