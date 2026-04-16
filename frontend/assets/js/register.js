@@ -17,12 +17,11 @@ let confirmationResult = null;
 
 // ========= FIREBASE INITIALIZATION =========
 function getAuthSafe() {
-  const auth = window.firebaseAuth;
-  if (!auth) {
-    console.error('[FIREBASE] ❌ Auth chưa sẵn sàng');
+  if (!window.firebaseAuth || !window.RecaptchaVerifier) {
+    console.warn('[FIREBASE] ⏳ Firebase chưa ready');
     return null;
   }
-  return auth;
+  return window.firebaseAuth;
 }
 if (window.firebaseAuth) {
   console.log('[FIREBASE] ✅ Firebase v9 ready');
@@ -34,7 +33,11 @@ function initRecaptcha() {
   if (window.recaptchaVerifier) return;
 
   const auth = getAuthSafe();
-  if (!auth) return;
+  if (!auth) {
+    console.log('[RECAPTCHA] ⏳ Đợi Firebase...');
+    setTimeout(initRecaptcha, 300); // 🔥 retry
+    return;
+  }
 
   try {
     window.recaptchaVerifier = new window.RecaptchaVerifier(
@@ -235,7 +238,7 @@ function switchTab(tabName) {
     emailTabContent.style.display = 'none';
 
     // Initialize reCAPTCHA for phone
-    initRecaptcha();
+    setTimeout(initRecaptcha, 200);
     console.log('[STEP 2] ✅ Switched to Phone tab');
   } else if (tabName === 'email') {
     // Activate email tab
