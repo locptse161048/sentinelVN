@@ -13,43 +13,44 @@ let resendCountdownInterval = null;
 let otpExpireAt = null;
 let otpAttemptsLeft = 3;
 let confirmationResult = null;
-let firebaseInitialized = false;
+
 
 // ========= FIREBASE INITIALIZATION =========
-const auth = window.firebaseAuth;
-if (auth) {
-  firebaseInitialized = true;
+function getAuthSafe() {
+  const auth = window.firebaseAuth;
+  if (!auth) {
+    console.error('[FIREBASE] ❌ Auth chưa sẵn sàng');
+    return null;
+  }
+  return auth;
+}
+if (window.firebaseAuth) {
   console.log('[FIREBASE] ✅ Firebase v9 ready');
 } else {
-  console.error('[FIREBASE] ❌ Firebase chưa load');
+  console.warn('[FIREBASE] ⏳ Firebase chưa sẵn sàng');
 }
 
 function initRecaptcha() {
   if (window.recaptchaVerifier) return;
 
-  if (!firebaseInitialized) {
-    console.warn('[RECAPTCHA] Firebase not initialized yet');
-    return;
-  }
+  const auth = getAuthSafe();
+  if (!auth) return;
 
   try {
     window.recaptchaVerifier = new window.RecaptchaVerifier(
       'recaptchaContainer',
       {
         size: 'normal',
-        callback: () => {
-          console.log('[RECAPTCHA] ✅ verified');
-        },
-        'expired-callback': () => {
-          console.warn('[RECAPTCHA] expired');
-        }
+        callback: () => console.log('[RECAPTCHA] ✅ verified'),
+        'expired-callback': () => console.warn('[RECAPTCHA] expired')
       },
       auth
     );
 
     window.recaptchaVerifier.render().then(() => {
-      console.log('[RECAPTCHA] ✅ reCAPTCHA rendered');
+      console.log('[RECAPTCHA] ✅ rendered');
     });
+
   } catch (err) {
     console.error('[RECAPTCHA] Error:', err.message);
   }
@@ -277,9 +278,9 @@ if (backBtn2) {
 
 // Initialize phone tab as default when showing step 2
 function initStep2() {
-  if (!firebaseInitialized) {
-    console.warn('[STEP 2] Firebase not initialized yet, retrying...');
-    setTimeout(initStep2, 500);
+  if (!window.firebaseAuth) {
+    console.warn('[STEP 2] Firebase chưa sẵn sàng, retry...');
+    setTimeout(initStep2, 300);
     return;
   }
   switchTab('phone');
@@ -375,7 +376,7 @@ if (sendPhoneOtpBtn) {
       phoneError.classList.remove('hidden');
       return;
     }
-
+    const auth = getAuthSafe();
     if (!auth) {
       console.error('[PHONE OTP] Auth not initialized');
       step2PhoneMsg.textContent = '❌ Firebase chưa khởi tạo. Vui lòng tải lại trang.';
