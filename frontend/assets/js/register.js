@@ -33,12 +33,12 @@ async function initFirebase() {
 		}
 
 		const firebaseConfig = {
-			apiKey: "AIzaSyDvCn-tP5OJEZ9S_LIFcxSG6MoYvmM_1Gg",
-			authDomain: "sentinelvn-2fb6f.firebaseapp.com",
-			projectId: "sentinelvn-2fb6f",
-			storageBucket: "sentinelvn-2fb6f.appspot.com",
-			messagingSenderId: "881888145051",
-			appId: "1:881888145051:web:b6b5c10c6a51f6fcb0f4ad"
+			apiKey: "AIzaSyCOcvfL4IVHpuEXMkQWNdnPBN5LH35SYSU",
+			authDomain: "sentinel-vn.firebaseapp.com",
+			projectId: "sentinel-vn",
+			storageBucket: "sentinel-vn.firebasestorage.app",
+			messagingSenderId: "426009488004",
+			appId: "1:426009488004:web:635069767c20ec76f430d1"
 		};
 
 		if (!firebase.apps.length) {
@@ -47,7 +47,7 @@ async function initFirebase() {
 
 		auth = firebase.auth();
 		firebaseInitialized = true;
-		console.log('[FIREBASE] ✅ Firebase initialized');
+		console.log('[FIREBASE] ✅ Firebase initialized with new config');
 		window.recaptchaVerifier = null;
 	} catch (err) {
 		console.error('[FIREBASE] ❌ Error initializing Firebase:', err);
