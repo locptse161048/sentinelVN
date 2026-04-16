@@ -472,7 +472,7 @@ async function fetchAccounts() {
 
 async function renderAccounts(keyword = "") {
     const accountTable = document.getElementById("accountTable");
-    accountTable.innerHTML = "<tr><td colspan='12'>Đang tải...</td></tr>";
+    accountTable.innerHTML = "<tr><td colspan='13'>Đang tải...</td></tr>";
     let users = await fetchAccounts();
 
     if (keyword) {
@@ -480,14 +480,14 @@ async function renderAccounts(keyword = "") {
     }
 
     if (!users.length) {
-        accountTable.innerHTML = `<tr><td colspan='12' class='p-4 text-center text-white/50'>Chưa có tài khoản nào</td></tr>`;
+        accountTable.innerHTML = `<tr><td colspan='13' class='p-4 text-center text-white/50'>Chưa có tài khoản nào</td></tr>`;
         return;
     }
 
     // ⚠️ SECURITY: Clear innerHTML once, then append safe rows
     accountTable.innerHTML = "";
 
-    users.forEach(user => {
+    users.forEach((user, index) => {
         const isActive = user.status === "đang hoạt động";
         const statusText = isActive ? "Đang hoạt động" : "Tạm ngưng";
         const statusColor = isActive ? "text-green-400" : "text-red-400";
@@ -507,6 +507,11 @@ async function renderAccounts(keyword = "") {
         // Create table row safely
         const tr = document.createElement('tr');
         tr.className = 'border-t border-white/10 hover:bg-white/5';
+
+        // STT Cell (Số thứ tự)
+        const tdStt = document.createElement('td');
+        tdStt.className = 'p-2 text-center font-semibold text-brand-400';
+        tdStt.textContent = index + 1;
 
         // License Key Cell
         const tdLicense = document.createElement('td');
@@ -548,6 +553,7 @@ async function renderAccounts(keyword = "") {
             return td;
         };
 
+        tr.appendChild(tdStt);
         tr.appendChild(tdLicense);
         tr.appendChild(tdEmail);
         tr.appendChild(createSafeTd(genderText));
