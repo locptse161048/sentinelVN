@@ -95,11 +95,64 @@ function isValidDateFormat(dateString) {
 }
 
 /**
- * Convert dd/mm/yyyy to yyyy-mm-dd format for backend
+ * Check if year is leap year
  */
-function convertDateToISO(dateString) {
-	const [day, month, year] = dateString.split('/');
-	return `${year}-${month}-${day}`;
+function isLeapYear(year) {
+	return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+}
+
+/**
+ * Get max days in month
+ */
+function getDaysInMonth(month, year) {
+	const daysInMonth = {
+		1: 31, 2: isLeapYear(year) ? 29 : 28, 3: 31, 4: 30, 5: 31, 6: 30,
+		7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31
+	};
+	return daysInMonth[month] || 0;
+}
+
+/**
+ * Validate date of birth - must be valid date and before today minus 2 years
+ */
+function isValidDateOfBirth(day, month, year) {
+	// Check if numeric values
+	if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
+	
+	day = parseInt(day, 10);
+	month = parseInt(month, 10);
+	year = parseInt(year, 10);
+	
+	// Validate month range
+	if (month < 1 || month > 12) return false;
+	
+	// Validate day range
+	const maxDays = getDaysInMonth(month, year);
+	if (day < 1 || day > maxDays) return false;
+	
+	// Create date object
+	const dobDate = new Date(year, month - 1, day);
+	
+	// Check if date is in past
+	const today = new Date();
+	if (dobDate > today) return false;
+	
+	// Check if at least 2 years old
+	const twoYearsAgo = new Date();
+	twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+	
+	if (dobDate > twoYearsAgo) {
+		return false; // Not old enough
+	}
+	
+	return true;
+}
+
+/**
+ * Convert formatted day/month/year to yyyy-mm-dd format for backend
+ */
+function convertDateToISO(day, month, year) {
+	return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 /**
@@ -226,23 +279,29 @@ if (step1Form) {
     const firstName = document.getElementById('firstName').value.trim();
     const lastName = document.getElementById('lastName').value.trim();
     const gender = document.getElementById('gender').value;
-    const dateOfBirthInput = document.getElementById('dateOfBirth').value.trim();
+    const dobDay = document.getElementById('dobDay').value.trim();
+    const dobMonth = document.getElementById('dobMonth').value.trim();
+    const dobYear = document.getElementById('dobYear').value.trim();
     const email = document.getElementById('email').value.trim().toLowerCase();
     const city = document.getElementById('city').value.trim();
     const step1Msg = document.getElementById('step1Msg');
+    const dateOfBirthError = document.getElementById('dateOfBirthError');
 
     step1Msg.textContent = '';
+    dateOfBirthError.textContent = '';
+    dateOfBirthError.classList.add('hidden');
 
-    if (!firstName || !lastName || !gender || !dateOfBirthInput || !email || !city) {
+    if (!firstName || !lastName || !gender || !dobDay || !dobMonth || !dobYear || !email || !city) {
       step1Msg.textContent = '⚠️ Vui lòng điền đầy đủ thông tin.';
       step1Msg.style.color = '#f87171';
       return;
     }
 
-    // Validate date format dd/mm/yyyy
-    if (!isValidDateFormat(dateOfBirthInput)) {
-      step1Msg.textContent = '⚠️ Ngày sinh không hợp lệ. Vui lòng dùng format dd/mm/yyyy.';
-      step1Msg.style.color = '#f87171';
+    // Validate date of birth
+    if (!isValidDateOfBirth(dobDay, dobMonth, dobYear)) {
+      dateOfBirthError.textContent = '⚠️ Ngày sinh không hợp lệ. Vui lòng kiểm tra lại. Bạn phải từ 18 tuổi trở lên.';
+      dateOfBirthError.classList.remove('hidden');
+      dateOfBirthError.style.color = '#f87171';
       return;
     }
 
@@ -253,8 +312,9 @@ if (step1Form) {
       return;
     }
 
-    // Convert dd/mm/yyyy to yyyy-mm-dd for backend
-    const dateOfBirthISO = convertDateToISO(dateOfBirthInput);
+    // Convert to ISO format for backend
+    const dateOfBirthISO = convertDateToISO(dobDay, dobMonth, dobYear);
+    const dateOfBirthDisplay = `${String(dobDay).padStart(2, '0')}/${String(dobMonth).padStart(2, '0')}/${dobYear}`;
 
     registrationData = {
       firstName,
@@ -262,7 +322,7 @@ if (step1Form) {
       fullName: `${firstName} ${lastName}`,
       gender,
       dateOfBirth: dateOfBirthISO,
-      dateOfBirthDisplay: dateOfBirthInput,
+      dateOfBirthDisplay: dateOfBirthDisplay,
       email,
       city,
       emailVerified: false,
@@ -840,4 +900,137 @@ if (phoneOtpInput) {
   });
 }
 
-console.log('[INIT] ✅ Register.js initialized - New Registration Flow Ready');
+// ========= DATE OF BIRTH AUTO-JUMP INPUT =========
+const dobDayInput = document.getElementById('dobDay');
+const dobMonthInput = document.getElementById('dobMonth');
+const dobYearInput = document.getElementById('dobYear');
+const dateOfBirthError = document.getElementById('dateOfBirthError');
+
+/**
+ * Validate and update error message for date inputs
+ */
+function validateDateOfBirth() {
+  if (!dobDayInput.value || !dobMonthInput.value || !dobYearInput.value) return;
+  
+  if (!isValidDateOfBirth(dobDayInput.value, dobMonthInput.value, dobYearInput.value)) {
+    dateOfBirthError.textContent = '⚠️ Ngày sinh không hợp lệ. Bạn phải từ 18 tuổi trở lên.';
+    dateOfBirthError.classList.remove('hidden');
+  } else {
+    dateOfBirthError.textContent = '';
+    dateOfBirthError.classList.add('hidden');
+  }
+}
+
+// Day input handler
+if (dobDayInput) {
+  dobDayInput.addEventListener('input', function () {
+    // Remove non-digits
+    this.value = this.value.replace(/\D/g, '').slice(0, 2);
+    
+    // Parse day value
+    let day = parseInt(this.value, 10);
+    
+    // If entered 2 digits and month is available, jump to month
+    if (this.value.length === 2) {
+      // Cap day at 31 max
+      if (day > 31) {
+        day = 31;
+        this.value = '31';
+      }
+      
+      // Pad with zero if needed
+      this.value = String(day).padStart(2, '0');
+      
+      // Auto-jump to month field after short delay
+      setTimeout(() => dobMonthInput.focus(), 100);
+    }
+    
+    validateDateOfBirth();
+  });
+}
+
+// Month input handler
+if (dobMonthInput) {
+  dobMonthInput.addEventListener('input', function () {
+    // Remove non-digits
+    this.value = this.value.replace(/\D/g, '').slice(0, 2);
+    
+    // Parse month value
+    let month = parseInt(this.value, 10);
+    
+    // If entered 2 digits and year is available, jump to year
+    if (this.value.length === 2) {
+      // Cap month at 12 max
+      if (month > 12) {
+        month = 12;
+        this.value = '12';
+      }
+      
+      // Pad with zero if needed
+      this.value = String(month).padStart(2, '0');
+      
+      // Auto-jump to year field after short delay
+      setTimeout(() => dobYearInput.focus(), 100);
+    }
+    
+    validateDateOfBirth();
+  });
+}
+
+// Year input handler
+if (dobYearInput) {
+  dobYearInput.addEventListener('input', function () {
+    // Remove non-digits
+    this.value = this.value.replace(/\D/g, '').slice(0, 4);
+    
+    // Validate year is reasonable (1900 - current year)
+    let year = parseInt(this.value, 10);
+    if (year < 1900) {
+      this.value = '';
+    } else if (year > new Date().getFullYear()) {
+      this.value = String(new Date().getFullYear());
+    }
+    
+    validateDateOfBirth();
+  });
+}
+
+// Clear error when clicking on date fields
+[dobDayInput, dobMonthInput, dobYearInput].forEach(field => {
+  if (field) {
+    field.addEventListener('focus', () => {
+      dateOfBirthError.classList.add('hidden');
+    });
+  }
+});
+
+// ========= PHONE INPUT VALIDATION =========
+const phoneInput = document.getElementById('phone');
+if (phoneInput) {
+  phoneInput.addEventListener('input', function () {
+    // Remove non-digits and limit to 10 digits
+    let value = this.value.replace(/\D/g, '').slice(0, 10);
+    
+    // Format with dashes: XXX-XXXX-XXXX (optional visual formatting)
+    if (value.length > 0) {
+      if (value.length <= 3) {
+        this.value = value;
+      } else if (value.length <= 6) {
+        this.value = value.slice(0, 3) + '-' + value.slice(3);
+      } else {
+        this.value = value.slice(0, 3) + '-' + value.slice(3, 6) + '-' + value.slice(6);
+      }
+    } else {
+      this.value = '';
+    }
+    
+    // Update error message
+    const phoneError = document.getElementById('phoneError');
+    const cleanPhone = this.value.replace(/\D/g, '');
+    if (cleanPhone.length > 0 && cleanPhone.length < 10) {
+      phoneError.classList.remove('hidden');
+    } else {
+      phoneError.classList.add('hidden');
+    }
+  });
+}

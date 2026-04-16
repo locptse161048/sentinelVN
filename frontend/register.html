@@ -62,7 +62,19 @@
           <option value="khác">Khác</option>
         </select>
 
-        <input type="text" id="dateOfBirth" name="dateOfBirth" class="input" placeholder="Ngày sinh (dd/mm/yyyy)" required />
+        <!-- Date of Birth with auto-jump fields -->
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <input type="text" id="dobDay" name="dobDay" class="input" placeholder="Ngày" maxlength="2" inputmode="numeric" required />
+          </div>
+          <div>
+            <input type="text" id="dobMonth" name="dobMonth" class="input" placeholder="Tháng" maxlength="2" inputmode="numeric" required />
+          </div>
+          <div>
+            <input type="text" id="dobYear" name="dobYear" class="input" placeholder="Năm" maxlength="4" inputmode="numeric" required />
+          </div>
+        </div>
+        <div id="dateOfBirthError" class="text-xs hidden" style="color: #f87171;"></div>
 
         <input type="email" id="email" name="email" class="input" placeholder="Email của bạn" required />
 

@@ -52,6 +52,7 @@ router.post('/register', getMiddleware, async (req, res) => {
 		gender, 
 		dateOfBirth,
 		city,
+		phone,
 		emailVerified,
 		phoneVerified
 	} = req.body;
@@ -88,6 +89,14 @@ router.post('/register', getMiddleware, async (req, res) => {
 		}
 	}
 
+	// ⚠️ SECURITY: Validate phone number if provided
+	if (phone) {
+		const phoneDigits = phone.replace(/\D/g, '');
+		if (!/^\d{10}$/.test(phoneDigits)) {
+			return res.status(400).json({ message: "Số điện thoại phải có 10 chữ số" });
+		}
+	}
+
 	// ⚠️ SECURITY: Verify either email or phone was confirmed via OTP
 	if (!emailVerified && !phoneVerified) {
 		return res.status(400).json({ message: "Vui lòng xác thực email hoặc số điện thoại trước khi đăng ký." });
@@ -106,6 +115,7 @@ router.post('/register', getMiddleware, async (req, res) => {
 			gender: gender || null,
 			dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
 			city: city ? city.trim() : null,
+			phone: phone ? phone.replace(/\D/g, '') : null,
 			passwordHash: hash,
 			emailVerified: emailVerified || false,
 			phoneVerified: phoneVerified || false,
