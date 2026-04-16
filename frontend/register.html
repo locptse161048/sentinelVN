@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Đăng ký - SENTINEL VN</title>
   <link rel="icon" type="image/x-icon" href="./assets/images/favicon.ico" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Orbitron:wght@700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Orbitron:wght@700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="assets/css/style.css">
 
   <!-- Remove Firebase SDK since we're using email OTP instead of phone SMS -->
@@ -63,15 +64,17 @@
         </select>
 
         <!-- Date of Birth with auto-jump fields -->
-        <div class="grid grid-cols-3 gap-2">
-          <div>
-            <input type="text" id="dobDay" name="dobDay" class="input" placeholder="Ngày" maxlength="2" inputmode="numeric" required />
-          </div>
-          <div>
-            <input type="text" id="dobMonth" name="dobMonth" class="input" placeholder="Tháng" maxlength="2" inputmode="numeric" required />
-          </div>
-          <div>
-            <input type="text" id="dobYear" name="dobYear" class="input" placeholder="Năm" maxlength="4" inputmode="numeric" required />
+        <div>
+          <label class="block text-sm text-white/70 mb-1">Ngày tháng năm sinh:</label>
+          <div class="flex items-center gap-1">
+            <input type="text" id="dobDay" name="dobDay" class="input text-center" placeholder="DD" maxlength="2"
+              inputmode="numeric" required style="width: 60px;" />
+            <span class="text-white/60 font-bold">/</span>
+            <input type="text" id="dobMonth" name="dobMonth" class="input text-center" placeholder="MM" maxlength="2"
+              inputmode="numeric" required style="width: 60px;" />
+            <span class="text-white/60 font-bold">/</span>
+            <input type="text" id="dobYear" name="dobYear" class="input text-center" placeholder="YYYY" maxlength="4"
+              inputmode="numeric" required style="flex: 1;" />
           </div>
         </div>
         <div id="dateOfBirthError" class="text-xs hidden" style="color: #f87171;"></div>
@@ -87,13 +90,15 @@
       <!-- STEP 2: VERIFICATION METHOD TABS -->
       <div id="step2Container" class="hidden step-form">
         <h3 class="font-semibold text-lg mb-4">Bước 2: Xác thực tài khoản</h3>
-        
+
         <!-- Tab Navigation -->
         <div class="flex gap-2 mb-4">
-          <button type="button" id="phoneTab" class="flex-1 py-2 px-3 rounded border-2 border-brand-400 bg-brand-400/20 text-brand-400 font-semibold transition-all">
+          <button type="button" id="phoneTab"
+            class="flex-1 py-2 px-3 rounded border-2 border-brand-400 bg-brand-400/20 text-brand-400 font-semibold transition-all">
             📱 Số điện thoại
           </button>
-          <button type="button" id="emailTab" class="flex-1 py-2 px-3 rounded border-2 border-white/20 text-white/60 font-semibold transition-all hover:border-white/40">
+          <button type="button" id="emailTab"
+            class="flex-1 py-2 px-3 rounded border-2 border-white/20 text-white/60 font-semibold transition-all hover:border-white/40">
             📧 Email
           </button>
         </div>
@@ -116,7 +121,8 @@
               <div id="phoneOtpError" class="text-xs" style="color: #f87171;"></div>
 
               <!-- Verify Button -->
-              <button type="button" id="verifyPhoneOtpBtn" class="btn bg-green-500/20 border-green-400 text-green-300 hover:bg-green-400/30">Xác thực OTP</button>
+              <button type="button" id="verifyPhoneOtpBtn"
+                class="btn bg-green-500/20 border-green-400 text-green-300 hover:bg-green-400/30">Xác thực OTP</button>
             </div>
 
             <div id="step2PhoneMsg" class="text-sm text-white/70 text-center"></div>
@@ -134,7 +140,8 @@
 
             <!-- OTP Input Section (hidden initially) -->
             <div id="emailOtpInputSection" class="hidden grid gap-3">
-              <input type="text" id="otpCode" placeholder="Nhập mã OTP (6 chữ số)" maxlength="6" class="input" autocomplete="one-time-code" />
+              <input type="text" id="otpCode" placeholder="Nhập mã OTP (6 chữ số)" maxlength="6" class="input"
+                autocomplete="one-time-code" />
               <div id="otpError" class="text-xs" style="color: #f87171;"></div>
 
               <!-- Countdown Timer -->
@@ -143,12 +150,14 @@
               </div>
 
               <!-- Verify Button -->
-              <button type="button" id="verifyOtpBtn" class="btn bg-green-500/20 border-green-400 text-green-300 hover:bg-green-400/30">Xác thực OTP</button>
+              <button type="button" id="verifyOtpBtn"
+                class="btn bg-green-500/20 border-green-400 text-green-300 hover:bg-green-400/30">Xác thực OTP</button>
             </div>
 
             <!-- Resend OTP Section -->
             <div id="resendSection" class="hidden flex gap-2 items-center justify-center">
-              <button type="button" id="resendOtpBtn" class="btn text-sm border-white/20 hover:border-brand-400/60" style="flex: 1; opacity: 0.5;" disabled>
+              <button type="button" id="resendOtpBtn" class="btn text-sm border-white/20 hover:border-brand-400/60"
+                style="flex: 1; opacity: 0.5;" disabled>
                 🔄 Gửi lại OTP
               </button>
               <span id="resendCountdown" class="text-xs text-white/50">Sau 2p</span>
@@ -174,8 +183,10 @@
 
           <!-- Password Input with Eye Icon -->
           <div class="relative">
-            <input type="password" id="password" name="password" class="input pr-10" placeholder="Mật khẩu" required autocomplete="new-password" />
-            <button type="button" id="togglePassword" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white/90 transition-colors cursor-pointer">
+            <input type="password" id="password" name="password" class="input pr-10" placeholder="Mật khẩu" required
+              autocomplete="new-password" />
+            <button type="button" id="togglePassword"
+              class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white/90 transition-colors cursor-pointer">
               👁️‍🗨️
             </button>
           </div>
@@ -183,8 +194,10 @@
 
           <!-- Password Confirm Input with Eye Icon -->
           <div class="relative">
-            <input type="password" id="passwordConfirm" name="passwordConfirm" class="input pr-10" placeholder="Nhập lại mật khẩu" required autocomplete="new-password" />
-            <button type="button" id="togglePasswordConfirm" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white/90 transition-colors cursor-pointer">
+            <input type="password" id="passwordConfirm" name="passwordConfirm" class="input pr-10"
+              placeholder="Nhập lại mật khẩu" required autocomplete="new-password" />
+            <button type="button" id="togglePasswordConfirm"
+              class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white/90 transition-colors cursor-pointer">
               👁️‍🗨️
             </button>
           </div>
@@ -217,33 +230,33 @@
     </div>
   </footer>
 
- <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-  import {
-    getAuth,
-    RecaptchaVerifier,
-    signInWithPhoneNumber
-  } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+    import {
+      getAuth,
+      RecaptchaVerifier,
+      signInWithPhoneNumber
+    } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCOcvfL4IVHpuEXMkQWNdnPBN5LH35SYSU",
-    authDomain: "sentinel-vn.firebaseapp.com",
-    projectId: "sentinel-vn",
-    storageBucket: "sentinel-vn.firebasestorage.app",
-    messagingSenderId: "426009488004",
-    appId: "1:426009488004:web:635069767c20ec76f430d1"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyCOcvfL4IVHpuEXMkQWNdnPBN5LH35SYSU",
+      authDomain: "sentinel-vn.firebaseapp.com",
+      projectId: "sentinel-vn",
+      storageBucket: "sentinel-vn.firebasestorage.app",
+      messagingSenderId: "426009488004",
+      appId: "1:426009488004:web:635069767c20ec76f430d1"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
 
-  // ✅ expose ra global để file khác dùng
-  window.firebaseAuth = auth;
-  window.RecaptchaVerifier = RecaptchaVerifier;
-  window.signInWithPhoneNumber = signInWithPhoneNumber;
+    // ✅ expose ra global để file khác dùng
+    window.firebaseAuth = auth;
+    window.RecaptchaVerifier = RecaptchaVerifier;
+    window.signInWithPhoneNumber = signInWithPhoneNumber;
 
-  console.log("🔥 Firebase v9 ready");
-</script>
+    console.log("🔥 Firebase v9 ready");
+  </script>
 
   <!-- ✅ Load register.js after Firebase SDK -->
   <script src="assets/js/register.js"></script>
