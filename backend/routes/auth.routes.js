@@ -50,6 +50,7 @@ router.post('/register', getMiddleware, async (req, res) => {
 		firstName, 
 		lastName, 
 		gender, 
+		dateOfBirth,
 		city,
 		emailVerified
 	} = req.body;
@@ -79,6 +80,13 @@ router.post('/register', getMiddleware, async (req, res) => {
 		return res.status(400).json({ message: "Giới tính không hợp lệ" });
 	}
 
+	if (dateOfBirth) {
+		const dob = new Date(dateOfBirth);
+		if (isNaN(dob.getTime())) {
+			return res.status(400).json({ message: "Ngày sinh không hợp lệ" });
+		}
+	}
+
 	// ⚠️ SECURITY: Verify email was confirmed via OTP
 	if (!emailVerified) {
 		return res.status(400).json({ message: "Email chưa được xác thực. Vui lòng xác thực email trước." });
@@ -95,6 +103,7 @@ router.post('/register', getMiddleware, async (req, res) => {
 			firstName: firstName ? firstName.trim() : null,
 			lastName: lastName ? lastName.trim() : null,
 			gender: gender || null,
+			dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
 			city: city ? city.trim() : null,
 			passwordHash: hash,
 			role: 'client',
@@ -130,7 +139,10 @@ router.post('/register', getMiddleware, async (req, res) => {
 				fullName: user.fullName,
 				firstName: user.firstName,
 				lastName: user.lastName,
-				city: user.city
+				gender: user.gender,
+				dateOfBirth: user.dateOfBirth,
+				city: user.city,
+				phone: user.phone
 			} 
 		});
 	} catch (err) {

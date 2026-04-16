@@ -7,6 +7,7 @@ const ClientSchema = new mongoose.Schema({
 	firstName: { type: String, default: null },
 	lastName: { type: String, default: null },
 	gender: { type: String, enum: ['nam', 'nữ', 'khác'], default: null },
+	dateOfBirth: { type: Date, default: null },
 	phone: { type: String, default: null },
 	city: { type: String, default: null },
 	phoneVerified: { type: Boolean, default: false },
