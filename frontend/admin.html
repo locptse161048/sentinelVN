@@ -43,8 +43,8 @@
         Liên hệ dùng thử
         <span id="trialBadge" class="tab-badge hidden">0</span>
       </button>
-      <button onclick="showTab('statsTab')" id="statsBtn" class="btn">
-        📊 Thống kê
+      <button onclick="showTab('financeTab')" id="financeBtn" class="btn">
+        💰 Tài chính
       </button>
     </div>
 
@@ -110,8 +110,10 @@
                   </th>
                   <th class="p-2 text-left resize-col" style="width: 60px;">Giới tính<span class="resize-handle"></span>
                   </th>
+                  <th class="p-2 text-left resize-col" style="width: 80px;">Ngày sinh<span class="resize-handle"></span>
+                  </th>
                   <th class="p-2 text-left resize-col" style="width: 80px;">SĐT<span class="resize-handle"></span></th>
-                  <th class="p-2 text-left resize-col" style="width: 80px;">Địa chỉ<span class="resize-handle"></span>
+                  <th class="p-2 text-left resize-col" style="width: 80px;">Thành phố<span class="resize-handle"></span>
                   </th>
                   <th class="p-2 text-left resize-col" style="width: 90px;">Trạng thái TK<span
                       class="resize-handle"></span></th>
@@ -164,86 +166,132 @@
     </div>
   </div>
 
-    <!-- ================= STATS TAB ================= -->
-    <div id="statsTab" class="hidden">
-      <div class="card p-4 mb-6">
-        <h2 class="text-lg font-semibold mb-4">Thống kê <span class="text-brand-400">Theo Tháng</span> <span class="text-sm text-white/40 font-normal">(12 tháng gần nhất)</span></h2>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm border border-white/10" id="statsMonthlyTable">
-            <thead class="bg-white/5">
-              <tr>
-                <th class="p-2 text-left">Tháng</th>
-                <th class="p-2 text-right">Doanh thu (VNĐ)</th>
-                <th class="p-2 text-right">Users mới</th>
-                <th class="p-2 text-right">License PREMIUM mới</th>
-                <th class="p-2 text-right">License PRO mới</th>
-              </tr>
-            </thead>
-            <tbody id="statsMonthlyBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card p-4 mb-6">
-        <h2 class="text-lg font-semibold mb-4">Thống kê <span class="text-brand-400">Theo Quý</span> <span class="text-sm text-white/40 font-normal">(năm hiện tại)</span></h2>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm border border-white/10" id="statsQuarterlyTable">
-            <thead class="bg-white/5">
-              <tr>
-                <th class="p-2 text-left">Quý</th>
-                <th class="p-2 text-right">Doanh thu (VNĐ)</th>
-                <th class="p-2 text-right">Users mới</th>
-                <th class="p-2 text-right">License PREMIUM mới</th>
-                <th class="p-2 text-right">License PRO mới</th>
-              </tr>
-            </thead>
-            <tbody id="statsQuarterlyBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card p-4 mb-6">
-        <h2 class="text-lg font-semibold mb-4">Thống kê <span class="text-brand-400">Theo Năm</span> <span class="text-sm text-white/40 font-normal">(5 năm gần nhất)</span></h2>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm border border-white/10" id="statsYearlyTable">
-            <thead class="bg-white/5">
-              <tr>
-                <th class="p-2 text-left">Năm</th>
-                <th class="p-2 text-right">Doanh thu (VNĐ)</th>
-                <th class="p-2 text-right">Users mới</th>
-                <th class="p-2 text-right">License PREMIUM mới</th>
-                <th class="p-2 text-right">License PRO mới</th>
-              </tr>
-            </thead>
-            <tbody id="statsYearlyBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card p-4 mb-6">
-        <h2 class="text-lg font-semibold mb-4">Tổng quan <span class="text-brand-400">Toàn thời gian</span></h2>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm border border-white/10" id="statsOverallTable">
-            <thead class="bg-white/5">
-              <tr>
-                <th class="p-2 text-right">Tổng doanh thu (VNĐ)</th>
-                <th class="p-2 text-right">Tổng Users</th>
-                <th class="p-2 text-right">PREMIUM còn hạn</th>
-                <th class="p-2 text-right">PRO còn hạn</th>
-              </tr>
-            </thead>
-            <tbody id="statsOverallBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="flex justify-end">
-        <button onclick="exportStatsToExcel()" class="btn flex items-center gap-2 bg-green-500/20 border border-green-400 text-green-300 hover:bg-green-400/30 transition px-5 py-2 rounded-lg font-semibold">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
-          </svg>
-          Xuất Excel (.xlsx)
+    <!-- ================= FINANCE TAB ================= -->
+    <div id="financeTab" class="hidden">
+      <!-- Finance Sub-menu -->
+      <div class="flex gap-3 mb-6">
+        <button onclick="showFinanceSubTab('revenueSubTab')" id="revenueBtn" class="btn bg-brand-400/10">
+          📈 Doanh thu
         </button>
+        <button onclick="showFinanceSubTab('transactionSubTab')" id="transactionBtn" class="btn">
+          💳 Giao dịch (Realtime)
+        </button>
+      </div>
+
+      <!-- ===== Revenue Sub-Tab ===== -->
+      <div id="revenueSubTab">
+        <div class="card p-4 mb-6">
+          <h2 class="text-lg font-semibold mb-4">Thống kê <span class="text-brand-400">Theo Tháng</span> <span class="text-sm text-white/40 font-normal">(12 tháng gần nhất)</span></h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm border border-white/10" id="statsMonthlyTable">
+              <thead class="bg-white/5">
+                <tr>
+                  <th class="p-2 text-left">Tháng</th>
+                  <th class="p-2 text-right">Doanh thu (VNĐ)</th>
+                  <th class="p-2 text-right">Users mới</th>
+                  <th class="p-2 text-right">License PREMIUM mới</th>
+                  <th class="p-2 text-right">License PRO mới</th>
+                </tr>
+              </thead>
+              <tbody id="statsMonthlyBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card p-4 mb-6">
+          <h2 class="text-lg font-semibold mb-4">Thống kê <span class="text-brand-400">Theo Quý</span> <span class="text-sm text-white/40 font-normal">(năm hiện tại)</span></h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm border border-white/10" id="statsQuarterlyTable">
+              <thead class="bg-white/5">
+                <tr>
+                  <th class="p-2 text-left">Quý</th>
+                  <th class="p-2 text-right">Doanh thu (VNĐ)</th>
+                  <th class="p-2 text-right">Users mới</th>
+                  <th class="p-2 text-right">License PREMIUM mới</th>
+                  <th class="p-2 text-right">License PRO mới</th>
+                </tr>
+              </thead>
+              <tbody id="statsQuarterlyBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card p-4 mb-6">
+          <h2 class="text-lg font-semibold mb-4">Thống kê <span class="text-brand-400">Theo Năm</span> <span class="text-sm text-white/40 font-normal">(5 năm gần nhất)</span></h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm border border-white/10" id="statsYearlyTable">
+              <thead class="bg-white/5">
+                <tr>
+                  <th class="p-2 text-left">Năm</th>
+                  <th class="p-2 text-right">Doanh thu (VNĐ)</th>
+                  <th class="p-2 text-right">Users mới</th>
+                  <th class="p-2 text-right">License PREMIUM mới</th>
+                  <th class="p-2 text-right">License PRO mới</th>
+                </tr>
+              </thead>
+              <tbody id="statsYearlyBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card p-4 mb-6">
+          <h2 class="text-lg font-semibold mb-4">Tổng quan <span class="text-brand-400">Toàn thời gian</span></h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm border border-white/10" id="statsOverallTable">
+              <thead class="bg-white/5">
+                <tr>
+                  <th class="p-2 text-right">Tổng doanh thu (VNĐ)</th>
+                  <th class="p-2 text-right">Tổng Users</th>
+                  <th class="p-2 text-right">PREMIUM còn hạn</th>
+                  <th class="p-2 text-right">PRO còn hạn</th>
+                </tr>
+              </thead>
+              <tbody id="statsOverallBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button onclick="exportStatsToExcel()" class="btn flex items-center gap-2 bg-green-500/20 border border-green-400 text-green-300 hover:bg-green-400/30 transition px-5 py-2 rounded-lg font-semibold">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+            Xuất Excel (.xlsx)
+          </button>
+        </div>
+      </div>
+
+      <!-- ===== Transaction Sub-Tab (Realtime) ===== -->
+      <div id="transactionSubTab" class="hidden">
+        <div class="card p-4">
+          <h2 class="text-lg font-semibold mb-4">Giao dịch <span class="text-brand-400">Realtime</span></h2>
+          
+          <div class="mb-4">
+            <button onclick="refreshTransactionTable()" class="btn bg-blue-500/20 border border-blue-400 text-blue-300 hover:bg-blue-400/30 transition px-4 py-2 rounded-lg">
+              🔄 Làm mới
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm border border-white/10" id="transactionTable">
+              <thead class="bg-white/5 sticky top-0">
+                <tr>
+                  <th class="p-2 text-left">Email Client</th>
+                  <th class="p-2 text-left">Gói</th>
+                  <th class="p-2 text-right">Số tiền (VNĐ)</th>
+                  <th class="p-2 text-left">Phương thức</th>
+                  <th class="p-2 text-left">Trạng thái</th>
+                  <th class="p-2 text-left">OrderCode</th>
+                  <th class="p-2 text-left">TransactionId</th>
+                  <th class="p-2 text-left">Ngày tạo</th>
+                </tr>
+              </thead>
+              <tbody id="transactionTableBody">
+                <tr><td colspan="8" class="p-4 text-center text-white/50">Đang tải...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 

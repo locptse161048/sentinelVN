@@ -308,5 +308,36 @@ router.get('/stats', async (req, res) => {
 	}
 });
 
+// ========= GET ALL TRANSACTIONS =========
+// GET /api/admin/transactions — Lấy tất cả giao dịch (payments) theo thời gian gần nhất
+router.get('/transactions', async (req, res) => {
+	try {
+		const Payment = require('../models/payment');
+		const payments = await Payment.find()
+			.populate('clientId', 'email') // Populate client email
+			.sort({ createdAt: -1 })
+			.lean();
+
+		// Map to include client email
+		const transactions = payments.map(p => ({
+			_id: p._id,
+			clientId: p.clientId?._id || p.clientId,
+			clientEmail: p.clientId?.email || 'N/A',
+			plan: p.plan,
+			amount: p.amount,
+			method: p.method,
+			status: p.status,
+			orderCode: p.orderCode,
+			transactionId: p.transactionId,
+			createdAt: p.createdAt
+		}));
+
+		res.json(transactions);
+	} catch (err) {
+		console.error('[ADMIN] Error fetching transactions:', err.message);
+		res.status(500).json({ message: 'Lỗi server' });
+	}
+});
+
 module.exports = router;
 

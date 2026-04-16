@@ -404,14 +404,14 @@ function showTab(tabId) {
     document.getElementById("supportTab").classList.add("hidden");
     document.getElementById("accountTab").classList.add("hidden");
     document.getElementById("trialTab").classList.add("hidden");
-    document.getElementById("statsTab").classList.add("hidden");
+    document.getElementById("financeTab").classList.add("hidden");
 
     document.getElementById(tabId).classList.remove("hidden");
 
     document.getElementById("supportBtn").classList.remove("bg-brand-400/10");
     document.getElementById("accountBtn").classList.remove("bg-brand-400/10");
     document.getElementById("trialBtn").classList.remove("bg-brand-400/10");
-    document.getElementById("statsBtn").classList.remove("bg-brand-400/10");
+    document.getElementById("financeBtn").classList.remove("bg-brand-400/10");
 
     if (tabId === "supportTab") {
         document.getElementById("supportBtn").classList.add("bg-brand-400/10");
@@ -422,9 +422,9 @@ function showTab(tabId) {
     } else if (tabId === "trialTab") {
         document.getElementById("trialBtn").classList.add("bg-brand-400/10");
         renderTrialContacts();
-    } else if (tabId === "statsTab") {
-        document.getElementById("statsBtn").classList.add("bg-brand-400/10");
-        renderStats();
+    } else if (tabId === "financeTab") {
+        document.getElementById("financeBtn").classList.add("bg-brand-400/10");
+        showFinanceSubTab('revenueSubTab');
     }
 }
 
@@ -479,6 +479,7 @@ async function renderAccounts(keyword = "") {
         const genderMap = { 'nam': 'Nam', 'nữ': 'Nữ', 'khác': 'Khác' };
         const genderText = user.gender ? genderMap[user.gender] : '-';
 
+        const dateOfBirth = user.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString("vi-VN") : '-';
         const createdDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString("vi-VN") : '-';
         const licenseCreatedDate = user.licenseCreatedAt ? new Date(user.licenseCreatedAt).toLocaleDateString("vi-VN") : '-';
         const licenseExpiresDate = user.licenseExpiresAt ? new Date(user.licenseExpiresAt).toLocaleDateString("vi-VN") : '-';
@@ -530,8 +531,9 @@ async function renderAccounts(keyword = "") {
         tr.appendChild(tdLicense);
         tr.appendChild(tdEmail);
         tr.appendChild(createSafeTd(genderText));
+        tr.appendChild(createSafeTd(dateOfBirth));
         tr.appendChild(createSafeTd(user.phone || '-'));
-        tr.appendChild(createSafeTd(user.address || '-'));
+        tr.appendChild(createSafeTd(user.city || '-'));
         tr.appendChild(createSafeTd(statusText, statusColor));
         tr.appendChild(createSafeTd(createdDate));
         tr.appendChild(createSafeTd(user.plan || '-'));
@@ -1125,4 +1127,105 @@ async function exportStatsToExcel() {
     // Xuất file
     const today = new Date().toISOString().split('T')[0];
     XLSX.writeFile(wb, `thong-ke-sentinelvn-${today}.xlsx`);
+}
+
+/* ===== FINANCE TAB - SUB-MENU ===== */
+
+function showFinanceSubTab(subTabId) {
+    // Hide both sub-tabs
+    document.getElementById("revenueSubTab").classList.add("hidden");
+    document.getElementById("transactionSubTab").classList.add("hidden");
+
+    // Remove highlighting from both buttons
+    document.getElementById("revenueBtn").classList.remove("bg-brand-400/10");
+    document.getElementById("transactionBtn").classList.remove("bg-brand-400/10");
+
+    // Show the selected sub-tab
+    document.getElementById(subTabId).classList.remove("hidden");
+
+    if (subTabId === "revenueSubTab") {
+        document.getElementById("revenueBtn").classList.add("bg-brand-400/10");
+        renderStats();
+    } else if (subTabId === "transactionSubTab") {
+        document.getElementById("transactionBtn").classList.add("bg-brand-400/10");
+        renderTransactionTable();
+    }
+}
+
+async function fetchTransactions() {
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(`${API_BASE}/api/admin/transactions`, {
+            credentials: "include",
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (!res.ok) {
+            console.error("Error fetching transactions, status:", res.status);
+            return [];
+        }
+        return await res.json();
+    } catch (err) {
+        console.error("Error fetching transactions:", err);
+        return [];
+    }
+}
+
+async function renderTransactionTable() {
+    const tableBody = document.getElementById("transactionTableBody");
+    tableBody.innerHTML = "<tr><td colspan='8' class='p-4 text-center text-white/50'>Đang tải...</td></tr>";
+
+    const transactions = await fetchTransactions();
+
+    if (!transactions || transactions.length === 0) {
+        tableBody.innerHTML = "<tr><td colspan='8' class='p-4 text-center text-white/50'>Chưa có giao dịch nào</td></tr>";
+        return;
+    }
+
+    tableBody.innerHTML = "";
+    transactions.forEach(txn => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-t border-white/10 hover:bg-white/5';
+
+        const statusColorMap = {
+            'success': 'text-green-400',
+            'pending': 'text-yellow-400',
+            'failed': 'text-red-400'
+        };
+        const statusColor = statusColorMap[txn.status] || 'text-white';
+        
+        const statusTextMap = {
+            'success': 'Thành công',
+            'pending': 'Chờ xử lý',
+            'failed': 'Thất bại'
+        };
+        const statusText = statusTextMap[txn.status] || txn.status;
+
+        const createTd = (content, extraClass = '') => {
+            const td = document.createElement('td');
+            td.className = `p-2 truncate ${extraClass}`;
+            td.textContent = content;
+            return td;
+        };
+
+        // Get client email (we need to fetch it separately or have it in response)
+        const clientEmail = txn.clientEmail || txn.clientId || '-';
+        const createdDate = txn.createdAt ? new Date(txn.createdAt).toLocaleString("vi-VN") : '-';
+
+        tr.appendChild(createTd(clientEmail));
+        tr.appendChild(createTd(txn.plan || '-'));
+        tr.appendChild(createTd(formatVND(txn.amount), 'text-right'));
+        tr.appendChild(createTd(txn.method || '-'));
+        tr.appendChild(createTd(statusText, statusColor));
+        tr.appendChild(createTd(txn.orderCode || '-'));
+        tr.appendChild(createTd(txn.transactionId || '-'));
+        tr.appendChild(createTd(createdDate));
+
+        tableBody.appendChild(tr);
+    });
+}
+
+function refreshTransactionTable() {
+    renderTransactionTable();
 }
