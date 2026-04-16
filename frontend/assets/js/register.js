@@ -59,8 +59,6 @@ function initRecaptcha() {
   }
 }
 
-
-
 // ========= UTILITY FUNCTIONS =========
 function updateStepIndicator(step) {
   document.querySelectorAll('.step-indicator').forEach((el) => {
@@ -74,94 +72,93 @@ function updateStepIndicator(step) {
     }
   });
 }
-
 /**
  * Validate date format dd/mm/yyyy
  */
 function isValidDateFormat(dateString) {
-	const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
-	const match = dateString.match(regex);
-	if (!match) return false;
-	
-	const day = parseInt(match[1], 10);
-	const month = parseInt(match[2], 10);
-	const year = parseInt(match[3], 10);
-	
-	if (month < 1 || month > 12) return false;
-	if (day < 1 || day > 31) return false;
-	if (year < 1900 || year > new Date().getFullYear()) return false;
-	
-	return true;
+  const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+  const match = dateString.match(regex);
+  if (!match) return false;
+
+  const day = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const year = parseInt(match[3], 10);
+
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
+  if (year < 1900 || year > new Date().getFullYear()) return false;
+
+  return true;
 }
 
 /**
  * Check if year is leap year
  */
 function isLeapYear(year) {
-	return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+  return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
 }
 
 /**
  * Get max days in month
  */
 function getDaysInMonth(month, year) {
-	const daysInMonth = {
-		1: 31, 2: isLeapYear(year) ? 29 : 28, 3: 31, 4: 30, 5: 31, 6: 30,
-		7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31
-	};
-	return daysInMonth[month] || 0;
+  const daysInMonth = {
+    1: 31, 2: isLeapYear(year) ? 29 : 28, 3: 31, 4: 30, 5: 31, 6: 30,
+    7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31
+  };
+  return daysInMonth[month] || 0;
 }
 
 /**
  * Validate date of birth - must be valid date and before today minus 2 years
  */
 function isValidDateOfBirth(day, month, year) {
-	// Check if numeric values
-	if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
-	
-	day = parseInt(day, 10);
-	month = parseInt(month, 10);
-	year = parseInt(year, 10);
-	
-	// Validate month range
-	if (month < 1 || month > 12) return false;
-	
-	// Validate day range
-	const maxDays = getDaysInMonth(month, year);
-	if (day < 1 || day > maxDays) return false;
-	
-	// Create date object
-	const dobDate = new Date(year, month - 1, day);
-	
-	// Check if date is in past
-	const today = new Date();
-	if (dobDate > today) return false;
-	
-	// Check if at least 2 years old
-	const twoYearsAgo = new Date();
-	twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-	
-	if (dobDate > twoYearsAgo) {
-		return false; // Not old enough
-	}
-	
-	return true;
+  // Check if numeric values
+  if (isNaN(day) || isNaN(month) || isNaN(year)) return false;
+
+  day = parseInt(day, 10);
+  month = parseInt(month, 10);
+  year = parseInt(year, 10);
+
+  // Validate month range
+  if (month < 1 || month > 12) return false;
+
+  // Validate day range
+  const maxDays = getDaysInMonth(month, year);
+  if (day < 1 || day > maxDays) return false;
+
+  // Create date object
+  const dobDate = new Date(year, month - 1, day);
+
+  // Check if date is in past
+  const today = new Date();
+  if (dobDate > today) return false;
+
+  // Check if at least 5 years old
+  const fiveYearsAgo = new Date();
+  fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+
+  if (dobDate > fiveYearsAgo) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
  * Convert formatted day/month/year to yyyy-mm-dd format for backend
  */
 function convertDateToISO(day, month, year) {
-	return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 /**
  * Convert yyyy-mm-dd format to dd/mm/yyyy for display
  */
 function convertDateToDisplay(dateString) {
-	if (!dateString) return '';
-	const [year, month, day] = dateString.split('-');
-	return `${day}/${month}/${year}`;
+  if (!dateString) return '';
+  const [year, month, day] = dateString.split('-');
+  return `${day}/${month}/${year}`;
 }
 
 function showStep(step) {
@@ -299,7 +296,7 @@ if (step1Form) {
 
     // Validate date of birth
     if (!isValidDateOfBirth(dobDay, dobMonth, dobYear)) {
-      dateOfBirthError.textContent = '⚠️ Ngày sinh không hợp lệ. Vui lòng kiểm tra lại. Bạn phải từ 18 tuổi trở lên.';
+      dateOfBirthError.textContent = '⚠️ Ngày sinh không hợp lệ. Năm sinh phải bé hơn năm hiện tại 5 năm.';
       dateOfBirthError.classList.remove('hidden');
       dateOfBirthError.style.color = '#f87171';
       return;
@@ -911,9 +908,9 @@ const dateOfBirthError = document.getElementById('dateOfBirthError');
  */
 function validateDateOfBirth() {
   if (!dobDayInput.value || !dobMonthInput.value || !dobYearInput.value) return;
-  
+
   if (!isValidDateOfBirth(dobDayInput.value, dobMonthInput.value, dobYearInput.value)) {
-    dateOfBirthError.textContent = '⚠️ Ngày sinh không hợp lệ. Bạn phải từ 18 tuổi trở lên.';
+    dateOfBirthError.textContent = '⚠️ Ngày sinh không hợp lệ. Năm sinh phải bé hơn năm hiện tại 5 năm.';
     dateOfBirthError.classList.remove('hidden');
   } else {
     dateOfBirthError.textContent = '';
@@ -926,10 +923,10 @@ if (dobDayInput) {
   dobDayInput.addEventListener('input', function () {
     // Remove non-digits
     this.value = this.value.replace(/\D/g, '').slice(0, 2);
-    
+
     // Parse day value
     let day = parseInt(this.value, 10);
-    
+
     // If entered 2 digits and month is available, jump to month
     if (this.value.length === 2) {
       // Cap day at 31 max
@@ -937,14 +934,14 @@ if (dobDayInput) {
         day = 31;
         this.value = '31';
       }
-      
+
       // Pad with zero if needed
       this.value = String(day).padStart(2, '0');
-      
+
       // Auto-jump to month field after short delay
       setTimeout(() => dobMonthInput.focus(), 100);
     }
-    
+
     validateDateOfBirth();
   });
 }
@@ -954,10 +951,10 @@ if (dobMonthInput) {
   dobMonthInput.addEventListener('input', function () {
     // Remove non-digits
     this.value = this.value.replace(/\D/g, '').slice(0, 2);
-    
+
     // Parse month value
     let month = parseInt(this.value, 10);
-    
+
     // If entered 2 digits and year is available, jump to year
     if (this.value.length === 2) {
       // Cap month at 12 max
@@ -965,14 +962,14 @@ if (dobMonthInput) {
         month = 12;
         this.value = '12';
       }
-      
+
       // Pad with zero if needed
       this.value = String(month).padStart(2, '0');
-      
+
       // Auto-jump to year field after short delay
       setTimeout(() => dobYearInput.focus(), 100);
     }
-    
+
     validateDateOfBirth();
   });
 }
@@ -980,17 +977,20 @@ if (dobMonthInput) {
 // Year input handler
 if (dobYearInput) {
   dobYearInput.addEventListener('input', function () {
-    // Remove non-digits
     this.value = this.value.replace(/\D/g, '').slice(0, 4);
-    
-    // Validate year is reasonable (1900 - current year)
-    let year = parseInt(this.value, 10);
-    if (year < 1900) {
-      this.value = '';
-    } else if (year > new Date().getFullYear()) {
-      this.value = String(new Date().getFullYear());
+
+    if (this.value.length === 4) {
+      const year = parseInt(this.value, 10);
+      const maxYear = new Date().getFullYear() - 5;
+
+      if (year > maxYear) {
+        dateOfBirthError.textContent = `⚠️ Năm sinh phải bé hơn năm hiện tại 5 năm (tối đa ${maxYear}).`;
+        dateOfBirthError.classList.remove('hidden');
+        dateOfBirthError.style.color = '#f87171';
+        return;
+      }
     }
-    
+
     validateDateOfBirth();
   });
 }
@@ -1010,7 +1010,7 @@ if (phoneInput) {
   phoneInput.addEventListener('input', function () {
     // Remove non-digits and limit to 10 digits
     let value = this.value.replace(/\D/g, '').slice(0, 10);
-    
+
     // Format with dashes: XXX-XXXX-XXXX (optional visual formatting)
     if (value.length > 0) {
       if (value.length <= 3) {
@@ -1023,7 +1023,7 @@ if (phoneInput) {
     } else {
       this.value = '';
     }
-    
+
     // Update error message
     const phoneError = document.getElementById('phoneError');
     const cleanPhone = this.value.replace(/\D/g, '');
