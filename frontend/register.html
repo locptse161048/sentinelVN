@@ -45,6 +45,7 @@
         <div class="flex-1 h-1 bg-white/20 rounded step-indicator" data-step="2"></div>
         <div class="flex-1 h-1 bg-white/20 rounded step-indicator" data-step="3"></div>
         <div class="flex-1 h-1 bg-white/20 rounded step-indicator" data-step="4"></div>
+        <div class="flex-1 h-1 bg-white/20 rounded step-indicator" data-step="5"></div>
       </div>
 
       <!-- STEP 1: PERSONAL INFO -->
@@ -65,21 +66,44 @@
 
         <input type="text" id="city" name="city" class="input" placeholder="Thành phố" required />
 
-        <input type="email" id="email" name="email" class="input" placeholder="Email" required autocomplete="email" />
-
         <button type="submit" class="btn w-full mt-2">Tiếp tục</button>
         <div id="step1Msg" class="text-sm text-white/70 text-center"></div>
       </form>
 
-      <!-- STEP 2: EMAIL VERIFICATION (hidden by default) -->
+      <!-- STEP 2: CHOOSE VERIFICATION METHOD (hidden by default) -->
       <div id="step2Container" class="hidden step-form">
-        <h3 class="font-semibold text-lg mb-4">Bước 2: Xác thực Email</h3>
+        <h3 class="font-semibold text-lg mb-4">Bước 2: Chọn cách xác thực</h3>
+        <p class="text-sm text-white/70 mb-4">Vui lòng chọn phương thức xác thực tài khoản của bạn:</p>
+        
+        <div class="grid gap-3">
+          <button type="button" id="emailMethodBtn" class="btn border-brand-400 hover:bg-brand-400/20 p-4 text-center">
+            📧 Xác thực qua Email
+          </button>
+          <button type="button" id="phoneMethodBtn" class="btn border-white/20 hover:border-white/40 p-4 text-center">
+            📱 Xác thực qua Số điện thoại
+          </button>
+        </div>
 
-        <form id="step2Form" class="grid gap-3">
-          <p class="text-sm text-white/70 mb-2">Nhập mã OTP được gửi đến email của bạn:</p>
+        <div class="grid grid-cols-2 gap-2 mt-4">
+          <button type="button" id="backBtn2Method" class="btn border-white/20">Quay lại</button>
+          <div></div>
+        </div>
+        <div id="step2MethodMsg" class="text-sm text-white/70 text-center"></div>
+      </div>
 
-          <!-- OTP Input -->
-          <div id="otpInputSection" class="grid gap-3">
+      <!-- STEP 3A: EMAIL VERIFICATION (hidden by default) -->
+      <div id="step3aContainer" class="hidden step-form">
+        <h3 class="font-semibold text-lg mb-4">Bước 3: Xác thực Email</h3>
+
+        <form id="step3aForm" class="grid gap-3">
+          <div class="grid gap-2">
+            <!-- Email Input for Email OTP -->
+            <input type="email" id="emailInput" name="emailInput" class="input" placeholder="Nhập email của bạn" required />
+            <button type="button" id="sendEmailOtpBtn" class="btn">Gửi mã OTP</button>
+          </div>
+
+          <!-- OTP Input Section (hidden initially) -->
+          <div id="otpInputSection" class="hidden grid gap-3">
             <input type="text" id="otpCode" placeholder="Nhập mã OTP (6 chữ số)" maxlength="6" class="input" autocomplete="one-time-code" />
             <div id="otpError" class="text-xs" style="color: #f87171;"></div>
 
@@ -93,7 +117,7 @@
           </div>
 
           <!-- Resend OTP Section -->
-          <div id="resendSection" class="flex gap-2 items-center justify-center">
+          <div id="resendSection" class="hidden flex gap-2 items-center justify-center">
             <button type="button" id="resendOtpBtn" class="btn text-sm border-white/20 hover:border-brand-400/60" style="flex: 1; opacity: 0.5;" disabled>
               🔄 Gửi lại OTP
             </button>
@@ -102,47 +126,87 @@
 
           <!-- Control Buttons -->
           <div class="grid grid-cols-2 gap-2">
-            <button type="button" id="backBtn2" class="btn border-white/20">Quay lại</button>
-            <div style="display: none;"></div>
+            <button type="button" id="backBtn3a" class="btn border-white/20">Quay lại</button>
+            <div></div>
           </div>
 
-          <div id="step2Msg" class="text-sm text-white/70 text-center"></div>
-        </form>
-      </div>
-          <div id="step2Msg" class="text-sm text-white/70 text-center"></div>
+          <div id="step3aMsg" class="text-sm text-white/70 text-center"></div>
         </form>
       </div>
 
-      <!-- STEP 3: PASSWORD -->
-      <div id="step3Container" class="hidden step-form">
-        <h3 class="font-semibold text-lg mb-4">Bước 3: Tạo mật khẩu</h3>
+      <!-- STEP 3B: PHONE VERIFICATION (hidden by default) -->
+      <div id="step3bContainer" class="hidden step-form">
+        <h3 class="font-semibold text-lg mb-4">Bước 3: Xác thực Số điện thoại</h3>
 
-        <form id="step3Form" class="grid gap-3">
+        <form id="step3bForm" class="grid gap-3">
+          <div id="recaptchaContainer" class="mb-3"></div>
+
+          <div class="grid gap-2">
+            <!-- Phone Input -->
+            <input type="tel" id="phone" name="phone" class="input" placeholder="Nhập số điện thoại (10 chữ số)" required />
+            <div id="phoneError" class="text-xs hidden" style="color: #f87171;">Số điện thoại phải là 10 chữ số</div>
+            <button type="button" id="sendPhoneOtpBtn" class="btn">Gửi mã OTP</button>
+          </div>
+
+          <!-- OTP Input Section (hidden initially) -->
+          <div id="phoneOtpInputSection" class="hidden grid gap-3">
+            <input type="text" id="phoneOtpCode" placeholder="Nhập mã OTP từ tin nhắn" maxlength="6" class="input" />
+            <div id="phoneOtpError" class="text-xs" style="color: #f87171;"></div>
+
+            <!-- Verify Button -->
+            <button type="button" id="verifyPhoneOtpBtn" class="btn bg-green-500/20 border-green-400 text-green-300 hover:bg-green-400/30">Xác thực OTP</button>
+          </div>
+
+          <!-- Control Buttons -->
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="backBtn3b" class="btn border-white/20">Quay lại</button>
+            <div></div>
+          </div>
+
+          <div id="step3bMsg" class="text-sm text-white/70 text-center"></div>
+        </form>
+      </div>
+
+      <!-- STEP 4: PASSWORD (hidden by default) -->
+      <div id="step4Container" class="hidden step-form">
+        <h3 class="font-semibold text-lg mb-4">Bước 4: Tạo mật khẩu</h3>
+
+        <form id="step4Form" class="grid gap-3">
           <p class="text-sm text-white/70 mb-2">Nhập mật khẩu cho tài khoản của bạn:</p>
 
-          <input type="password" id="password" name="password" class="input" placeholder="Mật khẩu" required autocomplete="new-password" />
+          <!-- Password Input with Eye Icon -->
+          <div class="relative">
+            <input type="password" id="password" name="password" class="input pr-10" placeholder="Mật khẩu" required autocomplete="new-password" />
+            <button type="button" id="togglePassword" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white/90 transition-colors">
+              👁️
+            </button>
+          </div>
           <div id="passwordError" class="text-xs" style="color: #f87171;"></div>
 
+          <!-- Password Confirm Input with Eye Icon -->
           <div class="relative">
-            <input type="password" id="passwordConfirm" name="passwordConfirm" class="input" placeholder="Nhập lại mật khẩu" required autocomplete="new-password" />
-            <div id="passwordMismatch" class="hidden text-xs mt-1" style="color: #f87171;">Mật khẩu không trùng khớp</div>
+            <input type="password" id="passwordConfirm" name="passwordConfirm" class="input pr-10" placeholder="Nhập lại mật khẩu" required autocomplete="new-password" />
+            <button type="button" id="togglePasswordConfirm" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white/90 transition-colors">
+              👁️
+            </button>
           </div>
+          <div id="passwordMismatch" class="hidden text-xs mt-1" style="color: #f87171;">Mật khẩu không trùng khớp</div>
 
           <div class="grid grid-cols-2 gap-2">
-            <button type="button" id="backBtn3" class="btn border-white/20">Quay lại</button>
+            <button type="button" id="backBtn4" class="btn border-white/20">Quay lại</button>
             <button type="submit" class="btn">Tạo tài khoản</button>
           </div>
-          <div id="step3Msg" class="text-sm text-white/70 text-center"></div>
+          <div id="step4Msg" class="text-sm text-white/70 text-center"></div>
         </form>
       </div>
 
-      <!-- STEP 4: SUCCESS / LOADING -->
-      <div id="step4Container" class="hidden step-form">
-        <h3 class="font-semibold text-lg mb-4">Bước 4: Hoàn tất</h3>
+      <!-- STEP 5: SUCCESS / LOADING -->
+      <div id="step5Container" class="hidden step-form">
+        <h3 class="font-semibold text-lg mb-4">Bước 5: Hoàn tất</h3>
         <div class="grid gap-3 text-center">
           <div id="loadingSpinner" style="font-size: 40px; animation: spin 1s linear infinite;">⏳</div>
           <p class="text-sm text-white/70">Đang lưu thông tin tài khoản của bạn...</p>
-          <div id="step4Msg" class="text-sm text-white/70"></div>
+          <div id="step5Msg" class="text-sm text-white/70"></div>
         </div>
       </div>
     </div>
@@ -155,7 +219,12 @@
     </div>
   </footer>
 
-  <!-- ✅ Bỏ "defer" để tránh race condition với Firebase SDK -->
+  <!-- Firebase SDK for Phone Authentication -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-analytics.js"></script>
+
+  <!-- ✅ Load register.js after Firebase SDK -->
   <script src="assets/js/register.js"></script>
 </body>
 
