@@ -75,6 +75,42 @@ function updateStepIndicator(step) {
   });
 }
 
+/**
+ * Validate date format dd/mm/yyyy
+ */
+function isValidDateFormat(dateString) {
+	const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+	const match = dateString.match(regex);
+	if (!match) return false;
+	
+	const day = parseInt(match[1], 10);
+	const month = parseInt(match[2], 10);
+	const year = parseInt(match[3], 10);
+	
+	if (month < 1 || month > 12) return false;
+	if (day < 1 || day > 31) return false;
+	if (year < 1900 || year > new Date().getFullYear()) return false;
+	
+	return true;
+}
+
+/**
+ * Convert dd/mm/yyyy to yyyy-mm-dd format for backend
+ */
+function convertDateToISO(dateString) {
+	const [day, month, year] = dateString.split('/');
+	return `${year}-${month}-${day}`;
+}
+
+/**
+ * Convert yyyy-mm-dd format to dd/mm/yyyy for display
+ */
+function convertDateToDisplay(dateString) {
+	if (!dateString) return '';
+	const [year, month, day] = dateString.split('-');
+	return `${day}/${month}/${year}`;
+}
+
 function showStep(step) {
   // Hide all steps
   document.getElementById('step1Form').style.display = 'none';
@@ -190,15 +226,22 @@ if (step1Form) {
     const firstName = document.getElementById('firstName').value.trim();
     const lastName = document.getElementById('lastName').value.trim();
     const gender = document.getElementById('gender').value;
-    const dateOfBirth = document.getElementById('dateOfBirth').value;
+    const dateOfBirthInput = document.getElementById('dateOfBirth').value.trim();
     const email = document.getElementById('email').value.trim().toLowerCase();
     const city = document.getElementById('city').value.trim();
     const step1Msg = document.getElementById('step1Msg');
 
     step1Msg.textContent = '';
 
-    if (!firstName || !lastName || !gender || !dateOfBirth || !email || !city) {
+    if (!firstName || !lastName || !gender || !dateOfBirthInput || !email || !city) {
       step1Msg.textContent = '⚠️ Vui lòng điền đầy đủ thông tin.';
+      step1Msg.style.color = '#f87171';
+      return;
+    }
+
+    // Validate date format dd/mm/yyyy
+    if (!isValidDateFormat(dateOfBirthInput)) {
+      step1Msg.textContent = '⚠️ Ngày sinh không hợp lệ. Vui lòng dùng format dd/mm/yyyy.';
       step1Msg.style.color = '#f87171';
       return;
     }
@@ -210,12 +253,16 @@ if (step1Form) {
       return;
     }
 
+    // Convert dd/mm/yyyy to yyyy-mm-dd for backend
+    const dateOfBirthISO = convertDateToISO(dateOfBirthInput);
+
     registrationData = {
       firstName,
       lastName,
       fullName: `${firstName} ${lastName}`,
       gender,
-      dateOfBirth,
+      dateOfBirth: dateOfBirthISO,
+      dateOfBirthDisplay: dateOfBirthInput,
       email,
       city,
       emailVerified: false,
@@ -485,6 +532,8 @@ if (verifyOtpBtn) {
       step2EmailMsg.textContent = '✅ Xác thực thành công!';
       step2EmailMsg.style.color = '#4ade80';
       registrationData.emailVerified = true;
+      // When verifying by email, phone is not stored
+      registrationData.phone = null;
 
       if (countdownInterval) clearInterval(countdownInterval);
 

@@ -21,8 +21,12 @@ router.get('/me', async (req, res) => {
 		res.json({
 			email: user.email,
 			fullName: user.fullName,
+			firstName: user.firstName,
+			lastName: user.lastName,
 			gender: user.gender,
+			dateOfBirth: user.dateOfBirth,
 			phone: user.phone,
+			city: user.city,
 			address: user.address,
 			plan: user.plan,
 			status: user.status
@@ -43,8 +47,12 @@ router.get('/account', async (req, res) => {
 		res.json({
 			email: user.email,
 			fullName: user.fullName,
+			firstName: user.firstName,
+			lastName: user.lastName,
 			gender: user.gender,
+			dateOfBirth: user.dateOfBirth,
 			phone: user.phone,
+			city: user.city,
 			address: user.address,
 			plan: user.plan,
 			status: user.status

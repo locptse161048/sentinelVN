@@ -112,16 +112,33 @@ async function loadClientInfo() {
 
       const accNameEl = document.getElementById("accName");
       const accEmailEl = document.getElementById("accEmail");
+      const accFirstNameEl = document.getElementById("accFirstName");
+      const accLastNameEl = document.getElementById("accLastName");
       const accGenderEl = document.getElementById("accGender");
+      const accDateOfBirthEl = document.getElementById("accDateOfBirth");
       const accPhoneEl = document.getElementById("accPhone");
-      const accAddressEl = document.getElementById("accAddress");
+      const accCityEl = document.getElementById("accCity");
 
       if (accNameEl && accEmailEl) {
         accNameEl.textContent = user.fullName || "Chưa cập nhật";
         accEmailEl.textContent = user.email;
+        accFirstNameEl.textContent = user.firstName || "Chưa cập nhật";
+        accLastNameEl.textContent = user.lastName || "Chưa cập nhật";
         accGenderEl.textContent = user.gender ? (user.gender === 'nam' ? 'Nam' : user.gender === 'nữ' ? 'Nữ' : 'Khác') : "Chưa cập nhật";
+        
+        // Convert dateOfBirth to dd/mm/yyyy format
+        if (user.dateOfBirth) {
+          const date = new Date(user.dateOfBirth);
+          const dd = String(date.getDate()).padStart(2, '0');
+          const mm = String(date.getMonth() + 1).padStart(2, '0');
+          const yyyy = date.getFullYear();
+          accDateOfBirthEl.textContent = `${dd}/${mm}/${yyyy}`;
+        } else {
+          accDateOfBirthEl.textContent = "Chưa cập nhật";
+        }
+        
         accPhoneEl.textContent = user.phone || "Chưa cập nhật";
-        accAddressEl.textContent = user.address || "Chưa cập nhật";
+        accCityEl.textContent = user.city || "Chưa cập nhật";
       }
 
       return user;
