@@ -12,7 +12,7 @@ const ClientSchema = new mongoose.Schema({
 	city: { type: String, default: null },
 	emailVerified: { type: Boolean, default: false },
 	phoneVerified: { type: Boolean, default: false },
-	role: { type: String, enum: ['client', 'admin'], default: 'client' },
+	role: { type: String, enum: ['client', 'admin','supervisor'], default: 'client' },
 	status: { type: String, enum: ['đang hoạt động', 'tạm ngưng'], default: 'đang hoạt động' },
 	loginAttempts: { type: Number, default: 0 },
 	lastLoginAttempt: { type: Date, default: null },

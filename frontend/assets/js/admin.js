@@ -246,6 +246,26 @@ function connectWebSocket() {
             console.error('[SOCKET] Socket error:', error);
         });
 
+        // ✅ Listen for new successful payments (realtime transaction updates)
+        socket.on('new_payment_success', (transactionData) => {
+            console.log('[SOCKET] Received new_payment_success event:', transactionData);
+            
+            // Only update if we're on the transaction tab
+            const transactionSubTab = document.getElementById('transactionSubTab');
+            if (!transactionSubTab.classList.contains('hidden')) {
+                // Add to cache at the beginning
+                if (transactionCache && Array.isArray(transactionCache)) {
+                    transactionCache.unshift(transactionData);
+                }
+                
+                // Refresh the filtered/sorted display
+                filterAndSortTransactions();
+            }
+            
+            // Show a notification
+            showNotification(`💳 Giao dịch mới: ${transactionData.clientEmail} - ${transactionData.plan}`);
+        });
+
     } catch (err) {
         console.error('[SOCKET] Connection error:', err);
     }
@@ -977,6 +997,9 @@ renderTrialContacts();
 /* ===== STATISTICS ===== */
 
 let statsCache = null; // Cache để không fetch lại khi re-render
+let transactionCache = null; // Cache for transactions
+let currentSortColumn = 'createdAt'; // Default sort column
+let currentSortOrder = 'desc'; // Default sort order (desc for recent first)
 
 function formatVND(num) {
     if (!num) return '0 đ';
@@ -1176,15 +1199,88 @@ async function renderTransactionTable() {
     const tableBody = document.getElementById("transactionTableBody");
     tableBody.innerHTML = "<tr><td colspan='8' class='p-4 text-center text-white/50'>Đang tải...</td></tr>";
 
-    const transactions = await fetchTransactions();
+    // Fetch and cache transactions if not already cached
+    if (!transactionCache) {
+        transactionCache = await fetchTransactions();
+    }
 
-    if (!transactions || transactions.length === 0) {
+    if (!transactionCache || transactionCache.length === 0) {
         tableBody.innerHTML = "<tr><td colspan='8' class='p-4 text-center text-white/50'>Chưa có giao dịch nào</td></tr>";
         return;
     }
 
+    // Apply filter and sort, then render
+    filterAndSortTransactions();
+}
+
+function filterAndSortTransactions() {
+    const tableBody = document.getElementById("transactionTableBody");
+    
+    if (!transactionCache || transactionCache.length === 0) {
+        tableBody.innerHTML = "<tr><td colspan='8' class='p-4 text-center text-white/50'>Chưa có giao dịch nào</td></tr>";
+        return;
+    }
+
+    // Get filter values
+    const selectedMonth = document.getElementById('transactionFilterMonth')?.value || '';
+    const selectedYear = document.getElementById('transactionFilterYear')?.value || '';
+
+    // Filter transactions
+    let filteredTransactions = transactionCache.filter(txn => {
+        if (!txn.createdAt) return false;
+        
+        const txnDate = new Date(txn.createdAt);
+        const txnMonth = String(txnDate.getMonth() + 1).padStart(2, '0');
+        const txnYear = String(txnDate.getFullYear());
+
+        if (selectedMonth && txnMonth !== selectedMonth) return false;
+        if (selectedYear && txnYear !== selectedYear) return false;
+
+        return true;
+    });
+
+    // Sort transactions
+    filteredTransactions.sort((a, b) => {
+        let aVal, bVal;
+        
+        switch(currentSortColumn) {
+            case 'plan':
+                aVal = (a.plan || '').toString();
+                bVal = (b.plan || '').toString();
+                return currentSortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            
+            case 'method':
+                aVal = (a.method || '').toString();
+                bVal = (b.method || '').toString();
+                return currentSortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            
+            case 'status':
+                aVal = (a.status || '').toString();
+                bVal = (b.status || '').toString();
+                return currentSortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            
+            case 'orderCode':
+                aVal = a.orderCode || 0;
+                bVal = b.orderCode || 0;
+                return currentSortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+            
+            case 'createdAt':
+            default:
+                aVal = new Date(a.createdAt).getTime();
+                bVal = new Date(b.createdAt).getTime();
+                return currentSortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+    });
+
+    // Render filtered & sorted transactions
     tableBody.innerHTML = "";
-    transactions.forEach(txn => {
+    
+    if (filteredTransactions.length === 0) {
+        tableBody.innerHTML = "<tr><td colspan='8' class='p-4 text-center text-white/50'>Không có giao dịch nào khớp với bộ lọc</td></tr>";
+        return;
+    }
+
+    filteredTransactions.forEach(txn => {
         const tr = document.createElement('tr');
         tr.className = 'border-t border-white/10 hover:bg-white/5';
 
@@ -1209,7 +1305,6 @@ async function renderTransactionTable() {
             return td;
         };
 
-        // Get client email (we need to fetch it separately or have it in response)
         const clientEmail = txn.clientEmail || txn.clientId || '-';
         const createdDate = txn.createdAt ? new Date(txn.createdAt).toLocaleString("vi-VN") : '-';
 
@@ -1226,6 +1321,26 @@ async function renderTransactionTable() {
     });
 }
 
+function setSortColumn(column) {
+    // Toggle sort order if same column, else set to asc
+    if (currentSortColumn === column) {
+        currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortColumn = column;
+        currentSortOrder = 'desc'; // Default to desc for new column
+    }
+    
+    filterAndSortTransactions();
+}
+
 function refreshTransactionTable() {
+    // Clear cache and re-fetch
+    transactionCache = null;
+    // Reset sort and filters
+    currentSortColumn = 'createdAt';
+    currentSortOrder = 'desc';
+    document.getElementById('transactionFilterMonth').value = '';
+    document.getElementById('transactionFilterYear').value = '';
+    // Re-render
     renderTransactionTable();
 }

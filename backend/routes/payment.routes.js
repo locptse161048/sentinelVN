@@ -246,7 +246,29 @@ router.post('/webhook', async (req, res) => {
 
 		console.log('✅ License processed via webhook:', license.key);
 
-		// 7. Trả 200 để PayOS không retry
+		// 7. Lấy thông tin client để emit event
+		const client = await Client.findById(payment.clientId);
+		
+		// 8. Emit WebSocket event cho admin dashboard (realtime transaction update)
+		const io = req.app.locals.io;
+		if (io) {
+			const transactionData = {
+				_id: updatedPayment._id,
+				clientId: updatedPayment.clientId,
+				clientEmail: client?.email || 'N/A',
+				plan: updatedPayment.plan,
+				amount: updatedPayment.amount,
+				method: updatedPayment.method,
+				status: updatedPayment.status,
+				orderCode: updatedPayment.orderCode,
+				transactionId: updatedPayment.transactionId,
+				createdAt: updatedPayment.createdAt
+			};
+			console.log('[WEBSOCKET] Emitting new_payment_success event:', transactionData);
+			io.emit('new_payment_success', transactionData);
+		}
+
+		// 9. Trả 200 để PayOS không retry
 		return res.json({ received: true });
 
 	} catch (err) {
