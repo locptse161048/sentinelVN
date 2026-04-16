@@ -191,13 +191,21 @@ if (step1Form) {
     const lastName = document.getElementById('lastName').value.trim();
     const gender = document.getElementById('gender').value;
     const dateOfBirth = document.getElementById('dateOfBirth').value;
+    const email = document.getElementById('email').value.trim().toLowerCase();
     const city = document.getElementById('city').value.trim();
     const step1Msg = document.getElementById('step1Msg');
 
     step1Msg.textContent = '';
 
-    if (!firstName || !lastName || !gender || !dateOfBirth || !city) {
+    if (!firstName || !lastName || !gender || !dateOfBirth || !email || !city) {
       step1Msg.textContent = '⚠️ Vui lòng điền đầy đủ thông tin.';
+      step1Msg.style.color = '#f87171';
+      return;
+    }
+
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      step1Msg.textContent = '⚠️ Email không hợp lệ.';
       step1Msg.style.color = '#f87171';
       return;
     }
@@ -208,7 +216,10 @@ if (step1Form) {
       fullName: `${firstName} ${lastName}`,
       gender,
       dateOfBirth,
-      city
+      email,
+      city,
+      emailVerified: false,
+      phoneVerified: false
     };
 
     console.log('[STEP 1] ✅ Personal info saved:', registrationData);
@@ -250,6 +261,12 @@ function switchTab(tabName) {
     phoneTab.classList.remove('border-brand-400', 'bg-brand-400/20', 'text-white');
     phoneTab.classList.add('border-white/20', 'text-white/60');
     phoneTabContent.style.display = 'none';
+
+    // Pre-fill email from Step 1
+    if (registrationData.email) {
+      document.getElementById('emailInput').value = registrationData.email;
+      console.log('[STEP 2] ✅ Pre-filled email from Step 1:', registrationData.email);
+    }
 
     console.log('[STEP 2] ✅ Switched to Email tab');
   }
@@ -564,6 +581,8 @@ if (verifyPhoneOtpBtn) {
 
       const credential = await confirmationResult.confirm(phoneOtpCode);
       registrationData.phoneVerified = true;
+      // Email is NOT verified when using phone OTP
+      registrationData.emailVerified = false;
 
       step2PhoneMsg.textContent = '✅ Xác thực thành công!';
       step2PhoneMsg.style.color = '#4ade80';
@@ -572,7 +591,7 @@ if (verifyPhoneOtpBtn) {
       continueBtn2.disabled = false;
       continueBtn2.style.opacity = '1';
 
-      console.log('[PHONE OTP VERIFY] ✅ Phone verified:', credential.user.uid);
+      console.log('[PHONE OTP VERIFY] ✅ Phone verified (emailVerified=false, phoneVerified=true):', credential.user.uid);
 
     } catch (err) {
       console.error('[PHONE OTP VERIFY] Error:', err.message);

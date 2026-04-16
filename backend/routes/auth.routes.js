@@ -41,7 +41,7 @@ const getMiddleware = (req, res, next) => {
 	next();
 };
 
-// Đăng ký (Email OTP Required)
+// Đăng ký (Email OTP Required hoặc Phone OTP Required)
 router.post('/register', getMiddleware, async (req, res) => {
 	const { 
 		email, 
@@ -52,7 +52,8 @@ router.post('/register', getMiddleware, async (req, res) => {
 		gender, 
 		dateOfBirth,
 		city,
-		emailVerified
+		emailVerified,
+		phoneVerified
 	} = req.body;
 	
 	// ⚠️ SECURITY: Input validation
@@ -87,9 +88,9 @@ router.post('/register', getMiddleware, async (req, res) => {
 		}
 	}
 
-	// ⚠️ SECURITY: Verify email was confirmed via OTP
-	if (!emailVerified) {
-		return res.status(400).json({ message: "Email chưa được xác thực. Vui lòng xác thực email trước." });
+	// ⚠️ SECURITY: Verify either email or phone was confirmed via OTP
+	if (!emailVerified && !phoneVerified) {
+		return res.status(400).json({ message: "Vui lòng xác thực email hoặc số điện thoại trước khi đăng ký." });
 	}
 	
 	try {
@@ -106,6 +107,8 @@ router.post('/register', getMiddleware, async (req, res) => {
 			dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
 			city: city ? city.trim() : null,
 			passwordHash: hash,
+			emailVerified: emailVerified || false,
+			phoneVerified: phoneVerified || false,
 			role: 'client',
 			status: 'đang hoạt động'
 		});
@@ -142,7 +145,9 @@ router.post('/register', getMiddleware, async (req, res) => {
 				gender: user.gender,
 				dateOfBirth: user.dateOfBirth,
 				city: user.city,
-				phone: user.phone
+				phone: user.phone,
+				emailVerified: user.emailVerified,
+				phoneVerified: user.phoneVerified
 			} 
 		});
 	} catch (err) {
