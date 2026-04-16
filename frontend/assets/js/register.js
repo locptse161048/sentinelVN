@@ -41,13 +41,13 @@ function initRecaptcha() {
 
   try {
     window.recaptchaVerifier = new window.RecaptchaVerifier(
+      auth,
       'recaptchaContainer',
       {
         size: 'normal',
         callback: () => console.log('[RECAPTCHA] ✅ verified'),
         'expired-callback': () => console.warn('[RECAPTCHA] expired')
-      },
-      auth
+      }
     );
 
     window.recaptchaVerifier.render().then(() => {
