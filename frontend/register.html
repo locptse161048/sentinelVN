@@ -203,9 +203,33 @@
     </div>
   </footer>
 
-  <!-- Firebase SDK v9+ for Phone Authentication -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+ <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+  import {
+    getAuth,
+    RecaptchaVerifier,
+    signInWithPhoneNumber
+  } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCOcvfL4IVHpuEXMkQWNdnPBN5LH35SYSU",
+    authDomain: "sentinel-vn.firebaseapp.com",
+    projectId: "sentinel-vn",
+    storageBucket: "sentinel-vn.firebasestorage.app",
+    messagingSenderId: "426009488004",
+    appId: "1:426009488004:web:635069767c20ec76f430d1"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // ✅ expose ra global để file khác dùng
+  window.firebaseAuth = auth;
+  window.RecaptchaVerifier = RecaptchaVerifier;
+  window.signInWithPhoneNumber = signInWithPhoneNumber;
+
+  console.log("🔥 Firebase v9 ready");
+</script>
 
   <!-- ✅ Load register.js after Firebase SDK -->
   <script defer src="assets/js/register.js"></script>
