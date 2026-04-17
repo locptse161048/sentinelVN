@@ -191,35 +191,66 @@ router.get('/stats', async (req, res) => {
 		const now = new Date();
 		const currentYear = now.getFullYear();
 
+		console.log('[ADMIN STATS] Starting stats calculation...');
+
 		// ── MONTHLY: 12 tháng gần nhất ──────────────────────────────────────
-		const monthlyRevenue = await Payment.aggregate([
-			{ $match: { status: 'success' } },
-			{
-				$group: {
-					_id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
-					revenue: { $sum: '$amount' }
+		let monthlyRevenue = [];
+		try {
+			monthlyRevenue = await Payment.aggregate([
+				{ $match: { status: 'success', createdAt: { $exists: true, $ne: null } } },
+				{
+					$group: {
+						_id: { 
+							year: { $year: '$createdAt' }, 
+							month: { $month: '$createdAt' } 
+						},
+						revenue: { $sum: '$amount' }
+					}
 				}
-			}
-		]);
+			]);
+		} catch (err) {
+			console.error('[ADMIN STATS] Error in monthlyRevenue aggregation:', err.message);
+			monthlyRevenue = [];
+		}
 
-		const monthlyNewUsers = await Client.aggregate([
-			{ $match: { role: 'client' } },
-			{
-				$group: {
-					_id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
-					count: { $sum: 1 }
+		let monthlyNewUsers = [];
+		try {
+			monthlyNewUsers = await Client.aggregate([
+				{ $match: { role: 'client', createdAt: { $exists: true, $ne: null } } },
+				{
+					$group: {
+						_id: { 
+							year: { $year: '$createdAt' }, 
+							month: { $month: '$createdAt' } 
+						},
+						count: { $sum: 1 }
+					}
 				}
-			}
-		]);
+			]);
+		} catch (err) {
+			console.error('[ADMIN STATS] Error in monthlyNewUsers aggregation:', err.message);
+			monthlyNewUsers = [];
+		}
 
-		const monthlyNewLicenses = await License.aggregate([
-			{
-				$group: {
-					_id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' }, plan: '$plan' },
-					count: { $sum: 1 }
+		let monthlyNewLicenses = [];
+		try {
+			monthlyNewLicenses = await License.aggregate([
+				{ $match: { createdAt: { $exists: true, $ne: null } } },
+				{
+					$group: {
+						_id: { 
+							year: { $year: '$createdAt' }, 
+							month: { $month: '$createdAt' }, 
+							plan: '$plan' 
+						},
+						count: { $sum: 1 }
+					}
 				}
-			}
-		]);
+			]);
+		} catch (err) {
+			console.error('[ADMIN STATS] Error in monthlyNewLicenses aggregation:', err.message);
+			monthlyNewLicenses = [];
+		}
 
 		// Tạo map tra cứu nhanh
 		const revenueMap = {};
@@ -282,17 +313,41 @@ router.get('/stats', async (req, res) => {
 		}
 
 		// ── OVERALL: Tổng quan toàn thời gian ───────────────────────────────
-		const totalRevenue = await Payment.aggregate([
-			{ $match: { status: 'success' } },
-			{ $group: { _id: null, total: { $sum: '$amount' } } }
-		]);
-		const totalUsers = await Client.countDocuments({ role: 'client' });
-		const totalPremiumActive = await License.countDocuments({
-			plan: 'PREMIUM', status: 'active', expiresAt: { $gt: now }
-		});
-		const totalProActive = await License.countDocuments({
-			plan: 'PRO', status: 'active', expiresAt: { $gt: now }
-		});
+		let totalRevenue = [];
+		try {
+			totalRevenue = await Payment.aggregate([
+				{ $match: { status: 'success' } },
+				{ $group: { _id: null, total: { $sum: '$amount' } } }
+			]);
+		} catch (err) {
+			console.error('[ADMIN STATS] Error in totalRevenue aggregation:', err.message);
+			totalRevenue = [];
+		}
+
+		let totalUsers = 0;
+		try {
+			totalUsers = await Client.countDocuments({ role: 'client' });
+		} catch (err) {
+			console.error('[ADMIN STATS] Error counting total users:', err.message);
+		}
+
+		let totalPremiumActive = 0;
+		try {
+			totalPremiumActive = await License.countDocuments({
+				plan: 'PREMIUM', status: 'active', expiresAt: { $gt: now }
+			});
+		} catch (err) {
+			console.error('[ADMIN STATS] Error counting PREMIUM active:', err.message);
+		}
+
+		let totalProActive = 0;
+		try {
+			totalProActive = await License.countDocuments({
+				plan: 'PRO', status: 'active', expiresAt: { $gt: now }
+			});
+		} catch (err) {
+			console.error('[ADMIN STATS] Error counting PRO active:', err.message);
+		}
 
 		const overall = {
 			totalRevenue: totalRevenue[0]?.total || 0,
@@ -301,6 +356,7 @@ router.get('/stats', async (req, res) => {
 			totalProActive,
 		};
 
+		console.log('[ADMIN STATS] Stats calculation completed successfully');
 		res.json({ monthly, quarterly, yearly, overall });
 	} catch (err) {
 		console.error('[ADMIN] Error fetching stats:', err.message);
