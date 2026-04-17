@@ -179,6 +179,16 @@ async function loadMembers() {
       const statusClass = member.status === 'đang hoạt động' ? 'active' : 'inactive';
       const statusText = member.status === 'đang hoạt động' ? '✅ Hoạt động' : '❌ Tạm ngưng';
       
+      // Assigned status
+      const assignedClass = member.isAssigned ? 'active' : 'pending';
+      const assignedText = member.isAssigned ? '✅ Đã gán' : '⏳ Chưa gán';
+      
+      // Action buttons - thêm vs xóa
+      const actionButtons = member.isAssigned
+        ? `<button class="action-btn view" onclick="viewMember('${member._id}')">Xem</button>
+           <button class="action-btn delete" onclick="removeMember('${member._id}')">Xóa</button>`
+        : `<button class="action-btn view" onclick="addMemberToTeam('${member._id}', '${escapeHtml(member.email)}')">Thêm</button>`;
+      
       row.innerHTML = `
         <td>${escapeHtml(member.email)}</td>
         <td>${escapeHtml(member.firstName)}</td>
@@ -187,9 +197,9 @@ async function loadMembers() {
         <td>${escapeHtml(member.dateOfBirth)}</td>
         <td>${escapeHtml(member.phone)}</td>
         <td><span class="status ${statusClass}">${statusText}</span></td>
+        <td><span class="status ${assignedClass}">${assignedText}</span></td>
         <td>
-          <button class="action-btn view" onclick="viewMember('${member._id}')">Xem</button>
-          <button class="action-btn delete" onclick="removeMember('${member._id}')">Xóa</button>
+          ${actionButtons}
         </td>
       `;
       tbodyEl.appendChild(row);
@@ -346,6 +356,39 @@ async function removeMember(memberId) {
     }
   } catch (err) {
     console.error('[REMOVE MEMBER] Error:', err.message);
+    alert(`❌ Lỗi: ${err.message}`);
+  }
+}
+
+/* ===== ADD UNASSIGNED MEMBER TO TEAM ===== */
+async function addMemberToTeam(memberId, memberEmail) {
+  if (!confirm(`Thêm ${memberEmail} vào đội nhóm của bạn?`)) {
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API_BASE}/api/team/members`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email: memberEmail })
+    });
+    
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    
+    const data = await res.json();
+    
+    if (data.success) {
+      alert('✅ Thêm thành viên thành công');
+      loadMembers(); // Reload the members list
+    } else {
+      alert(`❌ ${data.message}`);
+    }
+  } catch (err) {
+    console.error('[ADD MEMBER] Error:', err.message);
     alert(`❌ Lỗi: ${err.message}`);
   }
 }

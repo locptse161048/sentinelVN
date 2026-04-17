@@ -36,8 +36,14 @@ router.get('/members', async (req, res) => {
 	try {
 		const teamLeaderId = req.user._id;
 		
-		// Get all team members under this team leader
-		const members = await Client.find({ teamLeaderId: teamLeaderId, role: 'teamMember' })
+		// Get all team members: assigned to this leader OR unassigned (chưa gán)
+		const members = await Client.find({
+			role: 'teamMember',
+			$or: [
+				{ teamLeaderId: teamLeaderId },  // Assigned to this leader
+				{ teamLeaderId: null }            // Unassigned members
+			]
+		})
 			.select('-passwordHash')
 			.sort({ createdAt: -1 });
 		
@@ -50,6 +56,7 @@ router.get('/members', async (req, res) => {
 			dateOfBirth: member.dateOfBirth ? new Date(member.dateOfBirth).toLocaleDateString('vi-VN') : '-',
 			phone: member.phone || '-',
 			status: member.status,
+			isAssigned: member.teamLeaderId ? true : false,  // Đã gán hay chưa gán
 			createdAt: member.createdAt
 		}));
 		
