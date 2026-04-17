@@ -11,6 +11,16 @@
   <link href="assets/css/admin.css" rel="stylesheet">
   <!-- SheetJS for Excel export -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+  <style>
+    /* Ẩn hoàn toàn tab menu và các tab không cần thiết */
+    #tabMenu,
+    #supportTab,
+    #accountTab,
+    #trialTab {
+      display: none !important;
+    }
+  </style>
 </head>
 
 <body class="min-h-screen px-4 py-8">
@@ -29,8 +39,62 @@
       <button onclick="logout()" class="btn">Đăng xuất</button>
     </div>
 
+    <!-- TAB MENU (ẩn - giữ để JS không lỗi) -->
+    <div id="tabMenu" class="flex gap-3 mb-6">
+      <button onclick="showTab('supportTab')" id="supportBtn" class="btn">
+        Tin nhắn Hỗ trợ
+        <span id="supportBadge" class="tab-badge hidden">0</span>
+      </button>
+      <button onclick="showTab('accountTab')" id="accountBtn" class="btn">
+        Quản lý Tài khoản
+      </button>
+      <button onclick="showTab('trialTab')" id="trialBtn" class="btn">
+        Liên hệ dùng thử
+        <span id="trialBadge" class="tab-badge hidden">0</span>
+      </button>
+      <button onclick="showTab('financeTab')" id="financeBtn" class="btn">
+        Tài chính
+      </button>
+    </div>
+
+    <!-- SUPPORT TAB (ẩn - giữ để JS không lỗi) -->
+    <div id="supportTab" class="hidden">
+      <div class="card p-4">
+        <input id="supportSearch" class="input w-full" placeholder="Tìm theo Email...">
+        <div class="mb-4 p-3">
+          <span id="pendingCount" class="font-bold text-red-500">0</span>
+        </div>
+        <div id="supportMessages"></div>
+      </div>
+    </div>
+
+    <!-- ACCOUNT TAB (ẩn - giữ để JS không lỗi) -->
+    <div id="accountTab" class="hidden">
+      <div class="card p-4">
+        <input id="accountSearch" class="input w-full" placeholder="Tìm Email hoặc License">
+        <table class="w-full text-sm" id="accountTableMain">
+          <thead><tr>
+            <th>STT</th><th>License Key</th><th>Email</th><th>Giới tính</th>
+            <th>Ngày sinh</th><th>SĐT</th><th>Thành phố</th><th>Trạng thái TK</th>
+            <th>Ngày tạo TK</th><th>Gói</th><th>Trạng thái gói</th><th>Ngày mua</th>
+            <th>Hết hạn</th><th>Hành động</th>
+          </tr></thead>
+          <tbody id="accountTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TRIAL TAB (ẩn - giữ để JS không lỗi) -->
+    <div id="trialTab" class="hidden">
+      <div class="card p-4">
+        <input id="trialSearch" class="input w-full" placeholder="Tìm theo Email...">
+        <span id="trialPendingCount" class="font-bold text-red-500">0</span>
+        <div id="trialMessages"></div>
+      </div>
+    </div>
+
     <!-- ================= FINANCE TAB ================= -->
-    <div id="financeTab">
+    <div id="financeTab" class="hidden">
       <!-- Finance Sub-menu -->
       <div class="flex gap-3 mb-6">
         <button onclick="showFinanceSubTab('revenueSubTab')" id="revenueBtn" class="btn bg-brand-400/10">
@@ -128,14 +192,11 @@
       <div id="transactionSubTab" class="hidden">
         <div class="card p-4">
           <h2 class="text-lg font-semibold mb-4">Giao dịch <span class="text-brand-400">Realtime</span></h2>
-          
-          <!-- Filter & Refresh Controls -->
+
           <div class="mb-4 flex gap-3 flex-wrap items-center">
             <button onclick="refreshTransactionTable()" class="btn bg-blue-500/20 border border-blue-400 text-blue-300 hover:bg-blue-400/30 transition px-4 py-2 rounded-lg">
               🔄 Làm mới
             </button>
-            
-            <!-- Filter by Month -->
             <select id="transactionFilterMonth" class="input px-3 py-2 rounded-lg" onchange="filterAndSortTransactions()">
               <option value="">Tất cả tháng</option>
               <option value="01">Tháng 1</option>
@@ -151,8 +212,6 @@
               <option value="11">Tháng 11</option>
               <option value="12">Tháng 12</option>
             </select>
-
-            <!-- Filter by Year -->
             <select id="transactionFilterYear" class="input px-3 py-2 rounded-lg" onchange="filterAndSortTransactions()">
               <option value="">Tất cả năm</option>
               <option value="2024">2024</option>
@@ -162,29 +221,17 @@
             </select>
           </div>
 
-          <!-- Sort Controls -->
           <div class="mb-4 p-3 bg-white/5 border border-white/10 rounded-lg">
             <p class="text-sm text-white/70 mb-2">Sắp xếp theo:</p>
             <div class="flex flex-wrap gap-2">
-              <button onclick="setSortColumn('plan')" class="text-xs btn px-3 py-1 bg-white/10 border border-white/20 hover:border-brand-400 transition">
-                📦 Gói
-              </button>
-              <button onclick="setSortColumn('method')" class="text-xs btn px-3 py-1 bg-white/10 border border-white/20 hover:border-brand-400 transition">
-                💳 Phương thức
-              </button>
-              <button onclick="setSortColumn('status')" class="text-xs btn px-3 py-1 bg-white/10 border border-white/20 hover:border-brand-400 transition">
-                ✓ Trạng thái
-              </button>
-              <button onclick="setSortColumn('orderCode')" class="text-xs btn px-3 py-1 bg-white/10 border border-white/20 hover:border-brand-400 transition">
-                # OrderCode
-              </button>
-              <button onclick="setSortColumn('createdAt')" class="text-xs btn px-3 py-1 bg-white/10 border border-white/20 hover:border-brand-400 transition">
-                📅 Ngày tạo
-              </button>
+              <button onclick="setSortColumn('plan')" class="text-xs btn px-3 py-1 bg-white/10 border border-white/20 hover:border-brand-400 transition">📦 Gói</button>
+              <button onclick="setSortColumn('method')" class="text-xs btn px-3 py-1 bg-white/10 border border-white/20 hover:border-brand-400 transition">💳 Phương thức</button>
+              <button onclick="setSortColumn('status')" class="text-xs btn px-3 py-1 bg-white/10 border border-white/20 hover:border-brand-400 transition">✓ Trạng thái</button>
+              <button onclick="setSortColumn('orderCode')" class="text-xs btn px-3 py-1 bg-white/10 border border-white/20 hover:border-brand-400 transition"># OrderCode</button>
+              <button onclick="setSortColumn('createdAt')" class="text-xs btn px-3 py-1 bg-white/10 border border-white/20 hover:border-brand-400 transition">📅 Ngày tạo</button>
             </div>
           </div>
 
-          <!-- Transaction Table -->
           <div class="overflow-x-auto">
             <table class="w-full text-sm border border-white/10" id="transactionTable">
               <thead class="bg-white/5 sticky top-0">
@@ -208,9 +255,21 @@
       </div>
     </div><!-- /financeTab -->
 
-  </div><!-- /max-w-full container -->
+  </div><!-- /container -->
 
   <script src="assets/js/supervisor.js"></script>
+
+  <script>
+    // Override showTab: luôn chuyển sang financeTab
+    // Chạy sau khi supervisor.js đã load xong
+    (function() {
+      const _orig = window.showTab;
+      window.showTab = function(tabId) {
+        _orig('financeTab');
+      };
+    })();
+  </script>
+
 </body>
 
 </html>
