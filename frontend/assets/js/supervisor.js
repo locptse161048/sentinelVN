@@ -96,14 +96,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         const user = await res.json();
         console.log('[AUTH] User verified:', user.email, 'Role:', user.role);
 
-        if (user.role !== 'admin') {
-            console.error('[AUTH] User is not admin:', user.role);
+        if (user.role !== 'admin' && user.role !== 'supervisor') {
+            console.error('[AUTH] User is not admin/supervisor:', user.role);
             localStorage.removeItem('auth_token');
             window.location.href = "index.html";
             return;
         }
 
-        console.log('[AUTH] Admin verified:', user.email);
+        console.log('[AUTH] Admin/Supervisor verified:', user.email);
 
         // ✅ Initialize WebSocket connection after session verification
         try {
