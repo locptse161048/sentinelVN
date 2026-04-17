@@ -450,6 +450,8 @@ form.onsubmit = async e => {
                 window.location.href = 'admin.html';
             } else if (data.user.role === 'supervisor') {
                 window.location.href = 'supervisor.html';
+            } else if (data.user.role === 'teamLeader') {
+                window.location.href = 'team.html';
             } else {
                 window.location.href = 'client.html';
             }
@@ -522,6 +524,8 @@ form.onsubmit = async e => {
                 window.location.href = 'admin.html';
             } else if (data.user.role === 'supervisor') {
                 window.location.href = 'supervisor.html';
+            } else if (data.user.role === 'teamLeader') {
+                window.location.href = 'team.html';
             } else {
                 window.location.href = 'client.html';
             }
@@ -548,6 +552,8 @@ function setupAccountButtons(user) {
             window.location.href = "admin.html";
         } else if (user.role === "supervisor") {
             window.location.href = "supervisor.html";
+        } else if (user.role === "teamLeader") {
+            window.location.href = "team.html";
         } else {
             window.location.href = "client.html";
         }

@@ -243,6 +243,9 @@ console.log("[STARTUP] ✅ /api/admin mounted");
 app.use('/api/client', authMiddleware, require('./routes/client.routes'));
 console.log("[STARTUP] ✅ /api/client mounted (with authMiddleware)");
 
+app.use('/api/team', authMiddleware, require('./routes/team.routes'));
+console.log("[STARTUP] ✅ /api/team mounted (with authMiddleware)");
+
 app.use('/api/payment', authMiddleware, require('./routes/payment.routes'));
 console.log("[STARTUP] ✅ /api/payment mounted (with authMiddleware)");
 

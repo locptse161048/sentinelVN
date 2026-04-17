@@ -12,12 +12,13 @@ const ClientSchema = new mongoose.Schema({
 	city: { type: String, default: null },
 	emailVerified: { type: Boolean, default: false },
 	phoneVerified: { type: Boolean, default: false },
-	role: { type: String, enum: ['client', 'admin','supervisor'], default: 'client' },
+	role: { type: String, enum: ['client', 'admin','supervisor', 'teamLeader', 'teamMember'], default: 'client' },
 	status: { type: String, enum: ['đang hoạt động', 'tạm ngưng'], default: 'đang hoạt động' },
 	loginAttempts: { type: Number, default: 0 },
 	lastLoginAttempt: { type: Date, default: null },
 	scanCount: { type: Number, default: 0 },
 	scanResetDate: { type: Date, default: null },
+	teamLeaderId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', default: null },
 	createdAt: { type: Date, default: Date.now },
 });
 

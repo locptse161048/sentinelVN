@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team Leader Dashboard - Sentinel VN</title>
+  <link rel="stylesheet" href="assets/css/team.css">
+</head>
+<body>
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <h1>TEAM <span>DASHBOARD</span></h1>
+      <p class="subtitle">Quản lý đội nhóm của bạn</p>
+    </div>
+    <div class="header-right">
+      <div class="user-info">
+        <p>Đăng nhập:</p>
+        <span id="userEmail">-</span>
+      </div>
+      <button onclick="logout()">Đăng xuất</button>
+    </div>
+  </header>
+
+  <!-- CONTAINER -->
+  <div class="container">
+    <!-- TABS -->
+    <div class="tabs-container">
+      <button class="tab-button active" onclick="showTab(1)">📋 Giấy phép & Đội nhóm</button>
+      <button class="tab-button" onclick="showTab(2)">🔍 Nhật ký kiểm toán</button>
+      <button class="tab-button" onclick="showTab(3)">💰 Quản lý chi tiêu</button>
+    </div>
+
+    <!-- TAB 1: LICENSES & TEAM MEMBERS -->
+    <div id="tab1" class="tab-content active">
+      <!-- Licenses Table -->
+      <div class="card">
+        <h2>📜 Danh sách Giấy phép</h2>
+        <div id="licensesLoading" class="loading">
+          <div class="spinner"></div>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+        <div id="licensesError" class="error" style="display: none;"></div>
+        <table id="licensesTable" style="display: none;">
+          <thead>
+            <tr>
+              <th>Khóa Giấy phép</th>
+              <th>Gói</th>
+              <th>Số thành viên</th>
+              <th>Trạng thái</th>
+              <th>Ngày tạo</th>
+              <th>Ngày hết hạn</th>
+            </tr>
+          </thead>
+          <tbody id="licensesTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Team Members Table -->
+      <div class="card">
+        <h2>👥 Danh sách Thành viên Đội nhóm</h2>
+        <div id="membersLoading" class="loading">
+          <div class="spinner"></div>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+        <div id="membersError" class="error" style="display: none;"></div>
+        <table id="membersTable" style="display: none;">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Họ và tên đệm</th>
+              <th>Tên</th>
+              <th>Giới tính</th>
+              <th>Ngày sinh</th>
+              <th>Số điện thoại</th>
+              <th>Trạng thái</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="membersTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: AUDIT LOGS -->
+    <div id="tab2" class="tab-content">
+      <div class="card">
+        <h2>📋 Nhật ký kiểm toán</h2>
+        <p style="font-size: 13px; color: rgba(255, 255, 255, 0.6); margin-bottom: 15px;">
+          ⏰ Danh sách các hoạt động gần đây nhất (sắp xếp theo thời gian mới nhất trước)
+        </p>
+        <div id="auditLoading" class="loading">
+          <div class="spinner"></div>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+        <div id="auditError" class="error" style="display: none;"></div>
+        <table id="auditTable" style="display: none;">
+          <thead>
+            <tr>
+              <th>Thời gian</th>
+              <th>Email</th>
+              <th>File</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="auditTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: PAYMENTS -->
+    <div id="tab3" class="tab-content">
+      <div class="card">
+        <h2>💳 Quản lý chi tiêu</h2>
+        <div id="paymentsLoading" class="loading">
+          <div class="spinner"></div>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+        <div id="paymentsError" class="error" style="display: none;"></div>
+        <table id="paymentsTable" style="display: none;">
+          <thead>
+            <tr>
+              <th>Gói</th>
+              <th>Số tiền</th>
+              <th>Phương thức</th>
+              <th>Trạng thái</th>
+              <th>Mã đặt hàng</th>
+              <th>Mã giao dịch</th>
+              <th>Ngày tạo</th>
+            </tr>
+          </thead>
+          <tbody id="paymentsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/team.js"></script>
+</body>
+</html>
