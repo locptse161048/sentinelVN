@@ -313,6 +313,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (user.role === "admin") {
                 window.location.href = "admin.html";
+            } else if (user.role === "supervisor") {
+                window.location.href = "supervisor.html";
             } else {
                 window.location.href = "client.html";
             }
@@ -542,10 +544,10 @@ function setupAccountButtons(user) {
     if (openAuthBtn_m) openAuthBtn_m.textContent = "Tài khoản";
 
     const goAccount = () => {
-        if (useif (user.role === "supervisor") {
-            window.location.href = "supervisor.html";
-        } else r.role === "admin") {
+        if (user.role === "admin") {
             window.location.href = "admin.html";
+        } else if (user.role === "supervisor") {
+            window.location.href = "supervisor.html";
         } else {
             window.location.href = "client.html";
         }
