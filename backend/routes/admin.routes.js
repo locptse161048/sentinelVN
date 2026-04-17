@@ -181,6 +181,37 @@ router.patch('/client/:clientId/toggle-status', async (req, res) => {
 	}
 });
 
+// ========= UPDATE CLIENT ROLE TO TEAM LEADER =========
+router.patch('/client/:clientId/role/team-leader', async (req, res) => {
+	try {
+		const client = await Client.findById(req.params.clientId);
+		if (!client) {
+			return res.status(404).json({ message: 'Client không tồn tại' });
+		}
+
+		// Update role to teamLeader
+		client.role = 'teamLeader';
+		await client.save();
+
+		console.log('[ADMIN] ✅ Updated client role to teamLeader:', client.email);
+
+		res.json({ 
+			success: true,
+			message: 'Đã nâng cấp thành Team Leader',
+			client: {
+				_id: client._id,
+				email: client.email,
+				fullName: client.fullName,
+				role: client.role,
+				status: client.status
+			}
+		});
+	} catch (err) {
+		console.error("[ADMIN] Error updating role to team leader:", err);
+		res.status(500).json({ success: false, message: 'Lỗi server' });
+	}
+});
+
 // ========= STATISTICS =========
 
 // GET /api/admin/stats — Tổng hợp thống kê cho admin dashboard
