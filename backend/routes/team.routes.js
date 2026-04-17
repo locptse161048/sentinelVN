@@ -98,16 +98,22 @@ router.get('/payments', async (req, res) => {
 	try {
 		const teamLeaderId = req.user._id;
 		
+		// Verify current user is a teamLeader
+		const currentUser = await Client.findById(teamLeaderId);
+		if (!currentUser || currentUser.role !== 'teamLeader') {
+			return res.status(403).json({ success: false, message: 'Chỉ teamLeader mới có quyền xem' });
+		}
+		
 		// Get all payments for this team leader
 		const payments = await Payment.find({ clientId: teamLeaderId }).sort({ createdAt: -1 });
 		
 		const formattedPayments = payments.map(payment => ({
 			_id: payment._id,
 			plan: payment.plan,
-			amount: payment.amount,
+			amount: Number(payment.amount),  // Ensure it's a number
 			method: payment.method,
 			status: payment.status,
-			orderCode: payment.orderCode || '-',
+			orderCode: payment.orderCode ? String(payment.orderCode) : '-',
 			transactionId: payment.transactionId || '-',
 			createdAt: new Date(payment.createdAt).toLocaleString('vi-VN')
 		}));
@@ -116,6 +122,37 @@ router.get('/payments', async (req, res) => {
 	} catch (err) {
 		console.error('[TEAM] Error fetching payments:', err.message);
 		res.status(500).json({ success: false, message: 'Lỗi server' });
+	}
+});
+
+// ========= DEBUG: GET PAYMENTS INFO =========
+router.get('/debug/payments', async (req, res) => {
+	try {
+		const teamLeaderId = req.user._id;
+		
+		// Get current user info
+		const currentUser = await Client.findById(teamLeaderId);
+		
+		// Get all payments for this user
+		const paymentsForUser = await Payment.find({ clientId: teamLeaderId });
+		
+		// Get total payments in database
+		const totalPayments = await Payment.countDocuments();
+		
+		res.json({
+			success: true,
+			debug: {
+				currentUserId: teamLeaderId.toString(),
+				currentUserRole: currentUser?.role,
+				currentUserEmail: currentUser?.email,
+				paymentsForThisUser: paymentsForUser.length,
+				paymentsForThisUserData: paymentsForUser,
+				totalPaymentsInDB: totalPayments
+			}
+		});
+	} catch (err) {
+		console.error('[DEBUG] Error:', err.message);
+		res.status(500).json({ success: false, message: err.message });
 	}
 });
 

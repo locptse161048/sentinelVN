@@ -305,7 +305,9 @@ async function loadPayments() {
       const statusText = payment.status === 'success' ? '✅ Thành công' :
                          payment.status === 'pending' ? '⏳ Chờ xử lý' : '❌ Thất bại';
       
-      const amountText = payment.amount.toLocaleString('vi-VN', {
+      // Ensure amount is a number before formatting
+      const amount = Number(payment.amount);
+      const amountText = amount.toLocaleString('vi-VN', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
       });
@@ -315,8 +317,8 @@ async function loadPayments() {
         <td>${amountText} đ</td>
         <td>${escapeHtml(payment.method)}</td>
         <td><span class="status ${statusClass}">${statusText}</span></td>
-        <td><code>${escapeHtml(payment.orderCode)}</code></td>
-        <td><code>${escapeHtml(payment.transactionId)}</code></td>
+        <td><code>${escapeHtml(String(payment.orderCode))}</code></td>
+        <td><code>${escapeHtml(String(payment.transactionId))}</code></td>
         <td>${escapeHtml(payment.createdAt)}</td>
       `;
       tbodyEl.appendChild(row);
@@ -472,10 +474,20 @@ document.addEventListener('DOMContentLoaded', () => {
   window.showTab = function(n) {
     originalShowTab(n);
     
-    if (n === 2 && !document.getElementById('auditTable').style.display || document.getElementById('auditTable').style.display === '') {
-      loadAuditLogs();
-    } else if (n === 3 && !document.getElementById('paymentsTable').style.display || document.getElementById('paymentsTable').style.display === '') {
-      loadPayments();
+    // Load audit logs for tab 2
+    if (n === 2) {
+      const auditTable = document.getElementById('auditTable');
+      if (!auditTable || auditTable.style.display === 'none' || auditTable.style.display === '') {
+        loadAuditLogs();
+      }
+    }
+    
+    // Load payments for tab 3
+    if (n === 3) {
+      const paymentsTable = document.getElementById('paymentsTable');
+      if (!paymentsTable || paymentsTable.style.display === 'none' || paymentsTable.style.display === '') {
+        loadPayments();
+      }
     }
   };
 });
