@@ -446,6 +446,8 @@ form.onsubmit = async e => {
             // Redirect
             if (data.user.role === 'admin') {
                 window.location.href = 'admin.html';
+            } else if (data.user.role === 'supervisor') {
+                window.location.href = 'supervisor.html';
             } else {
                 window.location.href = 'client.html';
             }
@@ -516,6 +518,8 @@ form.onsubmit = async e => {
             // Redirect
             if (data.user.role === 'admin') {
                 window.location.href = 'admin.html';
+            } else if (data.user.role === 'supervisor') {
+                window.location.href = 'supervisor.html';
             } else {
                 window.location.href = 'client.html';
             }
@@ -538,7 +542,9 @@ function setupAccountButtons(user) {
     if (openAuthBtn_m) openAuthBtn_m.textContent = "Tài khoản";
 
     const goAccount = () => {
-        if (user.role === "admin") {
+        if (useif (user.role === "supervisor") {
+            window.location.href = "supervisor.html";
+        } else r.role === "admin") {
             window.location.href = "admin.html";
         } else {
             window.location.href = "client.html";

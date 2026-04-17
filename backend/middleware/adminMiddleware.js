@@ -44,12 +44,12 @@ module.exports = async (req, res, next) => {
 					return res.status(401).json({ message: 'User không tồn tại' });
 				}
 				
-				if (user.role !== 'admin') {
-					console.warn('[ADMIN MIDDLEWARE] ❌ User is not admin:', user.role);
-					return res.status(403).json({ message: 'Admin access required' });
+				if (user.role !== 'admin' && user.role !== 'supervisor') {
+					console.warn('[ADMIN MIDDLEWARE] ❌ User is not admin/supervisor:', user.role);
+					return res.status(403).json({ message: 'Admin/Supervisor access required' });
 				}
 				
-				console.log('[ADMIN MIDDLEWARE] ✅ Admin verified:', user.email);
+				console.log('[ADMIN MIDDLEWARE] ✅ Admin/Supervisor verified:', user.email, 'Role:', user.role);
 				req.user = user;
 				next();
 			} catch (userErr) {
